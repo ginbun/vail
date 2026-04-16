@@ -1,0 +1,1 @@
+const s=a=>{const e=[],n=a.map(t=>t.tags).filter(t=>t==null?void 0:t.length).flat(1).sort((t,r)=>t.id-r.id).map(t=>t.name);[...new Set(n)].map(t=>({label:t,value:`@${t}`,isTag:!0})).forEach(t=>e.push(t));const o=a.map(t=>[t.name,t.code,t.address,t.alias]).filter(Boolean).flat(1);return[...new Set(o)].map(t=>({label:t,value:t})).forEach(t=>e.push(t)),e};export{s as g};

@@ -1,4 +1,3 @@
-pub mod entities;
 pub mod migrate;
 
 use sqlx::migrate::Migrator;

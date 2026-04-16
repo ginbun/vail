@@ -1,5 +1,5 @@
 use axum::{
-    extract::State,
+    extract::{ConnectInfo, State},
     http::HeaderMap,
     response::IntoResponse,
     routing::{get, post},
@@ -9,6 +9,7 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::net::SocketAddr;
 use totp_rs::{Algorithm, Secret, TOTP};
 use uuid::Uuid;
 
@@ -79,7 +80,7 @@ fn verify_token(token: &str, secret: &str) -> AppResult<Claims> {
     Ok(token_data.claims)
 }
 
-fn get_source_ip(headers: &HeaderMap) -> String {
+fn get_source_ip(headers: &HeaderMap, connect_info: Option<&ConnectInfo<SocketAddr>>) -> String {
     headers
         .get("x-forwarded-for")
         .and_then(|v| v.to_str().ok())
@@ -91,6 +92,7 @@ fn get_source_ip(headers: &HeaderMap) -> String {
                 .and_then(|v| v.to_str().ok())
                 .map(|v| v.to_string())
         })
+        .or_else(|| connect_info.map(|addr| addr.0.ip().to_string()))
         .unwrap_or_else(|| "0.0.0.0".to_string())
 }
 
@@ -153,9 +155,10 @@ async fn issue_token_pair(
 async fn login(
     State(state): State<AppState>,
     headers: HeaderMap,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
     axum::extract::Json(payload): axum::extract::Json<LoginRequest>,
 ) -> AppResult<impl IntoResponse> {
-    let source_ip = get_source_ip(&headers);
+    let source_ip = get_source_ip(&headers, connect_info.as_ref());
 
     let user = sqlx::query_as::<_, (i64, String, String, Option<String>, bool)>(
         "SELECT u.id, u.username, u.password, u.nickname, COALESCE(m.enabled, false) AS mfa_enabled FROM sys_user u LEFT JOIN user_mfa_totp m ON m.user_id = u.id WHERE u.username = $1 AND u.deleted = 0",
@@ -239,9 +242,10 @@ async fn login(
 async fn verify_totp_login(
     State(state): State<AppState>,
     headers: HeaderMap,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
     axum::extract::Json(payload): axum::extract::Json<TotpVerifyRequest>,
 ) -> AppResult<impl IntoResponse> {
-    let source_ip = get_source_ip(&headers);
+    let source_ip = get_source_ip(&headers, connect_info.as_ref());
 
     let challenge = sqlx::query_as::<_, (i64, String, Option<String>, String, i16)>(
         "SELECT c.user_id, u.username, u.nickname, m.secret_ciphertext, c.attempts FROM auth_login_challenge c JOIN sys_user u ON u.id = c.user_id JOIN user_mfa_totp m ON m.user_id = u.id WHERE c.id = $1::uuid AND c.used_at IS NULL AND c.expires_at > NOW() AND m.enabled = TRUE",

@@ -29,6 +29,7 @@ async fn main() {
     let db_pool = db::init_pool(&config.database).await;
     db::run_migrations(&db_pool).await;
     db::migrate::ensure_partitions(&db_pool).await;
+    db::migrate::ensure_default_admin_menu(&db_pool).await;
 
     let state = api::AppState {
         db: db_pool,
@@ -62,5 +63,10 @@ async fn main() {
     tracing::info!("Listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap();
 }

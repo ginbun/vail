@@ -248,9 +248,7 @@ fn ensure_remote_dir(sftp: &ssh2::Sftp, path: &Path) -> Result<(), ssh2::Error> 
             continue;
         }
 
-        if current.is_empty() {
-            current.push('/');
-        } else if !current.ends_with('/') {
+        if current.is_empty() || !current.ends_with('/') {
             current.push('/');
         }
         current.push_str(&segment);

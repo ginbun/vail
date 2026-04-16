@@ -1,0 +1,28 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[database]
+host = "postgres"
+port = 5432
+username = "vail"
+password = "vail"
+database = "vail"
+
+[jwt]
+secret = "please-change-this-in-production"
+expiration = 3600
+refresh_expiration = 604800
+
+[ssh]
+default_port = 22
+connection_timeout = 30
+keepalive_interval = 60
+
+[storage]
+temp_dir = "/tmp/vail"
+max_upload_size = 1024
+default_chunk_size = 1048576
+
+[secrets]
+data_encryption_key = "please-change-this-32-char-minimum-key"

@@ -1,7 +1,10 @@
 pub mod api;
+pub mod application;
 pub mod config;
 pub mod db;
+pub mod domain;
 pub mod error;
+pub mod infrastructure;
 pub mod model;
 pub mod security;
 pub mod ssh_client;

@@ -1,0 +1,1 @@
+const t="dict-key",e={STRING:"STRING",INTEGER:"INTEGER",DECIMAL:"DECIMAL",BOOLEAN:"BOOLEAN",COLOR:"COLOR"},s=[{name:"disabled",type:e.BOOLEAN},{name:"status",type:e.STRING},{name:"type",type:e.STRING},{name:"color",type:e.COLOR},{name:"icon",type:e.STRING}],n=10,y=["value","label"],a="dictValueType",c=[a];export{t as T,e as V,s as a,c as b,a as d,y as i,n as s};
