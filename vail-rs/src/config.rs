@@ -13,6 +13,8 @@ pub struct Config {
     pub ssh: SshConfig,
     #[serde(default)]
     pub storage: StorageConfig,
+    #[serde(default)]
+    pub secrets: SecretsConfig,
 }
 
 fn default_server() -> ServerConfig {
@@ -66,6 +68,16 @@ pub struct JwtConfig {
     pub refresh_expiration: u64,
 }
 
+impl Default for JwtConfig {
+    fn default() -> Self {
+        Self {
+            secret: default_jwt_secret(),
+            expiration: default_expiration(),
+            refresh_expiration: default_refresh_expiration(),
+        }
+    }
+}
+
 fn default_jwt_secret() -> String {
     "vail-secret-key-change-in-production".to_string()
 }
@@ -88,6 +100,16 @@ pub struct SshConfig {
     pub keepalive_interval: u64,
 }
 
+impl Default for SshConfig {
+    fn default() -> Self {
+        Self {
+            default_port: default_ssh_port(),
+            connection_timeout: default_connection_timeout(),
+            keepalive_interval: default_keepalive_interval(),
+        }
+    }
+}
+
 fn default_ssh_port() -> u16 {
     22
 }
@@ -108,6 +130,34 @@ pub struct StorageConfig {
     pub max_upload_size: u64,
     #[serde(default = "default_chunk_size")]
     pub default_chunk_size: u64,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SecretsConfig {
+    #[serde(default = "default_data_encryption_key")]
+    pub data_encryption_key: String,
+}
+
+impl Default for SecretsConfig {
+    fn default() -> Self {
+        Self {
+            data_encryption_key: default_data_encryption_key(),
+        }
+    }
+}
+
+fn default_data_encryption_key() -> String {
+    std::env::var("VAIL_DATA_ENCRYPTION_KEY").unwrap_or_default()
+}
+
+impl Default for StorageConfig {
+    fn default() -> Self {
+        Self {
+            temp_dir: default_temp_dir(),
+            max_upload_size: default_max_upload_size(),
+            default_chunk_size: default_chunk_size(),
+        }
+    }
 }
 
 fn default_temp_dir() -> String {
@@ -166,6 +216,9 @@ impl Default for Config {
                 temp_dir: "/tmp/vail".to_string(),
                 max_upload_size: 1024,
                 default_chunk_size: 1048576,
+            },
+            secrets: SecretsConfig {
+                data_encryption_key: default_data_encryption_key(),
             },
         }
     }

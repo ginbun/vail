@@ -22,7 +22,7 @@ CREATE TABLE operator_log (
 
 -- 默认分区
 CREATE TABLE operator_log_default PARTITION OF operator_log
-    FOR VALUES FROM (MINVALUE) TO (MAXVALUE);
+    DEFAULT;
 
 -- 自动分区函数
 CREATE OR REPLACE FUNCTION create_operator_log_partition()

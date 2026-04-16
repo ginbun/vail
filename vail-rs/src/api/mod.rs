@@ -1,9 +1,13 @@
 pub mod auth;
+pub mod guard;
 pub mod host;
+pub mod iam;
+pub mod orion;
 pub mod sftp;
+pub mod ssh;
+pub mod ssh_key;
+pub mod web;
 
-use axum::extract::State;
-use axum::response::IntoResponse;
 use sqlx::PgPool;
 
 use crate::config::Config;
@@ -12,13 +16,4 @@ use crate::config::Config;
 pub struct AppState {
     pub db: PgPool,
     pub config: Config,
-}
-
-impl<S> axum::extract::FromRef<S> for AppState
-where
-    S: Send + Sync,
-{
-    fn from_ref(state: &S) -> Self {
-        State::from_ref(state)
-    }
 }

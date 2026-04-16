@@ -34,3 +34,7 @@ temp_dir = "/tmp/vail"
 max_upload_size = 1024
 # 默认分片大小 (1MB)
 default_chunk_size = 1048576
+
+[secrets]
+# 至少 32 位的随机主密钥，用于加密主机凭据（建议来自 KMS/Secret Manager）
+data_encryption_key = "replace-with-a-random-32+-char-key"

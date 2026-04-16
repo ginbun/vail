@@ -1,7 +1,6 @@
-use std::net::SocketAddr;
-use std::path::PathBuf;
-
+use axum::routing::get;
 use axum::Router;
+use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -21,10 +20,15 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    tracing::info!("Starting Vail server on {}:{}", config.server.host, config.server.port);
+    tracing::info!(
+        "Starting Vail server on {}:{}",
+        config.server.host,
+        config.server.port
+    );
 
     let db_pool = db::init_pool(&config.database).await;
     db::run_migrations(&db_pool).await;
+    db::migrate::ensure_partitions(&db_pool).await;
 
     let state = api::AppState {
         db: db_pool,
@@ -36,18 +40,25 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    let app = Router::new()
+    let api_router = Router::new()
         .merge(api::auth::router())
         .merge(api::host::router())
-        .merge(api::sftp::router())
+        .merge(api::iam::router())
+        .merge(api::orion::router())
+        .merge(api::ssh::router())
+        .merge(api::ssh_key::router())
+        .merge(api::sftp::router());
+
+    let app = Router::new()
+        .nest("/api", api_router.clone())
+        .merge(api_router)
+        .route("/", get(api::web::index))
+        .route("/*path", get(api::web::assets))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state);
 
-    let addr = SocketAddr::new(
-        config.server.host.parse().unwrap(),
-        config.server.port,
-    );
+    let addr = SocketAddr::new(config.server.host.parse().unwrap(), config.server.port);
     tracing::info!("Listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();

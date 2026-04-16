@@ -36,9 +36,11 @@ impl axum::response::IntoResponse for AppError {
             AppError::Sftp(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e),
         };
 
-        axum::json::Json(serde_json::json!({
+        axum::Json(serde_json::json!({
             "code": status.as_u16(),
-            "message": message
+            "message": message,
+            "msg": message,
+            "trace_id": null
         }))
         .into_response()
     }

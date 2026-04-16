@@ -16,7 +16,7 @@ CREATE TABLE login_log (
 
 -- 默认分区 (当没有匹配分区时使用)
 CREATE TABLE login_log_default PARTITION OF login_log
-    FOR VALUES FROM (MINVALUE) TO (MAXVALUE);
+    DEFAULT;
 
 -- 自动分区函数
 CREATE OR REPLACE FUNCTION create_login_log_partition()

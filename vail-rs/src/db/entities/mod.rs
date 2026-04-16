@@ -1,4 +1,3 @@
-use sea_orm::EntityTrait;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

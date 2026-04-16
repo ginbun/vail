@@ -1,10 +1,12 @@
 pub mod entities;
 pub mod migrate;
 
-use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::migrate::Migrator;
+use sqlx::postgres::{PgPool, PgPoolOptions};
 
 use crate::config::DatabaseConfig;
+
+static MIGRATOR: Migrator = sqlx::migrate!("./migrations");
 
 pub async fn init_pool(config: &DatabaseConfig) -> PgPool {
     let pool = PgPoolOptions::new()
@@ -17,9 +19,5 @@ pub async fn init_pool(config: &DatabaseConfig) -> PgPool {
 }
 
 pub async fn run_migrations(pool: &PgPool) {
-    let migrator = Migrator::new(std::env!("CARGO_MANIFEST_DIR"))
-        .await
-        .expect("Failed to create migrator");
-
-    migrator.run(pool).await.expect("Failed to run migrations");
+    MIGRATOR.run(pool).await.expect("Failed to run migrations");
 }

@@ -32,6 +32,9 @@ export default function usePermission() {
      * 是否有权限
      */
     hasPermission(permission: string) {
+      if (userStore.roles?.includes(AdminRoleCode)) {
+        return true;
+      }
       return userStore.permission?.includes(permission);
     },
 
@@ -39,6 +42,9 @@ export default function usePermission() {
      * 是否有权限
      */
     hasAnyPermission(permission: string[]) {
+      if (userStore.roles?.includes(AdminRoleCode)) {
+        return true;
+      }
       return permission.map(s => userStore.permission?.includes(s))
         .filter(Boolean).length > 0;
     },
