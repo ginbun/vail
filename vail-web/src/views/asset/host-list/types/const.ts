@@ -1,0 +1,107 @@
+import WindowsIcon from '@/assets/images/icon/os_windows.svg';
+import LinuxIcon from '@/assets/images/icon/os_linux.svg';
+import DarwinIcon from '@/assets/images/icon/os_darwin.svg';
+import { TagColors } from '@/types/const';
+
+// 表名称
+export const TableName = 'host';
+
+// tag 颜色
+export const tagColor = TagColors;
+
+// 主机类型
+export const HostType = {
+  SSH: {
+    value: 'SSH',
+    port: 22,
+  },
+  RDP: {
+    value: 'RDP',
+    port: 3389,
+  },
+  VNC: {
+    value: 'VNC',
+    port: 5900,
+  },
+};
+
+// 系统类型
+export const HostOsType = {
+  LINUX: {
+    value: 'LINUX',
+    icon: LinuxIcon,
+  },
+  WINDOWS: {
+    value: 'WINDOWS',
+    icon: WindowsIcon,
+  },
+  DARWIN: {
+    value: 'DARWIN',
+    icon: DarwinIcon,
+  },
+};
+
+// 主机认证方式
+export const HostAuthType = {
+  // 密码认证
+  PASSWORD: 'PASSWORD',
+  // 密钥认证
+  KEY: 'KEY',
+  // 身份认证
+  IDENTITY: 'IDENTITY'
+};
+
+// 探针安装状态
+export const AgentInstallStatus = {
+  NOT_INSTALL: 0,
+  INSTALLED: 1,
+};
+
+// 探针在线状态
+export const AgentOnlineStatus = {
+  OFFLINE: 0,
+  ONLINE: 1,
+};
+
+// 获取系统类型 icon
+export const getHostOsIcon = (osType: string) => {
+  return HostOsType[osType as keyof typeof HostOsType]?.icon;
+};
+
+// 主机类型 字典项
+export const hostTypeKey = 'hostType';
+
+// 主机系统类型 字典项
+export const hostOsTypeKey = 'hostOsType';
+
+// 主机系统架构 字典项
+export const hostArchTypeKey = 'hostArchType';
+
+// 主机状态 字典项
+export const hostStatusKey = 'hostStatus';
+
+// 主机 SSH 认证方式 字典项
+export const sshAuthTypeKey = 'hostSshAuthType';
+
+// 主机密码认证方式 字典项
+export const passwordAuthTypeKey = 'hostPasswordAuthType';
+
+// 时区
+export const timezoneKey = 'timezone';
+
+// 键盘布局
+export const keyboardLayoutKey = 'keyboardLayout';
+
+// 剪切板标准
+export const clipboardNormalizeKey = 'clipboardNormalize';
+
+// 剪切板编码
+export const clipboardEncodingKey = 'clipboardEncoding';
+
+// 加载的字典值
+export const dictKeys = [
+  hostTypeKey, hostOsTypeKey, hostArchTypeKey, hostStatusKey,
+  sshAuthTypeKey, passwordAuthTypeKey,
+  keyboardLayoutKey, timezoneKey, clipboardNormalizeKey,
+  clipboardEncodingKey,
+];

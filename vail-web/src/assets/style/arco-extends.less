@@ -1,0 +1,185 @@
+// 内联菜单
+.arco-menu-inner::-webkit-scrollbar {
+  display: none;
+}
+
+// 吸顶列表
+.sticky-list {
+  .arco-list-header {
+    position: sticky;
+    background: var(--color-fill-2);
+    border-bottom: none;
+    top: 0;
+  }
+}
+
+// 表头
+.arco-table-td-content {
+  color: rgba(var(--gray-9), .95);
+  font-size: 13px;
+}
+
+// 表格行
+.arco-table-tr-checked .arco-table-td {
+  background-color: rgb(var(--gray-1)) !important;
+}
+
+.arco-table-tr-checked .arco-table-td:hover {
+  background-color: rgb(var(--gray-1)) !important;
+}
+
+.arco-table-tr-checked.arco-table-tr:hover .arco-table-td {
+  background-color: rgb(var(--gray-2)) !important;
+}
+
+.arco-table-tr-checked .arco-table-td.arco-table-col-fixed-left::before,
+.arco-table-tr-checked .arco-table-td.arco-table-col-fixed-right::before {
+  background-color: rgb(var(--gray-2)) !important;
+}
+
+// 表格单元格
+.arco-table-cell {
+  .circle {
+    display: inline-block;
+    margin-right: 4px;
+    margin-bottom: 2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: rgb(var(--blue-6));
+
+    &.normal {
+      background-color: rgb(var(--arcoblue-6));
+    }
+
+    &.pass {
+      background-color: rgb(var(--green-6));
+    }
+
+    &.warn {
+      background-color: rgb(var(--orange-6));
+    }
+
+    &.error {
+      background-color: rgb(var(--red-6));
+    }
+  }
+}
+
+// 可调节列宽
+.table-resize .arco-table-th:not(.arco-table-th-expand):not(.arco-table-operation)::after {
+  content: '';
+  position: absolute;
+  top: 25%;
+  right: 0;
+  width: 1px;
+  height: 50%;
+  background-color: var(--color-neutral-3);
+}
+
+// 垂直滚动
+.arco-scrollbar-track-direction-vertical {
+  width: 10px;
+
+  .arco-scrollbar-thumb-bar {
+    margin: 0;
+  }
+}
+
+// 水平滚动
+.arco-scrollbar-track-direction-horizontal {
+  width: 10px;
+
+  .arco-scrollbar-thumb-bar {
+    margin: 0;
+  }
+}
+
+// 表头
+.a-query-header-grid {
+  .arco-grid-item {
+    &:last-child {
+      display: flex !important;
+    }
+  }
+}
+
+// 标准卡片
+.general-card {
+  border-radius: 8px;
+  border: none;
+
+  & > .arco-card-header {
+    height: auto;
+    padding: 12px 16px;
+    border: none;
+  }
+
+  & > .arco-card-body {
+    padding: 0 16px 16px 16px;
+  }
+}
+
+// 块状树
+.block-tree {
+  @tree-node-hover-color: var(--color-fill-1);
+  @tree-node-selected-color: var(--color-fill-2);
+  @tree-node-selected-hover-color: var(--color-fill-2);
+
+  .arco-tree-node {
+    cursor: unset;
+    margin-bottom: 2px;
+
+    &-switcher {
+      margin-left: 8px;
+    }
+
+    &:hover {
+      background-color: @tree-node-hover-color;
+    }
+
+    &-selected {
+      background-color: @tree-node-selected-color;
+
+      &:hover {
+        background-color: @tree-node-selected-hover-color;
+      }
+    }
+
+    &-selected .arco-tree-node-title:hover {
+      background-color: unset;
+      //background-color: @tree-node-selected-hover-color;
+    }
+
+    &-title {
+      padding: 0 16px 0 0;
+      height: 32px;
+
+      &:hover {
+        background-color: unset;
+        //background-color: @tree-node-hover-color;
+      }
+
+      &-text {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+      }
+    }
+  }
+}
+
+// 抽屉
+.arco-drawer .arco-drawer-body {
+  padding: 0;
+}
+
+.arco-trigger-menu {
+  user-select: none;
+}
+
+.arco-dropdown-option-content {
+  user-select: none;
+}

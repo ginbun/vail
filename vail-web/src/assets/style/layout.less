@@ -1,0 +1,266 @@
+// -- container
+.layout-container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+// -- table-view
+.table-search-card {
+  width: 100%;
+  padding-top: 16px;
+  margin-bottom: 16px;
+
+  .arco-form-item {
+    margin-bottom: 0;
+  }
+}
+
+.table-left-bar-handle {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+}
+
+.table-right-bar-handle {
+  display: flex;
+  align-items: center;
+  justify-content: end
+}
+
+.table-card {
+  width: 100%;
+
+  .arco-card-header {
+    padding: 8px 16px 0 16px;
+
+    .arco-card-header-title {
+      display: flex;
+      justify-content: space-between;
+
+      .table-title {
+        display: flex;
+        align-items: center;
+        font-size: 1.17em;
+        font-weight: 600;
+        margin-right: 16px;
+      }
+    }
+  }
+}
+
+.table-wrapper {
+  &-8 {
+    margin-top: 8px;
+  }
+
+  &-16 {
+    margin-top: 16px;
+  }
+}
+
+.table-handle-wrapper {
+  .arco-btn-text {
+    padding: 0 8px;
+  }
+}
+
+.table-adjust-popover {
+  user-select: none;
+
+  &-header {
+    padding: 4px 4px 4px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .table-adjust-title {
+      margin-left: 4px;
+      color: var(--color-text-1);
+    }
+  }
+
+  .arco-checkbox-group {
+    min-width: 168px;
+  }
+
+  .arco-radio-group {
+    min-width: 148px;
+  }
+
+  .arco-checkbox-group, .arco-radio-group {
+    padding: 0 4px 4px 4px;
+
+    .arco-checkbox, .radio-checkbox {
+      border-radius: 4px;
+      padding: 0 6px;
+
+      &:hover {
+        background: var(--color-fill-2);
+      }
+    }
+  }
+}
+
+// -- drawer
+.drawer-form-small {
+  padding: 20px 20px 2px 20px;
+}
+
+.drawer-form-large {
+  padding: 20px 28px 2px 28px;
+}
+
+// -- modal
+.modal-form-small {
+  .arco-modal-header {
+    height: 40px;
+    padding: 0 14px;
+  }
+
+  .arco-modal-body {
+    padding: 20px 20px 2px 20px;
+  }
+
+  .arco-modal-footer {
+    padding: 8px 12px;
+  }
+}
+
+.modal-form-medium {
+  .arco-modal-header {
+    height: 40px;
+    padding: 0 16px;
+  }
+
+  .arco-modal-body {
+    padding: 20px 28px 4px 28px;
+  }
+
+  .arco-modal-footer {
+    padding: 10px 12px;
+  }
+}
+
+.modal-form-large {
+  .arco-modal-header {
+    height: 48px;
+  }
+
+  .arco-modal-body {
+    padding: 24px 36px 4px 36px;
+  }
+
+  .arco-modal-footer {
+    padding: 10px 14px;
+  }
+}
+
+// -- card-view
+.card-list-item {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  //border: 1px solid var(--color-neutral-3);
+  transition-property: all;
+
+  & > .arco-card-header {
+    padding: 16px 16px 8px 16px;
+    border: none;
+
+    .arco-card-header-title {
+      font-size: 15px;
+    }
+  }
+
+  & > .arco-card-body {
+    padding: 0 16px 12px 16px;
+    flex-grow: 1;
+  }
+}
+
+.card-list-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 2px 2px 12px rgba(0, 0, 0, .15);
+}
+
+.card-list-item-disabled {
+  pointer-events: none;
+  opacity: .5;
+  background: var(--color-bg-1);
+}
+
+.card-extra-icon {
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.card-filter-wrapper {
+  padding: 24px 24px 16px 24px;
+
+  .card-filter-form {
+    width: 320px;
+  }
+
+  .card-filter-container {
+    display: flex;
+    flex-direction: column;
+
+    .card-filter-footer {
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+}
+
+.card-header-button {
+  height: 26px;
+  padding: 0 8px;
+  user-select: none;
+}
+
+.card-header-icon-button {
+  height: 26px;
+  width: 26px;
+  user-select: none;
+}
+
+// -- card
+.simple-card {
+  background: var(--color-bg-2);
+  border-radius: 8px;
+}
+
+// -- doption
+.arco-dropdown-option-disabled .arco-dropdown-option-content .more-doption {
+  color: var(--color-text-4);
+}
+
+.more-doption {
+  min-width: 42px;
+  padding: 0 4px;
+  font-size: 13px;
+  display: inline-block;
+
+  svg {
+    margin-right: 2px;
+  }
+
+  &.normal {
+    color: rgb(var(--arcoblue-6));
+  }
+
+  &.pass {
+    color: rgb(var(--green-6));
+  }
+
+  &.warn {
+    color: rgb(var(--orange-6));
+  }
+
+  &.error {
+    color: rgb(var(--red-6));
+  }
+}
