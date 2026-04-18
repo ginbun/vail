@@ -4,40 +4,46 @@
     <!-- 左侧操作 -->
     <div class="sftp-table-header-left">
       <!-- 返回上级 -->
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="返回上级">
-        <a-button class="header-action-icon icon-button mr8"
+        <a-button
+class="header-action-icon icon-button mr8"
                   @click="backParentPath">
           <icon-left />
         </a-button>
       </a-tooltip>
       <!-- 当前路径 -->
-      <div class="sftp-path-container"
+      <div
+class="sftp-path-container"
            @click="setPathEditable(true)">
         <!-- 路径输入框 -->
         <div v-if="pathEditable">
-          <a-input v-model="pathInput"
-                   ref="pathInputRef"
+          <a-input
+ref="pathInputRef"
+                   v-model="pathInput"
                    size="mini"
                    placeholder="文件夹路径"
                    allow-clear
                    @press-enter="doChangePath" />
         </div>
         <!-- 路径视图 -->
-        <a-breadcrumb class="sftp-path-wrapper" v-else>
+        <a-breadcrumb v-else class="sftp-path-wrapper">
           <!-- 根目录 -->
-          <a-breadcrumb-item class="sftp-path-unit"
+          <a-breadcrumb-item
+class="sftp-path-unit"
                              @click.stop="loadFileList('/')">
             <icon-storage />
           </a-breadcrumb-item>
           <!-- 子目录 -->
-          <a-breadcrumb-item class="sftp-path-unit"
-                             v-for="path in analysisPaths"
+          <a-breadcrumb-item
+v-for="path in analysisPaths"
+                             class="sftp-path-unit"
                              @click.stop="loadFileList(path.path)">
             {{ path.name }}
           </a-breadcrumb-item>
@@ -45,16 +51,19 @@
       </div>
     </div>
     <!-- 已关闭-右侧操作 -->
-    <div v-if="session?.state.connected === false && closeMessage !== undefined"
+    <div
+v-if="session?.state.connected === false && closeMessage !== undefined"
          class="sftp-table-header-right">
       <!-- 错误信息 -->
-      <a-tag class="close-message"
+      <a-tag
+class="close-message"
              color="red"
              :title="closeMessage">
         已断开: {{ closeMessage }}
       </a-tag>
       <!-- 重连 -->
-      <a-tooltip v-if="session?.state.connected === false && session?.state.canReconnect"
+      <a-tooltip
+v-if="session?.state.connected === false && session?.state.canReconnect"
                  position="top"
                  :mini="true"
                  :overlay-inverse="true"
@@ -62,7 +71,8 @@
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="重连">
-        <a-button class="header-action-icon icon-button ml8"
+        <a-button
+class="header-action-icon icon-button ml8"
                   @click="reConnect">
           <icon-refresh />
         </a-button>
@@ -71,27 +81,31 @@
     <!-- 路径编辑模式-右侧操作 -->
     <a-space v-else-if="pathEditable" class="sftp-table-header-right">
       <!-- 进入 -->
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="进入">
-        <a-button class="header-action-icon icon-button"
+        <a-button
+class="header-action-icon icon-button"
                   @click="doChangePath">
           <icon-right />
         </a-button>
       </a-tooltip>
       <!-- 取消 -->
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="取消">
-        <a-button class="header-action-icon icon-button"
+        <a-button
+class="header-action-icon icon-button"
                   @click="setPathEditable(false)">
           <icon-stop />
         </a-button>
@@ -100,93 +114,107 @@
     <!-- 非路径编辑模式-右侧操作 -->
     <a-space v-else class="sftp-table-header-right">
       <!-- 刷新 -->
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="刷新">
-        <a-button class="header-action-icon icon-button"
+        <a-button
+class="header-action-icon icon-button"
                   @click="loadFileList()">
           <icon-refresh />
         </a-button>
       </a-tooltip>
       <!-- 显示隐藏文件 -->
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  :content="showHiddenFile ? '不显示隐藏文件' : '显示隐藏文件'">
-        <a-button class="header-action-icon icon-button"
+        <a-button
+class="header-action-icon icon-button"
                   @click="toggleShowHiddenFile">
           <icon-eye-invisible v-if="showHiddenFile" />
           <icon-eye v-else />
         </a-button>
       </a-tooltip>
       <!-- 创建文件 -->
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="创建文件">
-        <a-button class="header-action-icon icon-button"
+        <a-button
+class="header-action-icon icon-button"
                   @click="createFile(true)">
           <icon-drive-file />
         </a-button>
       </a-tooltip>
       <!-- 创建文件夹 -->
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="创建文件夹">
-        <a-button class="header-action-icon icon-button"
+        <a-button
+class="header-action-icon icon-button"
                   @click="createFile(false)">
           <icon-folder-add />
         </a-button>
       </a-tooltip>
       <!-- 删除选中文件 -->
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="删除选中文件">
-        <a-button class="header-action-icon icon-button"
+        <a-button
+class="header-action-icon icon-button"
                   @click="deleteSelectFiles">
           <icon-delete />
         </a-button>
       </a-tooltip>
       <!-- 上传 -->
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="上传">
-        <a-button class="header-action-icon icon-button"
+        <a-button
+class="header-action-icon icon-button"
                   @click="openUpload">
           <icon-upload />
         </a-button>
       </a-tooltip>
       <!-- 下载 -->
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="下载">
-        <a-button class="header-action-icon icon-button"
+        <a-button
+class="header-action-icon icon-button"
                   @click="downloadFile">
           <icon-download />
         </a-button>
@@ -197,7 +225,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sftpTableHeader'
+    name: 'SftpTableHeader'
   };
 </script>
 

@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            title-align="start"
            width="96%"
            :top="24"
@@ -11,12 +12,14 @@
            :hide-title="true"
            :footer="false"
            @close="handleClose">
-    <a-spin v-if="visible"
+    <a-spin
+v-if="visible"
             class="panel-container"
             :loading="loading">
       <div class="panel-wrapper">
         <!-- 日志面板 -->
-        <exec-log-panel ref="log"
+        <exec-log-panel
+ref="log"
                         :type="type"
                         :visible-back="false" />
       </div>
@@ -26,7 +29,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execLogPanelModal'
+    name: 'ExecLogPanelModal'
   };
 </script>
 

@@ -3,14 +3,16 @@
     <!-- 头像 -->
     <div class="avatar-container">
       <div class="avatar-wrapper">
-        <a-avatar :size="88"
+        <a-avatar
+:size="88"
                   :style="{ backgroundColor: 'rgb(var(--primary-6))' }">
           {{ nickname }}
         </a-avatar>
       </div>
     </div>
-    <a-form :model="formModel"
-            ref="formRef"
+    <a-form
+ref="formRef"
+            :model="formModel"
             label-align="right"
             size="medium"
             :style="{ width: '100%' }"
@@ -47,7 +49,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userBaseInfo'
+    name: 'UserBaseInfo'
   };
 </script>
 
@@ -58,7 +60,7 @@
   import formRules from '../../user/types/form.rules';
   import { useUserStore } from '@/store';
   import { getCurrentUser, updateCurrentUser } from '@/api/user/mine';
-  import { pick } from 'lodash';
+  import { pick } from 'lodash-es';
   import { Message } from '@arco-design/web-vue';
   import { updateUser } from '@/api/user/user';
 

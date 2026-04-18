@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             :title="title"
             :width="600"
             :esc-to-close="false"
@@ -8,57 +9,68 @@
             :footer="false"
             @close="handleClose">
     <div class="host-from-container">
-      <a-tabs v-model:active-key="activeTab"
+      <a-tabs
+v-model:active-key="activeTab"
               class=""
               type="rounded"
               direction="vertical"
               :justify="true"
               :lazy-load="true">
         <!-- 主机信息 -->
-        <a-tab-pane v-permission="['asset:host:update']"
-                    key="info"
+        <a-tab-pane
+key="info"
+                    v-permission="['asset:host:update']"
                     title="主机信息">
-          <host-form-info ref="infoRef"
+          <host-form-info
+ref="infoRef"
                           class="form-panel"
                           @change-type="(ts: string[]) => types = ts"
                           @updated="onUpdateHostInfo" />
         </a-tab-pane>
         <!-- 规格配置 -->
-        <a-tab-pane v-permission="['asset:host:update']"
-                    key="spec"
+        <a-tab-pane
+key="spec"
+                    v-permission="['asset:host:update']"
                     title="规格配置"
                     :disabled="!hostId">
-          <host-form-spec v-if="hostId"
+          <host-form-spec
+v-if="hostId"
                           class="form-panel"
-                          :hostId="hostId"
+                          :host-id="hostId"
                           @updated="onUpdateHostSpec" />
         </a-tab-pane>
         <!-- SSH 配置 -->
-        <a-tab-pane v-permission="['asset:host:update-config']"
-                    key="ssh"
+        <a-tab-pane
+key="ssh"
+                    v-permission="['asset:host:update-config']"
                     title="SSH"
                     :disabled="!hostId || !types.includes(HostType.SSH.value)">
-          <host-form-ssh v-if="hostId"
+          <host-form-ssh
+v-if="hostId"
                          class="form-panel"
-                         :hostId="hostId" />
+                         :host-id="hostId" />
         </a-tab-pane>
         <!-- RDP 配置 -->
-        <a-tab-pane v-permission="['asset:host:update-config']"
-                    key="rdp"
+        <a-tab-pane
+key="rdp"
+                    v-permission="['asset:host:update-config']"
                     title="RDP"
                     :disabled="!hostId || !types.includes(HostType.RDP.value)">
-          <host-form-rdp v-if="hostId"
+          <host-form-rdp
+v-if="hostId"
                          class="form-panel"
-                         :hostId="hostId" />
+                         :host-id="hostId" />
         </a-tab-pane>
         <!-- VNC 配置 -->
-        <a-tab-pane v-permission="['asset:host:update-config']"
-                    key="vnc"
+        <a-tab-pane
+key="vnc"
+                    v-permission="['asset:host:update-config']"
                     title="VNC"
                     :disabled="!hostId || !types.includes(HostType.VNC.value)">
-          <host-form-vnc v-if="hostId"
+          <host-form-vnc
+v-if="hostId"
                          class="form-panel"
-                         :hostId="hostId" />
+                         :host-id="hostId" />
         </a-tab-pane>
       </a-tabs>
     </div>
@@ -67,7 +79,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostFormDrawer'
+    name: 'HostFormDrawer'
   };
 </script>
 

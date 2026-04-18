@@ -4,7 +4,8 @@
       <div class="card-title">
         <p class="card-title-left">最近批量执行记录</p>
         <!-- 跳转 -->
-        <span class="pointer span-blue"
+        <span
+class="pointer span-blue"
               title="详情"
               @click="router.push({ name: 'execCommandLog', query: { action: 'self' } })">
           详情
@@ -12,7 +13,8 @@
       </div>
       <div class="card-body">
         <!-- 表格 -->
-        <a-table row-key="id"
+        <a-table
+row-key="id"
                  class="table-resize"
                  :loading="loading"
                  :columns="batchExecColumns"
@@ -35,7 +37,8 @@
           <template #handle="{ record }">
             <div class="table-handle-wrapper">
               <!-- 日志 -->
-              <a-button v-permission="['exec:exec-command:exec']"
+              <a-button
+v-permission="['exec:exec-command:exec']"
                         type="text"
                         size="mini"
                         @click="router.push({ name: 'execCommand', query: { id: record.id } })">
@@ -51,7 +54,7 @@
 
 <script lang="ts">
   export default {
-    name: 'batchExecTable'
+    name: 'BatchExecTable'
   };
 </script>
 

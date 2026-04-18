@@ -1,5 +1,6 @@
 <template>
-  <a-tree-select v-model:model-value="value"
+  <a-tree-select
+v-model:model-value="value"
                  :data="treeData"
                  :disabled="disabled"
                  :loading="loading"
@@ -10,7 +11,7 @@
 
 <script lang="ts">
   export default {
-    name: 'menuTreeSelector'
+    name: 'MenuTreeSelector'
   };
 </script>
 

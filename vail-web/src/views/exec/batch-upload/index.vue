@@ -1,5 +1,5 @@
 <template>
-  <div class="layout-container upload-container" v-if="render">
+  <div v-if="render" class="layout-container upload-container">
     <!-- 上传面板 -->
     <upload-panel ref="panel" />
   </div>
@@ -7,7 +7,7 @@
 
 <script lang="ts">
   export default {
-    name: 'batchUpload'
+    name: 'BatchUpload'
   };
 </script>
 

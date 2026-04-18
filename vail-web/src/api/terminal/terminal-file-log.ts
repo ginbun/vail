@@ -1,7 +1,7 @@
 import type { DataGrid, OrderDirection, Pagination } from '@/types/global';
 import type { TableData } from '@arco-design/web-vue';
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 /**
  * 终端文件操作日志 查询请求
@@ -64,7 +64,7 @@ export function deleteTerminalFileLog(idList: Array<number>) {
   return axios.delete('/terminal/terminal-file-log/delete', {
     params: { idList },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

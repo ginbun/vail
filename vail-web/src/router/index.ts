@@ -6,10 +6,6 @@ import { openWindow } from '@/utils';
 import { isStandaloneMode } from '@/utils/env';
 import createRouteGuard from './guard';
 import baseRouters from './routes/base';
-import NProgress from 'nprogress';
-import 'nprogress/nprogress.css';
-
-NProgress.configure({ showSpinner: false });
 
 // 创建路由
 const router = createRouter({

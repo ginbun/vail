@@ -2,7 +2,7 @@ import type { HostExtraUpdateRequest, HostSpecExtraModel } from './host-extra';
 import type { TableData } from '@arco-design/web-vue';
 import type { DataGrid, FavoriteItem, OrderDirection, Pagination } from '@/types/global';
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 // 主机类型
 export type HostType = 'SSH' | 'RDP' | 'VNC' | string | undefined;
@@ -187,7 +187,7 @@ export function batchDeleteHost(idList: Array<number>) {
   return axios.delete('/asset/host/batch-delete', {
     params: { idList },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

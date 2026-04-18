@@ -1,7 +1,8 @@
 <template>
   <!-- table -->
-  <a-table row-key="id"
-           ref="tableRef"
+  <a-table
+ref="tableRef"
+           row-key="id"
            class="table-resize"
            :loading="loading"
            :columns="hostColumns"
@@ -17,7 +18,8 @@
         {{ record.hostName }}
       </span>
       <br>
-      <span class="table-cell-sub-value usn text-copy"
+      <span
+class="table-cell-sub-value usn text-copy"
             style="font-size: 12px;"
             @click="copy(record.hostAddress)">
         {{ record.hostAddress }}
@@ -49,7 +51,8 @@
     <template #handle="{ record }">
       <div class="table-handle-wrapper">
         <!-- 命令 -->
-        <a-button v-permission="['exec:exec-job-log:query']"
+        <a-button
+v-permission="['exec:exec-job-log:query']"
                   type="text"
                   size="mini"
                   :disabled="record.status === ExecHostStatus.WAITING"
@@ -58,7 +61,8 @@
           命令
         </a-button>
         <!-- 参数 -->
-        <a-button v-permission="['exec:exec-job-log:query']"
+        <a-button
+v-permission="['exec:exec-job-log:query']"
                   type="text"
                   size="mini"
                   :disabled="record.status === ExecHostStatus.WAITING"
@@ -67,17 +71,20 @@
           参数
         </a-button>
         <!-- 下载 -->
-        <a-button type="text"
+        <a-button
+type="text"
                   size="mini"
                   @click="downloadLogFile(record.id)">
           下载
         </a-button>
         <!-- 中断 -->
-        <a-popconfirm content="确认要中断命令吗, 删除后会中断执行?"
+        <a-popconfirm
+content="确认要中断命令吗, 删除后会中断执行?"
                       position="left"
                       type="warning"
                       @ok="interruptedHost(record)">
-          <a-button v-permission="['exec:exec-job-log:interrupt']"
+          <a-button
+v-permission="['exec:exec-job-log:interrupt']"
                     type="text"
                     size="mini"
                     status="danger"
@@ -86,11 +93,13 @@
           </a-button>
         </a-popconfirm>
         <!-- 删除 -->
-        <a-popconfirm content="确认删除这条记录吗?"
+        <a-popconfirm
+content="确认删除这条记录吗?"
                       position="left"
                       type="warning"
                       @ok="deleteRow(record)">
-          <a-button v-permission="['exec:exec-job-log:delete']"
+          <a-button
+v-permission="['exec:exec-job-log:delete']"
                     type="text"
                     size="mini"
                     status="danger">
@@ -104,7 +113,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execJobHostLogTable'
+    name: 'ExecJobHostLogTable'
   };
 </script>
 

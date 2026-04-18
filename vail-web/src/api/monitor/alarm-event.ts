@@ -1,7 +1,7 @@
 import type { TableData } from '@arco-design/web-vue';
 import type { DataGrid, OrderDirection, Pagination, ClearRequest } from '@/types/global';
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 /**
  * 告警事件处理请求
@@ -119,7 +119,7 @@ export function batchDeleteAlarmEvent(idList: Array<number>) {
   return axios.delete<number>('/monitor/alarm-event/batch-delete', {
     params: { idList },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

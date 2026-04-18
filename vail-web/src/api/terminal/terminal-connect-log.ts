@@ -1,7 +1,7 @@
 import type { ClearRequest, DataGrid, OrderDirection, Pagination } from '@/types/global';
 import type { TableData } from '@arco-design/web-vue';
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 /**
  * 终端连接日志查询请求
@@ -86,7 +86,7 @@ export function deleteTerminalConnectLog(idList: Array<number>) {
   return axios.delete('/terminal/terminal-connect-log/delete', {
     params: { idList },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

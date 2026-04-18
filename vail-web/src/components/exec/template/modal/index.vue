@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            title-align="start"
            title="执行模板"
            width="86%"
@@ -12,29 +13,34 @@
            :footer="false"
            @close="handleClose">
     <!-- 搜索 -->
-    <a-card class="general-card table-search-card"
+    <a-card
+class="general-card table-search-card"
             style="margin-bottom: 0;">
-      <query-header :model="formModel"
+      <query-header
+:model="formModel"
                     label-align="left"
                     @submit="fetchTableData"
                     @reset="fetchTableData"
                     @keyup.enter="() => fetchTableData()">
         <!-- id -->
         <a-form-item field="id" label="id">
-          <a-input-number v-model="formModel.id"
+          <a-input-number
+v-model="formModel.id"
                           placeholder="请输入id"
                           allow-clear
                           hide-button />
         </a-form-item>
         <!-- 模板名称 -->
         <a-form-item field="name" label="模板名称">
-          <a-input v-model="formModel.name"
+          <a-input
+v-model="formModel.name"
                    placeholder="请输入模板名称"
                    allow-clear />
         </a-form-item>
         <!-- 模板命令 -->
         <a-form-item field="command" label="模板命令">
-          <a-input v-model="formModel.command"
+          <a-input
+v-model="formModel.command"
                    placeholder="请输入模板命令"
                    allow-clear />
         </a-form-item>
@@ -43,8 +49,9 @@
     <!-- 表格 -->
     <a-card class="general-card table-card">
       <!-- table -->
-      <a-table row-key="id"
-               ref="tableRef"
+      <a-table
+ref="tableRef"
+               row-key="id"
                class="table-resize"
                :loading="loading"
                :columns="columns"
@@ -61,7 +68,8 @@
         </template>
         <!-- 模板命令 -->
         <template #command="{ record }">
-          <span class="copy-left"
+          <span
+class="copy-left"
                 title="复制"
                 @click="copy(record.command, true)">
             <icon-copy />
@@ -72,7 +80,8 @@
         <template #handle="{ record }">
           <div class="table-handle-wrapper">
             <!-- 选择 -->
-            <a-button type="text"
+            <a-button
+type="text"
                       size="mini"
                       @click="selectedTemplate(record)">
               选择
@@ -86,7 +95,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execTemplateModal'
+    name: 'ExecTemplateModal'
   };
 </script>
 

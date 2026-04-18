@@ -3,14 +3,16 @@
   <div class="sftp-editor-header">
     <!-- 左侧操作 -->
     <div class="sftp-editor-header-left">
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="点击复制">
-        <a-tag class="sftp-path-container pointer"
+        <a-tag
+class="sftp-path-container pointer"
                color="arcoblue"
                @click="copy(path, true)">
           <span>{{ name }}</span>
@@ -20,27 +22,31 @@
     <!-- 右侧操作 -->
     <a-space class="sftp-editor-header-right">
       <!-- 保存 -->
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="保存">
-        <a-button class="header-action-icon icon-button"
+        <a-button
+class="header-action-icon icon-button"
                   @click="emits('save')">
           <icon-save />
         </a-button>
       </a-tooltip>
       <!-- 关闭 -->
-      <a-tooltip position="top"
+      <a-tooltip
+position="top"
                  :mini="true"
                  :overlay-inverse="true"
                  :auto-fix-position="false"
                  content-class="terminal-tooltip-content"
                  arrow-class="terminal-tooltip-content"
                  content="关闭">
-        <a-button class="header-action-icon icon-button"
+        <a-button
+class="header-action-icon icon-button"
                   @click="emits('close')">
           <icon-close />
         </a-button>
@@ -51,7 +57,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sftpEditorHeader'
+    name: 'SftpEditorHeader'
   };
 </script>
 

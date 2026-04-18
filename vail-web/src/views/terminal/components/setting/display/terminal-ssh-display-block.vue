@@ -8,14 +8,16 @@
     </div>
     <!-- 内容区域 -->
     <div class="terminal-setting-body block-body setting-body">
-      <a-form class="terminal-setting-form"
+      <a-form
+class="terminal-setting-form"
               :model="formModel"
               layout="vertical">
         <a-row :gutter="48">
           <!-- 字体样式 -->
           <a-col :span="12">
             <a-form-item field="fontFamily" label="字体样式">
-              <a-select v-model="formModel.fontFamily"
+              <a-select
+v-model="formModel.fontFamily"
                         placeholder="请选择字体样式"
                         :options="toOptions(fontFamilyKey)"
                         :allow-create="true"
@@ -34,7 +36,8 @@
           <!-- 字体大小 -->
           <a-col :span="12">
             <a-form-item field="fontSize" label="字体大小">
-              <a-select v-model="formModel.fontSize"
+              <a-select
+v-model="formModel.fontSize"
                         placeholder="请选择字体大小"
                         :options="toOptions(fontSizeKey)" />
             </a-form-item>
@@ -42,7 +45,8 @@
           <!-- 行高 -->
           <a-col :span="12">
             <a-form-item field="lineHeight" label="行高">
-              <a-input-number v-model="formModel.lineHeight"
+              <a-input-number
+v-model="formModel.lineHeight"
                               placeholder="请输入行高"
                               :precision="2"
                               :step="0.05"
@@ -53,7 +57,8 @@
           <!-- 字间距 -->
           <a-col :span="12">
             <a-form-item field="lineHeight" label="字间距 (px)">
-              <a-input-number v-model="formModel.letterSpacing"
+              <a-input-number
+v-model="formModel.letterSpacing"
                               placeholder="请输入字间距"
                               :precision="0"
                               :step="1"
@@ -64,7 +69,8 @@
           <!-- 普通文本字重 -->
           <a-col :span="12">
             <a-form-item field="fontWeight" label="普通文本字重">
-              <a-select v-model="formModel.fontWeight"
+              <a-select
+v-model="formModel.fontWeight"
                         placeholder="请选择字重"
                         :options="toOptions(fontWeightKey)" />
             </a-form-item>
@@ -72,7 +78,8 @@
           <!-- 加粗文本字重 -->
           <a-col :span="12">
             <a-form-item field="fontWeightBold" label="加粗文本字重">
-              <a-select v-model="formModel.fontWeightBold"
+              <a-select
+v-model="formModel.fontWeightBold"
                         placeholder="请选择字重"
                         :options="toOptions(fontWeightKey)" />
             </a-form-item>
@@ -80,8 +87,9 @@
           <!-- 光标样式 -->
           <a-col :span="12">
             <a-form-item field="cursorStyle" label="光标样式">
-              <a-radio-group type="button"
-                             v-model="formModel.cursorStyle"
+              <a-radio-group
+v-model="formModel.cursorStyle"
+                             type="button"
                              class="form-item-cursor-style usn"
                              :options="toRadioOptions(cursorStyleKey)" />
             </a-form-item>
@@ -97,10 +105,12 @@
       <!-- 预览区域 -->
       <div class="terminal-example">
         <span class="vertical-form-label">预览效果</span>
-        <div class="terminal-example-wrapper"
+        <div
+class="terminal-example-wrapper"
              :style="{ background: background }">
-          <terminal-example :schema="preference.sshTheme.schema"
-                            ref="previewTerminal" />
+          <terminal-example
+ref="previewTerminal"
+                            :schema="preference.sshTheme.schema" />
         </div>
       </div>
     </div>
@@ -109,7 +119,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalSshDisplayBlock'
+    name: 'TerminalSshDisplayBlock'
   };
 </script>
 

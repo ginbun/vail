@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             :title="title"
             :esc-to-close="false"
             :mask-closable="false"
@@ -7,7 +8,8 @@
             @ok="handleOk"
             @cancel="handleCancel">
     <div class="full">
-      <editor v-model="value"
+      <editor
+v-model="value"
               language="shell"
               :suggestions="true"
               :auto-focus="true"
@@ -19,7 +21,7 @@
 
 <script lang="ts">
   export default {
-    name: 'shellEditorDrawer'
+    name: 'ShellEditorDrawer'
   };
 </script>
 

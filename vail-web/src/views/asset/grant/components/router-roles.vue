@@ -2,22 +2,26 @@
   <a-scrollbar>
     <div class="role-container">
       <!-- 角色列表 -->
-      <tab-router v-if="rolesRouter.length"
-                  class="role-router"
+      <tab-router
+v-if="rolesRouter.length"
                   v-model="value"
+                  class="role-router"
                   :items="rolesRouter"
                   @change="(key: number, item: any) => emits('change', key, item)" />
       <!-- 加载中 -->
-      <a-skeleton v-else-if="loading"
+      <a-skeleton
+v-else-if="loading"
                   class="skeleton-wrapper"
                   :animation="true">
         <a-skeleton-line :rows="4" />
       </a-skeleton>
       <!-- 暂无数据 -->
       <a-empty v-else class="role-empty">
-        <div slot="description">
+        <template #description>
+<div >
           暂无角色数据
         </div>
+</template>
       </a-empty>
     </div>
   </a-scrollbar>
@@ -25,7 +29,7 @@
 
 <script lang="ts">
   export default {
-    name: 'routerRoles'
+    name: 'RouterRoles'
   };
 </script>
 

@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            top="80px"
            title-align="start"
            title="文件上传"
@@ -10,15 +11,18 @@
            :unmount-on-close="true"
            :on-before-ok="handleOk"
            @cancel="handleClose">
-    <a-form :model="formModel"
-            ref="formRef"
+    <a-form
+ref="formRef"
+            :model="formModel"
             label-align="right"
             :auto-label-width="true">
       <!-- 上传目录 -->
-      <a-form-item field="parentPath"
+      <a-form-item
+field="parentPath"
                    label="上传目录"
                    :rules="[{ required: true, message: '请输入文件上传目录' }]">
-        <a-textarea ref="pathRef"
+        <a-textarea
+ref="pathRef"
                     v-model="formModel.parentPath"
                     placeholder="上传目录"
                     :auto-size="{ minRows: 3, maxRows: 3 }" />
@@ -27,7 +31,8 @@
       <a-form-item class="mb0" hide-asterisk>
         <div class="button-container">
           <!-- 选择文件 -->
-          <a-upload v-model:file-list="fileList"
+          <a-upload
+v-model:file-list="fileList"
                     :auto-upload="false"
                     :show-file-list="false"
                     :multiple="true">
@@ -36,7 +41,8 @@
             </template>
           </a-upload>
           <!-- 选择文件夹 -->
-          <a-upload v-model:file-list="fileList"
+          <a-upload
+v-model:file-list="fileList"
                     :auto-upload="false"
                     :show-file-list="false"
                     :directory="true">
@@ -48,16 +54,18 @@
       </a-form-item>
     </a-form>
     <!-- 文件列表 -->
-    <a-upload v-if="fileList.length"
-              class="file-list-uploader"
+    <a-upload
+v-if="fileList.length"
               v-model:file-list="fileList"
+              class="file-list-uploader"
               :auto-upload="false"
               :show-file-list="true">
       <template #upload-button />
       <template #file-name="{ fileItem }">
         <div class="file-name-wrapper">
           <!-- 文件名称 -->
-          <a-tooltip position="left"
+          <a-tooltip
+position="left"
                      :mini="true"
                      :auto-fix-position="false"
                      content-class="terminal-tooltip-content"
@@ -80,7 +88,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sftpUploadModal'
+    name: 'SftpUploadModal'
   };
 </script>
 

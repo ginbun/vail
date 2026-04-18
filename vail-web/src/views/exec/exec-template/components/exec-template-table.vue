@@ -1,27 +1,31 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- id -->
       <a-form-item field="id" label="id">
-        <a-input-number v-model="formModel.id"
+        <a-input-number
+v-model="formModel.id"
                         placeholder="请输入id"
                         allow-clear
                         hide-button />
       </a-form-item>
       <!-- 模板名称 -->
       <a-form-item field="name" label="模板名称">
-        <a-input v-model="formModel.name"
+        <a-input
+v-model="formModel.name"
                  placeholder="请输入模板名称"
                  allow-clear />
       </a-form-item>
       <!-- 模板命令 -->
       <a-form-item field="command" label="模板命令">
-        <a-input v-model="formModel.command"
+        <a-input
+v-model="formModel.command"
                  placeholder="请输入模板命令"
                  allow-clear />
       </a-form-item>
@@ -41,7 +45,8 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 新增 -->
-          <a-button v-permission="['exec:exec-template:create']"
+          <a-button
+v-permission="['exec:exec-template:create']"
                     type="primary"
                     @click="emits('openAdd')">
             新增
@@ -50,11 +55,13 @@
             </template>
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm :content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
+          <a-popconfirm
+:content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
                         position="br"
                         type="warning"
                         @ok="deleteSelectedRows">
-            <a-button v-permission="['exec:exec-template:delete']"
+            <a-button
+v-permission="['exec:exec-template:delete']"
                       type="primary"
                       status="danger"
                       :disabled="selectedKeys.length === 0">
@@ -65,7 +72,8 @@
             </a-button>
           </a-popconfirm>
           <!-- 调整 -->
-          <table-adjust :columns="columns"
+          <table-adjust
+:columns="columns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -73,9 +81,10 @@
       </div>
     </template>
     <!-- table -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+ref="tableRef"
+             v-model:selected-keys="selectedKeys"
              row-key="id"
-             ref="tableRef"
              class="table-resize"
              :loading="loading"
              :columns="tableColumns"
@@ -88,7 +97,8 @@
              @page-size-change="(size: number) => fetchTableData(1, size)">
       <!-- 模板命令 -->
       <template #command="{ record }">
-        <span class="copy-left"
+        <span
+class="copy-left"
               title="复制"
               @click="copy(record.command, true)">
           <icon-copy />
@@ -98,25 +108,29 @@
       <!-- 操作 -->
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
-          <a-button v-permission="['exec:exec-command:exec']"
+          <a-button
+v-permission="['exec:exec-command:exec']"
                     type="text"
                     size="mini"
                     @click="emits('openExec', record.id)">
             执行
           </a-button>
           <!-- 修改 -->
-          <a-button v-permission="['exec:exec-template:update']"
+          <a-button
+v-permission="['exec:exec-template:update']"
                     type="text"
                     size="mini"
                     @click="emits('openUpdate', record.id)">
             修改
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['exec:exec-template:delete']"
+            <a-button
+v-permission="['exec:exec-template:delete']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -131,7 +145,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execTemplateTable'
+    name: 'ExecTemplateTable'
   };
 </script>
 

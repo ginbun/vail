@@ -1,11 +1,13 @@
 <template>
-  <a-dropdown class="terminal-context-menu"
+  <a-dropdown
+class="terminal-context-menu"
               :popup-max-height="false"
               trigger="contextMenu"
               position="bl"
-              alignPoint>
+              align-point>
     <!-- 命令 -->
-    <div class="snippet-item-wrapper"
+    <div
+class="snippet-item-wrapper"
          :class="[expand ? 'snippet-item-wrapper-expand' : '']"
          @click="clickItem">
       <div class="snippet-item">
@@ -18,7 +20,8 @@
           <div class="snippet-item-title-actions">
             <a-space>
               <!-- 粘贴 -->
-              <a-tag class="pointer usn"
+              <a-tag
+class="pointer usn"
                      size="small"
                      :checkable="true"
                      :checked="true"
@@ -29,7 +32,8 @@
                 粘贴
               </a-tag>
               <!-- 执行 -->
-              <a-tag class="pointer usn"
+              <a-tag
+class="pointer usn"
                      size="small"
                      :checkable="true"
                      :checked="true"
@@ -43,7 +47,8 @@
           </div>
         </div>
         <!-- 命令 -->
-        <span class="snippet-item-command"
+        <span
+class="snippet-item-command"
               @click="clickCommand">
           {{ item.command }}
         </span>
@@ -87,7 +92,8 @@
         <div>删除</div>
       </a-doption>
       <!-- 展开 -->
-      <a-doption v-if="!expand"
+      <a-doption
+v-if="!expand"
                  @click="() => expand = true">
         <div class="terminal-context-menu-icon">
           <icon-expand />
@@ -95,7 +101,8 @@
         <div>展开</div>
       </a-doption>
       <!-- 收起 -->
-      <a-doption v-else
+      <a-doption
+v-else
                  @click="() => expand = false">
         <div class="terminal-context-menu-icon">
           <icon-shrink />
@@ -108,7 +115,7 @@
 
 <script lang="ts">
   export default {
-    name: 'commandSnippetItem'
+    name: 'CommandSnippetItem'
   };
 </script>
 

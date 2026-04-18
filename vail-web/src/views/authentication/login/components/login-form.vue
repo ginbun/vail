@@ -9,27 +9,32 @@
     <!-- 错误信息 -->
     <div class="login-form-error-msg">{{ errorMessage }}</div>
     <!-- 登录表单 -->
-    <a-form ref="loginForm"
+    <a-form
+ref="loginForm"
             :model="userInfo"
             class="login-form"
             layout="vertical"
             @submit="handleSubmit">
-      <a-form-item field="username"
+      <a-form-item
+field="username"
                    :rules="[{ required: true, message: t('login.form.userName.errMsg') }]"
                    :validate-trigger="['change', 'blur']"
                    hide-label>
-        <a-input v-model="userInfo.username"
+        <a-input
+v-model="userInfo.username"
                  :placeholder="t('login.form.userName.placeholder')">
           <template #prefix>
             <icon-user />
           </template>
         </a-input>
       </a-form-item>
-      <a-form-item field="password"
+      <a-form-item
+field="password"
                    :rules="[{ required: true, message: t('login.form.password.errMsg') }]"
                    :validate-trigger="['change', 'blur']"
                    hide-label>
-        <a-input-password v-model="userInfo.password"
+        <a-input-password
+v-model="userInfo.password"
                           :placeholder="t('login.form.password.placeholder')"
                           allow-clear>
           <template #prefix>

@@ -151,7 +151,7 @@ async fn create_session(
         ));
     }
 
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let is_admin = has_host_read_permission(&state, user_id).await?;
     if !can_access_host(&state, user_id, payload.host_id, is_admin).await? {
         return Err(AppError::Auth("Host access denied".to_string()));
@@ -223,7 +223,7 @@ async fn list_sessions(
     headers: HeaderMap,
     Query(query): Query<ListSessionsQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let is_admin = has_host_read_permission(&state, user_id).await?;
 
     let rows = if is_admin {
@@ -278,7 +278,7 @@ async fn disconnect_session(
         ));
     }
 
-    let actor_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let actor_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let is_admin = has_host_read_permission(&state, actor_id).await?;
 
     let row = sqlx::query_as::<_, (i64, i64, i16)>(

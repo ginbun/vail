@@ -11,7 +11,8 @@
       <!-- 中间信息 -->
       <div class="transfer-item-center">
         <!-- 文件名称 -->
-        <span class="file-name text-copy"
+        <span
+class="file-name text-copy"
               :title="task.fileItem.name"
               @click="copy(task.fileItem.name)">
           {{ task.fileItem.name }}
@@ -20,22 +21,24 @@
         <span class="transfer-progress">
           <!-- 当前大小 -->
           <span v-if="task.state.status === TransferStatus.TRANSFERRING && task.fileItem.unknownSize !== true">{{ getFileSize(task.state.currentSize) }}</span>
-          <span class="mx4" v-if="task.state.status === TransferStatus.TRANSFERRING && task.fileItem.unknownSize !== true">/</span>
+          <span v-if="task.state.status === TransferStatus.TRANSFERRING && task.fileItem.unknownSize !== true" class="mx4">/</span>
           <!-- 总大小 -->
           <span>{{ getFileSize(task.state.totalSize) }}</span>
           <!-- 进度百分比 -->
-          <span class="ml8" v-if="task.state.status === TransferStatus.TRANSFERRING && task.fileItem.unknownSize !== true">
+          <span v-if="task.state.status === TransferStatus.TRANSFERRING && task.fileItem.unknownSize !== true" class="ml8">
             {{ task.state.progress }}%
           </span>
         </span>
         <!-- 目标目录 -->
-        <span class="target-path text-copy"
+        <span
+class="target-path text-copy"
               :title="task.fileItem.parentPath"
               @click="copy(task.fileItem.parentPath)">
           {{ task.fileItem.parentPath }}
         </span>
         <!-- 错误信息 -->
-        <a-tooltip v-if="task.state.errorMessage"
+        <a-tooltip
+v-if="task.state.errorMessage"
                    position="top"
                    :mini="true"
                    :auto-fix-position="false"
@@ -56,7 +59,8 @@
           <!-- 传输中-但不知道文件大小 -->
           <icon-loading v-else-if="task.state.status === TransferStatus.TRANSFERRING && task.fileItem.unknownSize === true" />
           <!-- 传输进度 -->
-          <a-progress v-else
+          <a-progress
+v-else
                       type="circle"
                       size="mini"
                       :status="getDictValue(transferStatusKey, task.state.status, 'status')"
@@ -76,7 +80,7 @@
 
 <script lang="ts">
   export default {
-    name: 'transferTask'
+    name: 'TransferTask'
   };
 </script>
 

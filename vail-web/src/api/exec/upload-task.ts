@@ -1,7 +1,7 @@
 import type { ClearRequest, DataGrid, OrderDirection, Pagination } from '@/types/global';
 import type { TableData } from '@arco-design/web-vue';
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 /**
  * 上传任务创建请求
@@ -150,7 +150,7 @@ export function getUploadTaskStatus(idList: Array<number>, queryFiles: boolean) 
     promptBizErrorMessage: false,
     promptRequestErrorMessage: false,
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     },
   });
 }
@@ -169,7 +169,7 @@ export function batchDeleteUploadTask(idList: Array<number>) {
   return axios.delete('/exec/upload-task/batch-delete', {
     params: { idList },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

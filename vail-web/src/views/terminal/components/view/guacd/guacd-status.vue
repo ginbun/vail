@@ -1,15 +1,18 @@
 <template>
   <div v-if="session.state.connectStatus !== TerminalStatus.CONNECTED && visible">
     <!-- 连接中 -->
-    <a-spin v-if="session.state.connectStatus === TerminalStatus.CONNECTING"
+    <a-spin
+v-if="session.state.connectStatus === TerminalStatus.CONNECTING"
             tip="正在连接会话..."
             dot />
     <!-- 会话关闭 -->
-    <a-card v-if="session.state.connectStatus === TerminalStatus.CLOSED"
+    <a-card
+v-if="session.state.connectStatus === TerminalStatus.CLOSED"
             class="status-wrapper"
             title="会话已关闭">
       <!-- 错误信息 -->
-      <a-descriptions size="large"
+      <a-descriptions
+size="large"
                       :label-style="{ display: 'flex', width: '74px' }"
                       :column="1">
         <!-- 连接地址 -->
@@ -39,7 +42,8 @@
       <!-- 按钮 -->
       <a-space class="status-button">
         <a-button @click="setVisible(false)">关闭</a-button>
-        <a-button v-if="session.state.closeCode !== TerminalCloseCode.FORCE && session.state.canReconnect"
+        <a-button
+v-if="session.state.closeCode !== TerminalCloseCode.FORCE && session.state.canReconnect"
                   type="primary"
                   @click="reOpenSession(session.sessionKey)">
           重连
@@ -51,7 +55,7 @@
 
 <script lang="ts">
   export default {
-    name: 'guacdStatus'
+    name: 'GuacdStatus'
   };
 </script>
 

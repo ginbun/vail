@@ -1,6 +1,6 @@
 import type { App } from 'vue';
 import { use } from 'echarts/core';
-import QueryHeader from '@dangojs/a-query-header';
+import QueryHeader from './query-header/index.vue';
 import { CanvasRenderer } from 'echarts/renderers';
 import { BarChart, LineChart, PieChart, RadarChart } from 'echarts/charts';
 import { DataZoomComponent, GraphicComponent, GridComponent, LegendComponent, TooltipComponent, } from 'echarts/components';
@@ -25,11 +25,11 @@ use([
 
 export default {
   install(Vue: App) {
-    Vue.component('chart', Chart);
-    Vue.component('breadcrumb', Breadcrumb);
-    Vue.component('query-header', QueryHeader);
-    Vue.component('card-list', CardList);
-    Vue.component('editor', Editor);
-    Vue.component('tab-router', TabRouter);
+    Vue.component('Chart', Chart);
+    Vue.component('Breadcrumb', Breadcrumb);
+    Vue.component('QueryHeader', QueryHeader);
+    Vue.component('CardList', CardList);
+    Vue.component('Editor', Editor);
+    Vue.component('TabRouter', TabRouter);
   },
 };

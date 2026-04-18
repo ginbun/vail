@@ -9,7 +9,8 @@
     </div>
     <!-- 加载中 -->
     <a-skeleton v-if="loading" :animation="true">
-      <a-skeleton-line :rows="4"
+      <a-skeleton-line
+:rows="4"
                        :line-height="40"
                        :line-spacing="8" />
     </a-skeleton>
@@ -19,7 +20,8 @@
     </div>
     <!-- 批量执行日志 -->
     <a-scrollbar v-else>
-      <div v-for="(record, index) in historyLogs"
+      <div
+v-for="(record, index) in historyLogs"
            :key="record.id"
            :style="{ marginBottom: index === historyLogs.length -1 ? 0 : '8px' }"
            class="exec-history"
@@ -39,7 +41,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execCommandPanelHistory'
+    name: 'ExecCommandPanelHistory'
   };
 </script>
 

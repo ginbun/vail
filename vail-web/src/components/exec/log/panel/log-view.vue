@@ -1,10 +1,11 @@
 <template>
   <div class="container">
-    <log-item class="log-item"
-              v-for="host in execLog.hosts"
+    <log-item
+v-for="host in execLog.hosts"
               v-show="current === host.id"
               :key="host.id"
               :ref="addRef as unknown as VNodeRef"
+              class="log-item"
               :type="type"
               :host="host"
               :exec-log="execLog"
@@ -14,7 +15,7 @@
 
 <script lang="ts">
   export default {
-    name: 'logView'
+    name: 'LogView'
   };
 </script>
 

@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            title-align="start"
            :top="136"
            :width="520"
@@ -13,12 +14,14 @@
       <!-- 主机搜索框 -->
       <div class="host-filter-wrapper">
         <span class="host-label">主机列表</span>
-        <a-input v-model="filterValue"
+        <a-input
+v-model="filterValue"
                  class="host-filter"
                  placeholder="别名/名称/编码/IP" />
       </div>
       <!-- 主机列表 -->
-      <a-list class="host-list"
+      <a-list
+class="host-list"
               max-height="50vh"
               :hoverable="true"
               :bordered="false"
@@ -33,7 +36,8 @@
                   <icon-desktop />
                 </span>
                 <!-- 名称 -->
-                <span class="host-item-name"
+                <span
+class="host-item-name"
                       :title="`${item.alias || item.name} (${item.address})`">
                   {{ `${item.alias || item.name} (${item.address})` }}
                 </span>
@@ -43,7 +47,8 @@
                 <!-- 打开会话 -->
                 <template v-for="type in TerminalSessionTypes">
                   <template v-if="item.types?.includes(type.protocol)">
-                    <a-tooltip position="top"
+                    <a-tooltip
+position="top"
                                :mini="true"
                                :auto-fix-position="false"
                                :content="`打开 ${type.type}`"
@@ -66,7 +71,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostListModal'
+    name: 'HostListModal'
   };
 </script>
 

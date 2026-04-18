@@ -3,10 +3,11 @@
     <!-- 主机分组 -->
     <div class="host-group-container">
       <a-scrollbar>
-        <a-tree v-model:selected-keys="selectedGroup"
+        <a-tree
+v-model:selected-keys="selectedGroup"
                 class="host-tree block-tree"
                 :data="groups"
-                :blockNode="true">
+                :block-node="true">
           <!-- 组内数量 -->
           <template #extra="node">
             <span class="node-host-count span-blue">{{ nodes[node.key]?.length || 0 }}</span>
@@ -15,8 +16,9 @@
       </a-scrollbar>
     </div>
     <!-- 主机列表 -->
-    <host-table class="host-list"
-                v-model:selected-keys="selectedKeysValue"
+    <host-table
+v-model:selected-keys="selectedKeysValue"
+                class="host-list"
                 :host-list="hostList"
                 empty-message="当前分组内无授权主机!" />
   </div>
@@ -24,7 +26,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostGroup'
+    name: 'HostGroup'
   };
 </script>
 

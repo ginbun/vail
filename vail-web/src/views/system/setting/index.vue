@@ -1,37 +1,43 @@
 <template>
   <div class="tabs-container">
-    <a-tabs v-model:active-key="activeKey"
+    <a-tabs
+v-model:active-key="activeKey"
             type="rounded"
             size="medium"
             position="left"
             :lazy-load="true">
       <!-- SFTP -->
-      <a-tab-pane v-permission="['infra:system-setting:update']"
-                  key="sftp"
+      <a-tab-pane
+key="sftp"
+                  v-permission="['infra:system-setting:update']"
                   title="SFTP">
         <sftp-setting />
       </a-tab-pane>
       <!-- 登录设置 -->
-      <a-tab-pane v-permission="['infra:system-setting:update']"
-                  key="login"
+      <a-tab-pane
+key="login"
+                  v-permission="['infra:system-setting:update']"
                   title="登录设置">
         <login-setting />
       </a-tab-pane>
       <!-- 加密设置 -->
-      <a-tab-pane v-permission="['infra:system-setting:update']"
-                  key="encrypt"
+      <a-tab-pane
+key="encrypt"
+                  v-permission="['infra:system-setting:update']"
                   title="加密设置">
         <encrypt-setting />
       </a-tab-pane>
       <!-- 日志设置 -->
-      <a-tab-pane v-permission="['infra:system-setting:update']"
-                  key="log"
+      <a-tab-pane
+key="log"
+                  v-permission="['infra:system-setting:update']"
                   title="日志设置">
         <log-setting />
       </a-tab-pane>
       <!-- 自动清理 -->
-      <a-tab-pane v-permission="['infra:system-setting:update']"
-                  key="auto-clear"
+      <a-tab-pane
+key="auto-clear"
+                  v-permission="['infra:system-setting:update']"
                   title="自动清理">
         <auto-clear-setting />
       </a-tab-pane>
@@ -45,7 +51,7 @@
 
 <script lang="ts">
   export default {
-    name: 'systemSetting',
+    name: 'SystemSetting',
   };
 </script>
 

@@ -13,7 +13,8 @@
           {{ getDictValue(execHostStatusKey, host.status) }}
         </a-tag>
         <!-- exitCode -->
-        <a-tag v-if="host.exitCode || host.exitCode === 0"
+        <a-tag
+v-if="host.exitCode || host.exitCode === 0"
                :color="host.exitCode === 0 ? 'arcoblue' : 'orangered'"
                title="exitCode">
           <template #icon>
@@ -23,7 +24,8 @@
           <span class="tag-value">{{ host.exitCode }}</span>
         </a-tag>
         <!-- 持续时间 -->
-        <a-tag v-if="host.startTime"
+        <a-tag
+v-if="host.startTime"
                color="arcoblue"
                title="持续时间">
           <template #icon>
@@ -36,61 +38,71 @@
       <!-- 右侧操作 -->
       <a-space class="log-header-right" :size="12">
         <!-- 搜索 -->
-        <a-button class="log-action icon-button"
+        <a-button
+class="log-action icon-button"
                   title="搜索"
                   @click="() => appender?.openSearch()">
           <icon-find-replace />
         </a-button>
         <!-- 增大字号 -->
-        <a-button class="log-action icon-button"
+        <a-button
+class="log-action icon-button"
                   title="增大字号"
                   @click="() => appender?.addFontSize(1)">
           <icon-zoom-in />
         </a-button>
         <!-- 减小字号 -->
-        <a-button class="log-action icon-button"
+        <a-button
+class="log-action icon-button"
                   title="减小字号"
                   @click="() => appender?.addFontSize(-1)">
           <icon-zoom-out />
         </a-button>
         <!-- 去顶部 -->
-        <a-button class="log-action icon-button"
+        <a-button
+class="log-action icon-button"
                   title="去顶部"
                   @click="() => appender?.toTop()">
           <icon-up />
         </a-button>
         <!-- 去底部 -->
-        <a-button class="log-action icon-button"
+        <a-button
+class="log-action icon-button"
                   title="去底部"
                   @click="() => appender?.toBottom()">
           <icon-down />
         </a-button>
         <!-- 全选 -->
-        <a-button class="log-action icon-button"
+        <a-button
+class="log-action icon-button"
                   title="全选"
                   @click="() => appender?.selectAll()">
           <icon-expand />
         </a-button>
         <!-- 复制 -->
-        <a-button class="log-action icon-button"
+        <a-button
+class="log-action icon-button"
                   title="复制"
                   @click="() => appender?.copy()">
           <icon-copy />
         </a-button>
         <!-- 复制全部 -->
-        <a-button class="log-action icon-button"
+        <a-button
+class="log-action icon-button"
                   title="复制全部"
                   @click="() => appender?.copyAll()">
           <icon-brush />
         </a-button>
         <!-- 清空 -->
-        <a-button class="log-action icon-button"
+        <a-button
+class="log-action icon-button"
                   title="清空"
                   @click="() => appender?.clear()">
           <icon-delete />
         </a-button>
         <!-- 下载 -->
-        <a-button class="log-action icon-button"
+        <a-button
+class="log-action icon-button"
                   title="下载"
                   @click="downloadLogFile(host.id)">
           <icon-download />
@@ -98,16 +110,18 @@
       </a-space>
     </div>
     <!-- 右键菜单 -->
-    <a-dropdown :popup-max-height="false"
+    <a-dropdown
+:popup-max-height="false"
                 trigger="contextMenu"
                 position="bl"
-                alignPoint>
+                align-point>
       <!-- 日志面板 -->
       <div class="log-wrapper">
         <!-- terminal -->
-        <div class="log-viewport" ref="viewport" />
+        <div ref="viewport" class="log-viewport" />
         <!-- 搜索框 -->
-        <xterm-search-modal ref="searchRef"
+        <xterm-search-modal
+ref="searchRef"
                             class="search-modal"
                             @find="searchWords"
                             @close="searchClose" />
@@ -115,7 +129,8 @@
       <!-- 右键菜单 -->
       <template #content>
         <!-- 去顶部 -->
-        <a-doption style="line-height: 30px; padding: 0 8px;"
+        <a-doption
+style="line-height: 30px; padding: 0 8px;"
                    @click="() => appender?.toTop()">
           <template #icon>
             <icon-up />
@@ -123,7 +138,8 @@
           <span>去顶部</span>
         </a-doption>
         <!-- 去底部 -->
-        <a-doption style="line-height: 30px; padding: 0 8px;"
+        <a-doption
+style="line-height: 30px; padding: 0 8px;"
                    @click="() => appender?.toBottom()">
           <template #icon>
             <icon-down />
@@ -131,7 +147,8 @@
           <span>去底部</span>
         </a-doption>
         <!-- 全选 -->
-        <a-doption style="line-height: 30px; padding: 0 8px;"
+        <a-doption
+style="line-height: 30px; padding: 0 8px;"
                    @click="() => appender?.selectAll()">
           <template #icon>
             <icon-expand />
@@ -139,7 +156,8 @@
           <span>全选</span>
         </a-doption>
         <!-- 复制 -->
-        <a-doption style="line-height: 30px; padding: 0 8px;"
+        <a-doption
+style="line-height: 30px; padding: 0 8px;"
                    @click="() => appender?.copy()">
           <template #icon>
             <icon-copy />
@@ -147,7 +165,8 @@
           <span>复制</span>
         </a-doption>
         <!-- 清空 -->
-        <a-doption style="line-height: 30px; padding: 0 8px;"
+        <a-doption
+style="line-height: 30px; padding: 0 8px;"
                    @click="() => appender?.clear()">
           <template #icon>
             <icon-delete />
@@ -161,7 +180,7 @@
 
 <script lang="ts">
   export default {
-    name: 'logItem'
+    name: 'LogItem'
   };
 </script>
 

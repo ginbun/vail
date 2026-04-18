@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             :width="388"
             :footer="false"
             @close="emits('closed')">
@@ -14,20 +15,23 @@
       <!-- 命令头部 -->
       <div class="snippet-header">
         <!-- 搜索框 -->
-        <a-input-search class="snippet-header-input"
-                        v-model="filterValue"
+        <a-input-search
+v-model="filterValue"
+                        class="snippet-header-input"
                         placeholder="请输入名称/命令"
                         allow-clear />
         <!-- 右侧按钮 -->
         <a-space size="small">
           <!-- 创建命令 -->
-          <a-button class="snippet-header-icon icon-button"
+          <a-button
+class="snippet-header-icon icon-button"
                     title="创建命令"
                     @click="openAdd">
             <icon-plus />
           </a-button>
           <!-- 刷新 -->
-          <a-button class="snippet-header-icon icon-button"
+          <a-button
+class="snippet-header-icon icon-button"
                     title="刷新"
                     @click="fetchData">
             <icon-refresh />
@@ -35,15 +39,18 @@
         </a-space>
       </div>
       <!-- 加载中 -->
-      <a-skeleton v-if="loading"
+      <a-skeleton
+v-if="loading"
                   class="loading-skeleton"
                   :animation="true">
-        <a-skeleton-line :rows="4"
+        <a-skeleton-line
+:rows="4"
                          :line-height="66"
                          :line-spacing="12" />
       </a-skeleton>
       <!-- 无数据 -->
-      <a-empty v-else-if="snippetGroups.length === 0 && ungroupedItems.length === 0"
+      <a-empty
+v-else-if="snippetGroups.length === 0 && ungroupedItems.length === 0"
                style="padding: 28px 0">
         <span>暂无数据</span><br>
         <span>点击上方 '<icon-plus />' 添加一条数据吧~</span>
@@ -53,7 +60,8 @@
         <!-- 命令片段组 -->
         <a-collapse :bordered="false">
           <template v-for="group in snippetGroups">
-            <a-collapse-item v-if="calcGroupTotal(group) > 0"
+            <a-collapse-item
+v-if="calcGroupTotal(group) > 0"
                              :key="group.id"
                              :header="group.name">
               <!-- 总量 -->
@@ -62,7 +70,8 @@
               </template>
               <!-- 代码片段 -->
               <template v-for="item in group.items">
-                <command-snippet-item v-if="item.visible"
+                <command-snippet-item
+v-if="item.visible"
                                       :key="item.id"
                                       :item="item"
                                       @copy="(s: string) => copy(s, true)"
@@ -77,7 +86,8 @@
         <!-- 未分组命令片段 -->
         <div class="ungrouped-snippet-container">
           <template v-for="item in ungroupedItems">
-            <command-snippet-item v-if="item.visible"
+            <command-snippet-item
+v-if="item.visible"
                                   :key="item.id"
                                   :item="item"
                                   @copy="(s: string) => copy(s, true)"
@@ -90,7 +100,8 @@
       </div>
     </div>
     <!-- 命令编辑抽屉 -->
-    <command-snippet-form-drawer ref="formDrawer"
+    <command-snippet-form-drawer
+ref="formDrawer"
                                  @added="onAdded"
                                  @updated="onUpdated" />
   </a-drawer>
@@ -98,7 +109,7 @@
 
 <script lang="ts">
   export default {
-    name: 'commandSnippetDrawer'
+    name: 'CommandSnippetDrawer'
   };
 </script>
 

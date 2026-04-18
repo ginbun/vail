@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            title-align="start"
            :top="120"
            :width="298"
@@ -21,7 +22,8 @@
         {{ request?.expression }}
       </div>
       <!-- 执行时间 -->
-      <div v-for="time in next"
+      <div
+v-for="time in next"
            :key="time"
            class="next-time">
         {{ time }}
@@ -32,7 +34,7 @@
 
 <script lang="ts">
   export default {
-    name: 'cronNextModal'
+    name: 'CronNextModal'
   };
 </script>
 

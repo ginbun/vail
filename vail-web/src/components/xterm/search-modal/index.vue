@@ -1,48 +1,55 @@
 <template>
-  <div class="search-modal" v-show="visible">
+  <div v-show="visible" class="search-modal">
     <!-- 输入框-->
-    <input class="search-input"
-           ref="inputRef"
+    <input
+ref="inputRef"
            v-model="inputValue"
+           class="search-input"
            placeholder="搜索关键字"
            @keyup.enter="find(true)"
            @keyup.esc="close" />
     <div class="options-wrapper">
       <!-- 上一个-->
-      <div class="icon-wrapper"
+      <div
+class="icon-wrapper"
            title="上一个"
            @click="find(false)">
         <icon-up />
       </div>
       <!-- 下一个 -->
-      <div class="icon-wrapper"
+      <div
+class="icon-wrapper"
            title="下一个"
            @click="find(true)">
         <icon-down />
       </div>
       <!-- 区分大小写 -->
-      <div class="icon-wrapper"
+      <div
+class="icon-wrapper"
            :class="{ selected: searchOptions.caseSensitive }"
            title="区分大小写"
            @click="toggleOption('caseSensitive')">
         <icon-font-colors />
       </div>
       <!-- 单词匹配 -->
-      <div class="icon-wrapper word-option"
+      <div
+class="icon-wrapper word-option"
            :class="{ selected: searchOptions.wholeWord }"
            title="单词匹配"
            @click="toggleOption('wholeWord')">
         <icon-formula />
       </div>
       <!-- 正则匹配 -->
-      <div class="icon-wrapper"
+      <div
+class="icon-wrapper"
            :class="{ selected: searchOptions.regex }"
            title="正则匹配"
            @click="toggleOption('regex')">
         <icon-italic />
       </div>
       <!-- 关闭 -->
-      <div class="icon-wrapper"
+      <div
+class="icon-wrapper"
            title="关闭"
            @click="close">
         <icon-close />
@@ -53,7 +60,7 @@
 
 <script lang="ts">
   export default {
-    name: 'xtermSearchModal'
+    name: 'XtermSearchModal'
   };
 </script>
 

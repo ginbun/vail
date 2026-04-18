@@ -15,7 +15,8 @@
         </block-setting-item>
         <!-- 驱动挂载模式 -->
         <block-setting-item label="驱动挂载模式">
-          <a-select v-model="formModel.driveMountMode"
+          <a-select
+v-model="formModel.driveMountMode"
                     style="width: 168px;"
                     size="small"
                     :options="toOptions(driveMountModeKey)" />
@@ -30,7 +31,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalRdpSessionBlock'
+    name: 'TerminalRdpSessionBlock'
   };
 </script>
 

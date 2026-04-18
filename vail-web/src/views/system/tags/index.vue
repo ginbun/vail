@@ -1,11 +1,13 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
-    <tag-table ref="table"
+    <tag-table
+ref="table"
                @open-add="(e: any) => modal.openAdd(e)"
                @open-update="(e: any) => modal.openUpdate(e)" />
     <!-- 添加修改抽屉 -->
-    <tag-form-modal ref="modal"
+    <tag-form-modal
+ref="modal"
                     @added="reload"
                     @updated="reload" />
   </div>
@@ -13,7 +15,7 @@
 
 <script lang="ts">
   export default {
-    name: 'systemTags'
+    name: 'SystemTags'
   };
 </script>
 

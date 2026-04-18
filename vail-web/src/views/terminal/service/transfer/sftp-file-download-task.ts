@@ -1,7 +1,7 @@
 import type { FileTransferItem, IFileDownloadTask, ITerminalSession } from '@/views/terminal/interfaces';
 import { TransferStatus, TerminalMessages } from '../../types/const';
 import { getFileName, openDownloadFile } from '@/utils/file';
-import { saveAs } from 'file-saver';
+import { downloadFile } from '@/utils';
 import { getDownloadTransferUrl } from '@/api/terminal/terminal-sftp';
 import SftpBaseTransferTask from './sftp-base-transfer-task';
 
@@ -41,7 +41,7 @@ export default class SftpFileDownloadTask extends SftpBaseTransferTask implement
       // 空文件直接触发下载
       try {
         // 触发下载
-        saveAs(new Blob([], {
+        downloadFile(new Blob([], {
           type: 'application/octet-stream'
         }), getFileName(this.fileItem.name));
         this.state.status = TransferStatus.SUCCESS;

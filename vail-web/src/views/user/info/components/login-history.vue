@@ -9,14 +9,16 @@
       </template>
     </span>
     <!-- 加载中 -->
-    <a-skeleton v-if="loading"
+    <a-skeleton
+v-if="loading"
                 style="width: 70%;"
                 :animation="true">
       <a-skeleton-line :rows="4" />
     </a-skeleton>
     <!-- 登录历史时间线 -->
     <a-timeline v-else-if="list.length">
-      <a-timeline-item v-for="item in list"
+      <a-timeline-item
+v-for="item in list"
                        :key="item.id">
         <!-- 图标 -->
         <template #dot>
@@ -33,7 +35,7 @@
             <span>{{ item.location }}</span>
           </a-space>
           <!-- 错误信息行 -->
-          <span class="error-line" v-if="item.result === ResultStatus.FAILED">
+          <span v-if="item.result === ResultStatus.FAILED" class="error-line">
             登录失败: {{ item.errorMessage }}
           </span>
           <!-- 时间行 -->
@@ -54,7 +56,7 @@
 
 <script lang="ts">
   export default {
-    name: 'loginHistory'
+    name: 'LoginHistory'
   };
 </script>
 

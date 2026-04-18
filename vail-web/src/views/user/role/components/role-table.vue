@@ -1,33 +1,38 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- 角色名称 -->
       <a-form-item field="name" label="角色名称">
-        <a-input v-model="formModel.name"
+        <a-input
+v-model="formModel.name"
                  placeholder="请输入角色名称"
                  allow-clear />
       </a-form-item>
       <!-- 角色编码 -->
       <a-form-item field="code" label="角色编码">
-        <a-input v-model="formModel.code"
+        <a-input
+v-model="formModel.code"
                  placeholder="请输入角色编码"
                  allow-clear />
       </a-form-item>
       <!-- 角色状态 -->
       <a-form-item field="status" label="角色状态">
-        <a-select v-model="formModel.status"
+        <a-select
+v-model="formModel.status"
                   placeholder="请选择角色状态"
                   :options="toOptions(roleStatusKey)"
                   allow-clear />
       </a-form-item>
       <!-- 角色描述 -->
       <a-form-item field="description" label="角色描述">
-        <a-input v-model="formModel.description"
+        <a-input
+v-model="formModel.description"
                  placeholder="请输入角色描述"
                  allow-clear />
       </a-form-item>
@@ -47,8 +52,9 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 新增 -->
-          <a-button type="primary"
-                    v-permission="['infra:system-role:create']"
+          <a-button
+v-permission="['infra:system-role:create']"
+                    type="primary"
                     @click="emits('openAdd')">
             新增
             <template #icon>
@@ -56,7 +62,8 @@
             </template>
           </a-button>
           <!-- 调整 -->
-          <table-adjust :columns="columns"
+          <table-adjust
+:columns="columns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -64,8 +71,9 @@
       </div>
     </template>
     <!-- table -->
-    <a-table row-key="id"
-             ref="tableRef"
+    <a-table
+ref="tableRef"
+             row-key="id"
              class="table-resize"
              :loading="loading"
              :columns="tableColumns"
@@ -82,9 +90,10 @@
       <!-- 状态 -->
       <template #status="{ record }">
         <!-- 有修改权限 -->
-        <a-switch v-if="hasPermission('infra:system-role:update-status')"
-                  type="round"
+        <a-switch
+v-if="hasPermission('infra:system-role:update-status')"
                   v-model="record.status"
+                  type="round"
                   :disabled="record.code === AdminRoleCode"
                   :checked-text="getDictValue(roleStatusKey, RoleStatus.ENABLED)"
                   :unchecked-text="getDictValue(roleStatusKey, RoleStatus.DISABLED)"
@@ -93,7 +102,8 @@
                   :before-change="(s) => updateStatus(record.id, s as number)" />
         <!-- 无修改权限 -->
         <span v-else>
-          <span class="circle" :style="{
+          <span
+class="circle" :style="{
             background: getDictValue(roleStatusKey, record.status, 'color')
           }" />
           {{ getDictValue(roleStatusKey, record.status) }}
@@ -103,7 +113,8 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 分配菜单 -->
-          <a-button v-permission="['infra:system-role:grant-menu']"
+          <a-button
+v-permission="['infra:system-role:grant-menu']"
                     :disabled="record.code === AdminRoleCode"
                     type="text"
                     size="mini"
@@ -111,18 +122,21 @@
             分配菜单
           </a-button>
           <!-- 修改 -->
-          <a-button v-permission="['infra:system-role:update']"
+          <a-button
+v-permission="['infra:system-role:update']"
                     type="text"
                     size="mini"
                     @click="emits('openUpdate', record)">
             修改
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['infra:system-role:delete']"
+            <a-button
+v-permission="['infra:system-role:delete']"
                       :disabled="record.code === AdminRoleCode"
                       type="text"
                       size="mini"
@@ -138,7 +152,7 @@
 
 <script lang="ts">
   export default {
-    name: 'roleTable'
+    name: 'RoleTable'
   };
 </script>
 

@@ -1,11 +1,13 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
-    <metrics-table ref="table"
+    <metrics-table
+ref="table"
                    @open-add="() => modal.openAdd()"
                    @open-update="(e: any) => modal.openUpdate(e)" />
     <!-- 添加修改模态框 -->
-    <metrics-form-modal ref="modal"
+    <metrics-form-modal
+ref="modal"
                         @added="reload"
                         @updated="reload" />
   </div>
@@ -13,7 +15,7 @@
 
 <script lang="ts">
   export default {
-    name: 'metrics'
+    name: 'Metrics'
   };
 </script>
 

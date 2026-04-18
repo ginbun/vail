@@ -7,7 +7,8 @@
       <a-button-group size="mini" :disabled="startStatus">
         <a-button @click="clear">清空</a-button>
         <!-- 选择文件 -->
-        <a-upload v-model:file-list="files"
+        <a-upload
+v-model:file-list="files"
                   :auto-upload="false"
                   :show-file-list="false"
                   :multiple="true">
@@ -16,7 +17,8 @@
           </template>
         </a-upload>
         <!-- 选择文件夹 -->
-        <a-upload v-model:file-list="files"
+        <a-upload
+v-model:file-list="files"
                   :auto-upload="false"
                   :show-file-list="false"
                   :directory="true">
@@ -29,9 +31,10 @@
     <!-- 文件列表 -->
     <div v-if="files.length" class="files-container">
       <a-scrollbar style="overflow-y: auto; height: 100%;">
-        <a-upload class="files-wrapper"
+        <a-upload
+v-model:file-list="files"
+                  class="files-wrapper"
                   :class="[ startStatus ? 'uploading-files-wrapper' : 'waiting-files-wrapper' ]"
-                  v-model:file-list="files"
                   :auto-upload="false"
                   :show-cancel-button="false"
                   :show-retry-button="false"
@@ -41,7 +44,8 @@
           <template #file-name="{ fileItem }">
             <div class="file-name-wrapper">
               <!-- 文件名称 -->
-              <span class="file-name text-ellipsis"
+              <span
+class="file-name text-ellipsis"
                     :title="fileItem.file.webkitRelativePath || fileItem.file.name">
                 {{ fileItem.file.webkitRelativePath || fileItem.file.name }}
               </span>
@@ -55,7 +59,8 @@
       </a-scrollbar>
     </div>
     <!-- 未选择文件 -->
-    <a-result v-else
+    <a-result
+v-else
               class="usn"
               status="404"
               subtitle="请先点击上方按钮选择文件" />
@@ -64,7 +69,7 @@
 
 <script lang="ts">
   export default {
-    name: 'batchUploadFiles'
+    name: 'BatchUploadFiles'
   };
 </script>
 

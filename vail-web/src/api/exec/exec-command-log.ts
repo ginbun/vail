@@ -8,7 +8,7 @@ import type {
   ExecLogStatusResponse
 } from './exec-log';
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 /**
  * 分页查询批量执行日志
@@ -47,7 +47,7 @@ export function getExecCommandLogStatus(idList: Array<number>) {
     promptBizErrorMessage: false,
     promptRequestErrorMessage: false,
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }
@@ -73,7 +73,7 @@ export function batchDeleteExecCommandLog(idList: Array<number>) {
   return axios.delete('/exec/exec-command-log/batch-delete', {
     params: { idList },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

@@ -1,5 +1,6 @@
 <template>
-  <card-list v-model:searchValue="formModel.searchValue"
+  <card-list
+v-model:search-value="formModel.searchValue"
              search-input-placeholder="输入 id / 名称 / 编码 / 地址"
              :create-card-position="false"
              :loading="loading"
@@ -36,10 +37,11 @@
     </template>
     <!-- 过滤条件 -->
     <template #filterContent>
-      <a-form :model="formModel"
+      <a-form
+ref="formRef"
+              :model="formModel"
               class="card-filter-form"
               size="small"
-              ref="formRef"
               label-align="right"
               :auto-label-width="true"
               @keyup.enter="() => fetchCardData()">
@@ -53,34 +55,39 @@
         </a-form-item>
         <!-- 在线状态 -->
         <a-form-item field="agentOnlineStatus" label="在线状态">
-          <a-select v-model="formModel.agentOnlineStatus"
+          <a-select
+v-model="formModel.agentOnlineStatus"
                     :options="toOptions(OnlineStatusKey)"
                     placeholder="请选择在线状态"
                     allow-clear />
         </a-form-item>
         <!-- 探针状态 -->
         <a-form-item field="agentInstallStatus" label="探针状态">
-          <a-select v-model="formModel.agentInstallStatus"
+          <a-select
+v-model="formModel.agentInstallStatus"
                     :options="toOptions(InstallStatusKey)"
                     placeholder="请选择探针状态"
                     allow-clear />
         </a-form-item>
         <!-- 告警开关 -->
         <a-form-item field="alarmSwitch" label="告警开关">
-          <a-select v-model="formModel.alarmSwitch"
+          <a-select
+v-model="formModel.alarmSwitch"
                     :options="toOptions(AlarmSwitchKey)"
                     placeholder="请选择告警开关"
                     allow-clear />
         </a-form-item>
         <!-- agentKey -->
         <a-form-item field="agentKey" label="agentKey">
-          <a-input v-model="formModel.agentKey"
+          <a-input
+v-model="formModel.agentKey"
                    placeholder="请输入 agentKey"
                    allow-clear />
         </a-form-item>
         <!-- 负责人 -->
         <a-form-item field="ownerUserId" label="负责人">
-          <user-selector v-model="formModel.ownerUserId"
+          <user-selector
+v-model="formModel.ownerUserId"
                          placeholder="请选择负责人"
                          allow-clear />
         </a-form-item>
@@ -92,7 +99,8 @@
     </template>
     <!-- 主机地址 -->
     <template #address="{ record }">
-      <span class="span-blue text-copy"
+      <span
+class="span-blue text-copy"
             title="复制"
             @click="copy(record.address)">
         {{ record.address }}
@@ -115,7 +123,8 @@
     <template #cpuUsage="{ record }">
       <monitor-cell :data-cell="true" :record="record">
         <a-tooltip :content="record.config?.cpuName +': ' + record.metricsData?.cpuUsagePercent?.toFixed(2) + '%'" mini>
-          <a-progress size="large"
+          <a-progress
+size="large"
                       :animation="true"
                       :show-text="false"
                       :color="getPercentProgressColor(record.metricsData?.cpuUsagePercent / 100)"
@@ -128,7 +137,8 @@
     <template #memoryUsage="{ record }">
       <monitor-cell :data-cell="true" :record="record">
         <a-tooltip :content="getFileSize(record.metricsData?.memoryUsageBytes)" mini>
-          <a-progress size="large"
+          <a-progress
+size="large"
                       :animation="true"
                       :show-text="false"
                       :color="getPercentProgressColor(record.metricsData?.memoryUsagePercent / 100)"
@@ -141,7 +151,8 @@
     <template #diskUsage="{ record }">
       <monitor-cell :data-cell="true" :record="record">
         <a-tooltip :content="record.config?.diskName +': ' + getFileSize(record.metricsData?.diskUsageBytes)" mini>
-          <a-progress size="large"
+          <a-progress
+size="large"
                       :animation="true"
                       :show-text="false"
                       :color="getPercentProgressColor(record.metricsData?.diskUsagePercent / 100)"
@@ -152,7 +163,8 @@
     </template>
     <!-- 网络 -->
     <template #network="{ record }">
-      <monitor-cell data-class="network"
+      <monitor-cell
+data-class="network"
                     :data-cell="true"
                     :record="record">
         <div class="network-inline">
@@ -184,7 +196,8 @@
     <!-- 告警策略 -->
     <template #alarmPolicy="{ record }">
       <monitor-cell :data-cell="false" :record="record">
-        <b class="pointer"
+        <b
+class="pointer"
            :style="{ color: record.alarmSwitch ? 'rgb(var(--green-6))' : 'rgb(var(--gray-6))' }"
            @click="emits('toPolicy', record)">
           {{ record.policyName || '-' }}
@@ -199,10 +212,12 @@
     </template>
     <!-- 标签 -->
     <template #tags="{ record }">
-      <a-space v-if="record.tags?.length"
+      <a-space
+v-if="record.tags?.length"
                style="margin-bottom: -8px;"
                :wrap="true">
-        <a-tag v-for="tag in record.tags"
+        <a-tag
+v-for="tag in record.tags"
                :key="tag.id"
                :color="dataColor(tag.name, tagColor)">
           {{ tag.name }}
@@ -212,7 +227,8 @@
     </template>
     <!-- agentKey -->
     <template #agentKey="{ record }">
-        <span class="text-copy text-ellipsis"
+        <span
+class="text-copy text-ellipsis"
               :title="record.agentKey"
               @click="copy(record.agentKey, true)">
           {{ record.agentKey }}
@@ -221,28 +237,33 @@
     <!-- 探针版本 -->
     <template #agentVersion="{ record }">
       <!-- 安装状态 -->
-      <div v-if="record.installLog?.status === AgentLogStatus.WAIT
+      <div
+v-if="record.installLog?.status === AgentLogStatus.WAIT
                     || record.installLog?.status === AgentLogStatus.RUNNING
                     || record.installLog?.status === AgentLogStatus.FAILED"
            class="flex-center">
         <!-- 当前状态 -->
-        <a-tag :color="getDictValue(AgentLogStatusKey, record.installLog.status, 'color')"
+        <a-tag
+:color="getDictValue(AgentLogStatusKey, record.installLog.status, 'color')"
                :loading="getDictValue(AgentLogStatusKey, record.installLog.status, 'loading')">
           {{ getDictValue(AgentLogStatusKey, record.installLog.status, 'installLabel') }}
         </a-tag>
         <!-- 提示信息 -->
-        <a-tooltip v-if="record.installLog.message"
+        <a-tooltip
+v-if="record.installLog.message"
                    :content="record.installLog.message"
                    mini>
           <icon-question-circle class="fs16 span-red ml4" />
         </a-tooltip>
       </div>
       <!-- 已安装显示版本号 -->
-      <b v-else-if="record.agentInstallStatus === AgentInstallStatus.INSTALLED"
+      <b
+v-else-if="record.agentInstallStatus === AgentInstallStatus.INSTALLED"
          class="fs12"
          :class="record.latestVersion && record.latestVersion !== record.agentVersion ? 'span-red' : ''">
         {{ record.agentVersion ? 'v' + record.agentVersion : '-' }}
-        <a-tooltip v-if="record.latestVersion && record.latestVersion !== record.agentVersion"
+        <a-tooltip
+v-if="record.latestVersion && record.latestVersion !== record.agentVersion"
                    :content="'存在新版本 v' + record.latestVersion + ', 请及时升级'"
                    mini>
           <icon-arrow-rise />
@@ -256,7 +277,8 @@
     <!-- 拓展操作 -->
     <template #extra="{ record }">
       <a-space>
-        <a-button v-permission="['monitor:monitor-host:query']"
+        <a-button
+v-permission="['monitor:monitor-host:query']"
                   type="text"
                   size="mini"
                   :disabled="record.agentInstallStatus !== AgentInstallStatus.INSTALLED"
@@ -268,7 +290,8 @@
           <icon-more class="card-extra-icon" />
           <template #content>
             <!-- 修改 -->
-            <a-doption v-if="record.agentInstallStatus === AgentInstallStatus.INSTALLED"
+            <a-doption
+v-if="record.agentInstallStatus === AgentInstallStatus.INSTALLED"
                        v-permission="['monitor:monitor-host:update']"
                        @click="emits('openUpdate', record)">
               <span class="more-doption normal">修改配置</span>
@@ -278,19 +301,22 @@
               <span class="more-doption normal">复制 Key</span>
             </a-doption>
             <!-- 安装探针 -->
-            <a-doption v-permission="['asset:host:install-agent']"
+            <a-doption
+v-permission="['asset:host:install-agent']"
                        :disabled="record.installLog?.status === AgentLogStatus.WAIT || record.installLog?.status === AgentLogStatus.RUNNING"
                        @click="installAgent([record.hostId])">
               <span class="more-doption normal">安装探针</span>
             </a-doption>
             <!-- 安装成功 -->
-            <a-doption v-if="record.installLog?.id && record.installLog?.status !== AgentLogStatus.SUCCESS"
+            <a-doption
+v-if="record.installLog?.id && record.installLog?.status !== AgentLogStatus.SUCCESS"
                        v-permission="['asset:host:install-agent']"
                        @click="setInstallSuccess(record.installLog)">
               <span class="more-doption normal">安装成功</span>
             </a-doption>
             <!-- 告警开关 -->
-            <a-doption v-if="record.id"
+            <a-doption
+v-if="record.id"
                        v-permission="['monitor:monitor-host:update', 'monitor:monitor-host:update-switch']"
                        @click="toggleAlarmSwitch(record)">
               <span class="more-doption normal">
@@ -298,7 +324,8 @@
               </span>
             </a-doption>
             <!-- 连接终端 单协议连接 -->
-            <a-doption v-if="record.types?.length === 1"
+            <a-doption
+v-if="record.types?.length === 1"
                        v-permission="['terminal:terminal:access']"
                        @click="openNewRoute({ name: 'terminal', query: { connect: record.hostId, type: record.types[0] } })">
                 <span class="more-doption normal">
@@ -306,7 +333,8 @@
                 </span>
             </a-doption>
             <!-- 连接终端 多协议连接 -->
-            <a-popover v-if="(record.types?.length || 0) > 1"
+            <a-popover
+v-if="(record.types?.length || 0) > 1"
                        :title="undefined"
                        position="left"
                        :content-style="{ padding: '8px' }">
@@ -317,7 +345,8 @@
               </a-doption>
               <template #content>
                 <a-space direction="vertical">
-                  <a-button v-for="type in record.types"
+                  <a-button
+v-for="type in record.types"
                             :key="type"
                             size="mini"
                             @click="openNewRoute({ name: 'terminal', query: { connect: record.hostId, type }})">
@@ -335,7 +364,7 @@
 
 <script lang="ts">
   export default {
-    name: 'monitorHostCardList'
+    name: 'MonitorHostCardList'
   };
 </script>
 

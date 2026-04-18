@@ -1,10 +1,12 @@
 <template>
   <a-spin class="panel-container full" :loading="loading">
     <!-- 上传步骤 -->
-    <batch-upload-step class="panel-item first-panel-container"
+    <batch-upload-step
+class="panel-item first-panel-container"
                        :status="taskStatus" />
     <!-- 上传表单 -->
-    <batch-upload-form v-if="taskStatus.formPanel"
+    <batch-upload-form
+v-if="taskStatus.formPanel"
                        class="panel-item center-panel-container"
                        :form-model="formModel"
                        :status="taskStatus"
@@ -13,31 +15,35 @@
                        @open-host="openHostModal"
                        @clear="clearForm" />
     <!-- 上传主机 -->
-    <batch-upload-hosts v-else
-                        class="panel-item center-panel-container"
+    <batch-upload-hosts
+v-else
                         v-model:selected-host="selectedHost"
+                        class="panel-item center-panel-container"
                         :status="taskStatus"
                         :task="task"
                         @back="backFormPanel"
                         @cancel="doCancelUploadTask" />
     <!-- 文件列表 -->
-    <batch-upload-files v-if="taskStatus.formPanel"
+    <batch-upload-files
+v-if="taskStatus.formPanel"
+                        ref="filesRef"
                         v-model:file-list="fileList"
                         class="panel-item last-panel-container"
-                        ref="filesRef"
                         @end="uploadRequestEnd"
                         @error="uploadRequestError"
                         @clear-file="clearFile" />
     <!-- 传输进度 -->
     <template v-else>
       <template v-for="host in task.hosts">
-        <batch-upload-progress v-if="host.id === selectedHost"
+        <batch-upload-progress
+v-if="host.id === selectedHost"
                                class="panel-item last-panel-container"
                                :files="host.files" />
       </template>
     </template>
     <!-- 主机模态框 -->
-    <authorized-host-modal ref="hostModal"
+    <authorized-host-modal
+ref="hostModal"
                            type="SSH"
                            @selected="setSelectedHost" />
   </a-spin>
@@ -45,7 +51,7 @@
 
 <script lang="ts">
   export default {
-    name: 'uploadPanel'
+    name: 'UploadPanel'
   };
 </script>
 

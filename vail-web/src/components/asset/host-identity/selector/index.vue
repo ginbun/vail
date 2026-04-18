@@ -1,5 +1,6 @@
 <template>
-  <a-select v-model:model-value="value"
+  <a-select
+v-model:model-value="value"
             :options="optionData"
             :loading="loading"
             placeholder="请选择主机身份"
@@ -23,7 +24,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostIdentitySelector'
+    name: 'HostIdentitySelector'
   };
 </script>
 

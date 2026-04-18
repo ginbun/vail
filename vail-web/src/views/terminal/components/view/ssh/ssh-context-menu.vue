@@ -1,15 +1,17 @@
 <template>
   <!-- 终端右键菜单 -->
-  <a-dropdown class="terminal-context-menu"
+  <a-dropdown
+class="terminal-context-menu"
               :popup-max-height="false"
               trigger="contextMenu"
               position="bl"
-              alignPoint>
+              align-point>
     <!-- 终端插槽 -->
     <slot />
     <!-- 右键菜单 -->
     <template v-if="session && preference.sshInteractSetting.enableRightClickMenu" #content>
-      <a-doption v-for="(action, index) in actions"
+      <a-doption
+v-for="(action, index) in actions"
                  :key="index"
                  :disabled="!session || !session.handler.enabledStatus(action.item)"
                  @click="emits('handle', action.item)">
@@ -26,7 +28,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sshContextMenu'
+    name: 'SshContextMenu'
   };
 </script>
 

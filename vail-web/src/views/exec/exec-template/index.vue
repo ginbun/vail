@@ -1,20 +1,24 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
-    <exec-template-table ref="table"
+    <exec-template-table
+ref="table"
                          @open-add="() => drawer.openAdd()"
                          @open-update="(e) => drawer.openUpdate(e)"
                          @open-exec="(e) => execModal.open(e)" />
     <!-- 添加修改模态框 -->
-    <exec-template-form-drawer ref="drawer"
+    <exec-template-form-drawer
+ref="drawer"
                                @added="() => table.reload()"
                                @updated="() => table.reload()"
                                @open-host="(e) => openHostModal('drawer', e)" />
     <!-- 执行模态框 -->
-    <exec-template-exec-drawer ref="execModal"
+    <exec-template-exec-drawer
+ref="execModal"
                                @open-host="(e) => openHostModal('exec', e)" />
     <!-- 主机模态框 -->
-    <authorized-host-modal ref="hostModal"
+    <authorized-host-modal
+ref="hostModal"
                            type="SSH"
                            @selected="hostSelected" />
   </div>
@@ -22,7 +26,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execTemplate'
+    name: 'ExecTemplate'
   };
 </script>
 

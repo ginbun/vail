@@ -13,7 +13,8 @@
       <a-row class="mb16" align="stretch" :gutter="16">
         <!-- 显示分辨率 -->
         <block-setting-item label="显示分辨率" desc="若选择为自适应, 则会根据窗口大小自动调整">
-          <a-select v-model="formModel.displaySize"
+          <a-select
+v-model="formModel.displaySize"
                     style="width: 168px;"
                     size="small"
                     :options="toOptions(screenResolutionKey)"
@@ -21,7 +22,8 @@
         </block-setting-item>
         <!-- 颜色深度 -->
         <block-setting-item label="颜色深度" desc="显示的颜色深度, 越高显示效果越好">
-          <a-select v-model="formModel.colorDepth"
+          <a-select
+v-model="formModel.colorDepth"
                     style="width: 168px;"
                     size="small"
                     :options="toOptions(graphColorDepthKey)" />
@@ -34,7 +36,8 @@
         </block-setting-item>
         <!-- 光标 -->
         <block-setting-item label="光标" desc="光标渲染方式, 远程光标会比本地光标慢">
-          <a-select v-model="formModel.cursor"
+          <a-select
+v-model="formModel.cursor"
                     style="width: 168px;"
                     size="small"
                     :options="toOptions(vcnCursorKey)" />
@@ -43,7 +46,8 @@
       <a-row class="mb16" align="stretch" :gutter="16">
         <!-- 压缩等级 -->
         <block-setting-item label="压缩等级" desc="设置服务器请求的压缩级别 0表示不压缩, 9表示最高压缩级别">
-          <a-input-number v-model="formModel.compressLevel"
+          <a-input-number
+v-model="formModel.compressLevel"
                           style="width: 168px;"
                           size="small"
                           mode="button"
@@ -53,7 +57,8 @@
         </block-setting-item>
         <!-- 质量等级 -->
         <block-setting-item label="质量等级" desc="设置图像的质量等级 0表示最低的图像质量, 9表示最高的图像质量">
-          <a-input-number v-model="formModel.qualityLevel"
+          <a-input-number
+v-model="formModel.qualityLevel"
                           style="width: 168px;"
                           size="small"
                           mode="button"
@@ -68,7 +73,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalVncGraphBlock'
+    name: 'TerminalVncGraphBlock'
   };
 </script>
 

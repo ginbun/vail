@@ -7,32 +7,37 @@
       </h3>
     </div>
     <!-- 非安全环境提示 -->
-    <a-alert v-if="!isSecureEnvironment"
+    <a-alert
+v-if="!isSecureEnvironment"
              type="warning"
              class="mb16">
       当前环境非 HTTPS 环境, 因浏览器安全策略限制, 自定义 '粘贴' 功能无法使用
     </a-alert>
     <!-- 内容区域 -->
     <div class="terminal-setting-body block-body setting-body">
-      <a-form class="terminal-setting-form"
+      <a-form
+class="terminal-setting-form"
               :model="formModel"
               layout="vertical">
         <a-space size="large">
           <!-- 顶部操作按钮 -->
           <a-form-item field="actions" label="顶部操作按钮">
-            <icon-actions class="form-item-actions"
+            <icon-actions
+class="form-item-actions"
                           :actions="actions"
                           position="bottom" />
           </a-form-item>
           <!-- 终端连接状态 -->
           <a-form-item field="showStatus" label="终端连接状态">
-            <a-switch v-model="formModel.connectStatus"
+            <a-switch
+v-model="formModel.connectStatus"
                       :default-checked="true"
                       type="round" />
           </a-form-item>
           <!-- 分享按钮 -->
           <a-form-item field="share" label="分享按钮">
-            <a-switch v-model="formModel.share"
+            <a-switch
+v-model="formModel.share"
                       :default-checked="true"
                       type="round" />
           </a-form-item>
@@ -44,7 +49,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalSshActionBarBlock'
+    name: 'TerminalSshActionBarBlock'
   };
 </script>
 

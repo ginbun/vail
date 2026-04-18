@@ -1,16 +1,26 @@
 [server]
+# Override via VAIL_SERVER_HOST / VAIL_SERVER_PORT
 host = "0.0.0.0"
 port = 8080
 
 [database]
+# Override via VAIL_DB_HOST / VAIL_DB_PORT / VAIL_DB_USERNAME / VAIL_DB_PASSWORD / VAIL_DB_DATABASE
 host = "postgres"
 port = 5432
-username = "vail"
-password = "vail"
+username = "REPLACE_IN_DEPLOYMENT"
+password = "REPLACE_IN_DEPLOYMENT"
 database = "vail"
 
 [jwt]
-secret = "please-change-this-in-production"
+# Override via VAIL_JWT_ALGORITHM / VAIL_JWT_SECRET / VAIL_JWT_PRIVATE_KEY / VAIL_JWT_PUBLIC_KEY
+# Recommended: EdDSA (Ed25519 keypair)
+algorithm = "EdDSA"
+# HS256 fallback secret (required only when algorithm = "HS256")
+secret = "REPLACE_WITH_A_RANDOM_32+_CHAR_SECRET_FOR_HS256"
+# Ed25519 signing key (PEM)
+private_key = "REPLACE_WITH_ED25519_PRIVATE_KEY_PEM"
+# Ed25519 verification key (PEM)
+public_key = "REPLACE_WITH_ED25519_PUBLIC_KEY_PEM"
 expiration = 3600
 refresh_expiration = 604800
 
@@ -25,4 +35,5 @@ max_upload_size = 1024
 default_chunk_size = 1048576
 
 [secrets]
-data_encryption_key = "please-change-this-32-char-minimum-key"
+# Override via VAIL_DATA_ENCRYPTION_KEY (must be >= 32 chars)
+data_encryption_key = "REPLACE_WITH_A_RANDOM_32+_CHAR_DATA_ENCRYPTION_KEY"

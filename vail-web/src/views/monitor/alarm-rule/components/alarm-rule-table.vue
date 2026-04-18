@@ -3,13 +3,15 @@
   <div class="container-content">
     <!-- 指标类型 -->
     <a-card class="general-card table-search-card measurement-card">
-      <a-tabs v-model:active-key="measurement"
+      <a-tabs
+v-model:active-key="measurement"
               direction="vertical"
               type="rounded"
               :hide-content="true"
               @change="reload">
         <a-tab-pane key="" title="全部" />
-        <a-tab-pane v-for="item in toOptions(MeasurementKey)"
+        <a-tab-pane
+v-for="item in toOptions(MeasurementKey)"
                     :key="item.value as string"
                     :title="item.label" />
       </a-tabs>
@@ -28,7 +30,8 @@
         <div class="table-right-bar-handle">
           <a-space>
             <!-- 新增 -->
-            <a-button v-permission="['monitor:alarm-policy:update-rule']"
+            <a-button
+v-permission="['monitor:alarm-policy:update-rule']"
                       type="primary"
                       @click="emits('openAdd', policyId)">
               新增
@@ -43,15 +46,17 @@
               </template>
             </a-button>
             <!-- 调整 -->
-            <table-adjust :columns="columns"
+            <table-adjust
+:columns="columns"
                           :columns-hook="columnsHook"
                           @query="doFetchTableData" />
           </a-space>
         </div>
       </template>
       <!-- table -->
-      <a-table row-key="id"
-               ref="tableRef"
+      <a-table
+ref="tableRef"
+               row-key="id"
                class="table-resize"
                :loading="loading"
                :columns="tableColumns"
@@ -65,7 +70,8 @@
             全部
           </a-tag>
           <a-space v-else-if="record.allEffect === 0">
-            <a-tag v-for="tag in extraTags(record.tags)"
+            <a-tag
+v-for="tag in extraTags(record.tags)"
                    class="text-ellipsis"
                    style="display: inline-block; max-width: 100px;">
               {{ tag }}
@@ -99,7 +105,8 @@
         </template>
         <!-- 规则开关 -->
         <template #ruleSwitch="{ record }">
-          <a-switch v-model="record.ruleSwitch"
+          <a-switch
+v-model="record.ruleSwitch"
                     type="round"
                     :disabled="!hasPermission('monitor:alarm-policy:update-rule')"
                     :checked-value="1"
@@ -110,25 +117,29 @@
         <template #handle="{ record }">
           <div class="table-handle-wrapper">
             <!-- 修改 -->
-            <a-button v-permission="['monitor:alarm-policy:update-rule']"
+            <a-button
+v-permission="['monitor:alarm-policy:update-rule']"
                       type="text"
                       size="mini"
                       @click="emits('openUpdate', record)">
               修改
             </a-button>
             <!-- 复制 -->
-            <a-button v-permission="['monitor:alarm-policy:update-rule']"
+            <a-button
+v-permission="['monitor:alarm-policy:update-rule']"
                       type="text"
                       size="mini"
                       @click="emits('openCopy', record)">
               复制
             </a-button>
             <!-- 删除 -->
-            <a-popconfirm content="确认删除这条记录吗?"
+            <a-popconfirm
+content="确认删除这条记录吗?"
                           position="left"
                           type="warning"
                           @ok="deleteRow(record)">
-              <a-button v-permission="['monitor:alarm-policy:update-rule']"
+              <a-button
+v-permission="['monitor:alarm-policy:update-rule']"
                         type="text"
                         size="mini"
                         status="danger">
@@ -144,7 +155,7 @@
 
 <script lang="ts">
   export default {
-    name: 'alarmRuleTable'
+    name: 'AlarmRuleTable'
   };
 </script>
 

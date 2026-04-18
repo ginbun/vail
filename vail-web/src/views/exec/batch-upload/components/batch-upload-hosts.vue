@@ -8,7 +8,8 @@
         <!-- 返回 -->
         <a-button @click="emits('back')">返回</a-button>
         <!-- 取消上传 -->
-        <a-button v-if="status.value === UploadTaskStepStatus.UPLOADING.value"
+        <a-button
+v-if="status.value === UploadTaskStepStatus.UPLOADING.value"
                   type="primary"
                   status="warning"
                   @click="emits('cancel')">
@@ -20,7 +21,8 @@
     <div class="wrapper">
       <a-scrollbar style="overflow-y: auto; height: 100%;">
         <!-- 主机 -->
-        <div v-for="host in task.hosts"
+        <div
+v-for="host in task.hosts"
              class="host-item"
              :class="[ selectedHost === host.id ? 'host-item-active' : '']"
              @click="changeSelectedHost(host.id)">
@@ -36,7 +38,8 @@
             </div>
           </div>
           <!-- 主机状态 -->
-          <a-space class="host-item-status"
+          <a-space
+class="host-item-status"
                    direction="vertical"
                    size="mini">
             <!-- 传输中 -->
@@ -60,7 +63,7 @@
 
 <script lang="ts">
   export default {
-    name: 'batchUploadHosts'
+    name: 'BatchUploadHosts'
   };
 </script>
 

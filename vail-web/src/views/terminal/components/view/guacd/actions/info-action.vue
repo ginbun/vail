@@ -1,5 +1,6 @@
 <template>
-  <a-descriptions size="large"
+  <a-descriptions
+size="large"
                   :label-style="{ display: 'flex', width: '48px' }"
                   :column="1">
     <!-- 主机id -->
@@ -29,7 +30,7 @@
 
 <script lang="ts">
   export default {
-    name: 'infoAction'
+    name: 'InfoAction'
   };
 </script>
 

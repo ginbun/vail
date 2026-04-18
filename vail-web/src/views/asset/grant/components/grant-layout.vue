@@ -1,14 +1,16 @@
 <template>
   <a-spin :loading="loading" class="grant-container">
     <!-- 角色列表 -->
-    <router-roles v-if="type === GrantType.ROLE"
-                  outer-class="router-wrapper"
+    <router-roles
+v-if="type === GrantType.ROLE"
                   v-model="subjectId"
+                  outer-class="router-wrapper"
                   @change="fetchAuthorizedData" />
     <!-- 角色列表 -->
-    <router-users v-else-if="type === GrantType.USER"
-                  outer-class="router-wrapper"
+    <router-users
+v-else-if="type === GrantType.USER"
                   v-model="subjectId"
+                  outer-class="router-wrapper"
                   @change="fetchAuthorizedData" />
     <!-- 数据列表 -->
     <div class="data-container">
@@ -16,7 +18,7 @@
       <div class="data-header">
         <!-- 提示信息 -->
         <a-alert class="alert-wrapper" :show-icon="false">
-          <span class="alert-message" v-if="currentSubject">
+          <span v-if="currentSubject" class="alert-message">
             <!-- 角色提示信息 -->
             <template v-if="type === GrantType.ROLE">
               当前选择的角色为 <span class="span-blue mr4">{{ currentSubject.text }}</span>
@@ -62,7 +64,7 @@
 
 <script lang="ts">
   export default {
-    name: 'grantLayout'
+    name: 'GrantLayout'
   };
 </script>
 

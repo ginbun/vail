@@ -1,23 +1,25 @@
 <template>
   <div class="guacd-container">
     <!-- 状态 -->
-    <guacd-status v-if="session"
+    <guacd-status
+v-if="session"
                   class="guacd-status-mask"
                   :session="session" />
     <!-- 工具栏 -->
-    <vnc-action-bar v-if="session"
+    <vnc-action-bar
+v-if="session"
                     class="guacd-action-bar"
                     :class="[actionBarDirection === 'right' ? 'right' : 'top']"
                     :session="session"
                     :direction="actionBarDirection" />
     <!-- 视口 -->
-    <div class="guacd-viewport" ref="viewport" />
+    <div ref="viewport" class="guacd-viewport" />
   </div>
 </template>
 
 <script lang="ts">
   export default {
-    name: 'vnc-view'
+    name: 'VncView'
   };
 </script>
 

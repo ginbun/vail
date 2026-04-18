@@ -1,16 +1,20 @@
 <template>
   <div>
-    <a-split class="split-view"
-             v-model:size="splitSize"
+    <a-split
+v-model:size="splitSize"
+             class="split-view"
              :min="0.3"
+             :max="0.9"
              :disabled="!editorView">
       <!-- 左侧面板表格 -->
       <template #first>
-        <a-spin class="sftp-table-container"
+        <a-spin
+class="sftp-table-container"
                 :loading="tableLoading"
                 :hide-icon="true">
           <!-- 表头 -->
-          <sftp-table-header class="sftp-table-header"
+          <sftp-table-header
+class="sftp-table-header"
                              :selected-files="selectFiles"
                              :close-message="closeMessage"
                              :current-path="currentPath"
@@ -22,8 +26,9 @@
                              @upload="openUpload"
                              @download="downloadFiles" />
           <!-- 表格 -->
-          <sftp-table class="sftp-table-wrapper"
-                      v-model:selected-files="selectFiles"
+          <sftp-table
+v-model:selected-files="selectFiles"
+                      class="sftp-table-wrapper"
                       :session="session"
                       :list="fileList"
                       :loading="tableLoading"
@@ -36,18 +41,21 @@
                       @download="downloadFiles" />
         </a-spin>
       </template>
-      <template #second v-if="editorView">
-        <a-spin class="sftp-editor-container"
+      <template v-if="editorView" #second>
+        <a-spin
+class="sftp-editor-container"
                 :loading="editorLoading">
           <!-- 表头 -->
-          <sftp-editor-header class="sftp-editor-header"
+          <sftp-editor-header
+class="sftp-editor-header"
                               :name="editorFileName"
                               :path="editorFilePath"
                               @save="editorSave"
                               @close="closeEditor" />
           <!-- 编辑器 -->
-          <sftp-editor class="sftp-editor-wrapper"
-                       ref="editorRef" />
+          <sftp-editor
+ref="editorRef"
+                       class="sftp-editor-wrapper" />
         </a-spin>
       </template>
     </a-split>
@@ -64,7 +72,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sftpView'
+    name: 'SftpView'
   };
 </script>
 

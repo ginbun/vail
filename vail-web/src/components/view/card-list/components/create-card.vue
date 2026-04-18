@@ -1,5 +1,6 @@
 <template>
-  <a-card class="card-list-item create-card"
+  <a-card
+class="card-list-item create-card"
           :style="{ height: cardHeight }"
           :body-style="{ height: '100%' }"
           :bordered="false"
@@ -13,7 +14,7 @@
 
 <script lang="ts">
   export default {
-    name: 'createCard'
+    name: 'CreateCard'
   };
 </script>
 

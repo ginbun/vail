@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             :title="title"
             :width="590"
             :mask-closable="false"
@@ -9,19 +10,22 @@
             :on-before-ok="handleOk"
             @cancel="handleClose">
     <a-spin class="full drawer-form-large" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
         <!-- 监控指标 -->
         <a-form-item field="metricsId" label="监控指标">
-          <monitor-metrics-selector v-model="formModel.metricsId"
+          <monitor-metrics-selector
+v-model="formModel.metricsId"
                                     :class="[ hasTags ? 'metrics-selector-has-tag' : 'metrics-selector-no-tag']"
                                     placeholder="请选择监控指标"
                                     allow-clear />
           <!-- 添加标签 -->
-          <a-button v-if="hasTags"
+          <a-button
+v-if="hasTags"
                     title="添加标签"
                     :disabled="formModel.allEffect === 1"
                     @click="addTag">
@@ -32,16 +36,19 @@
         </a-form-item>
         <!-- tags -->
         <template v-for="(tag, index) in tags">
-          <a-form-item v-if="formModel.allEffect === 0"
+          <a-form-item
+v-if="formModel.allEffect === 0"
                        :field="'tag-' + (index + 1)"
                        :label="'指标标签-' + (index + 1)">
             <a-space :size="12" class="tag-wrapper">
               <!-- 标签名称 -->
-              <a-input v-model="tag.key"
+              <a-input
+v-model="tag.key"
                        style="width: 108px;"
                        placeholder="标签名称" />
               <!-- 标签值 -->
-              <a-select v-model="tag.value"
+              <a-select
+v-model="tag.value"
                         class="tag-values"
                         style="width: 260px"
                         :max-tag-count="2"
@@ -56,7 +63,8 @@
                 </template>
               </a-select>
               <!-- 移除 -->
-              <a-button title="移除"
+              <a-button
+title="移除"
                         style="width: 32px"
                         @click="removeTag(index)">
                 <template #icon>
@@ -69,10 +77,12 @@
         <a-row>
           <!-- 规则开关 -->
           <a-col :span="12" style="padding-right: 24px;">
-            <a-form-item field="ruleSwitch"
+            <a-form-item
+field="ruleSwitch"
                          label="规则开关"
                          hide-asterisk>
-              <a-switch v-model="formModel.ruleSwitch"
+              <a-switch
+v-model="formModel.ruleSwitch"
                         type="round"
                         :checked-value="1"
                         :unchecked-value="0" />
@@ -80,11 +90,13 @@
           </a-col>
           <!-- 全部生效 -->
           <a-col v-if="hasTags" :span="12">
-            <a-form-item field="allEffect"
+            <a-form-item
+field="allEffect"
                          label="全部生效"
                          tooltip="开启后则忽略标签, 并生效与已配置标签的规则 (通常用于默认策略)"
                          hide-asterisk>
-              <a-switch v-model="formModel.allEffect"
+              <a-switch
+v-model="formModel.allEffect"
                         type="round"
                         :checked-value="1"
                         :unchecked-value="0" />
@@ -94,10 +106,12 @@
         <a-row>
           <!-- 持续数据点 -->
           <a-col :span="12" style="padding-right: 24px;">
-            <a-form-item field="silencePeriod"
+            <a-form-item
+field="silencePeriod"
                          label="持续数据点"
                          hide-asterisk>
-              <a-input-number v-model="formModel.consecutiveCount"
+              <a-input-number
+v-model="formModel.consecutiveCount"
                               :min="0"
                               :max="100"
                               placeholder="持续数据点"
@@ -111,11 +125,13 @@
           </a-col>
           <!-- 静默时间 -->
           <a-col :span="12">
-            <a-form-item field="silencePeriod"
+            <a-form-item
+field="silencePeriod"
                          label="静默时间"
                          tooltip="再次发生告警后沉默的时间"
                          hide-asterisk>
-              <a-input-number v-model="formModel.silencePeriod"
+              <a-input-number
+v-model="formModel.silencePeriod"
                               :min="0"
                               placeholder="请输入静默时间"
                               hide-button
@@ -130,10 +146,12 @@
         <!-- 告警条件 -->
         <a-row>
           <a-col :span="7">
-            <a-form-item field="level"
+            <a-form-item
+field="level"
                          label="告警条件"
                          class="alarm-level-select">
-              <a-select v-model="formModel.level"
+              <a-select
+v-model="formModel.level"
                         style="padding: 0;"
                         :options="toOptions(LevelKey)"
                         :bordered="false"
@@ -149,20 +167,24 @@
           </a-col>
           <!-- 告警条件 -->
           <a-col :span="6">
-            <a-form-item field="triggerCondition"
+            <a-form-item
+field="triggerCondition"
                          class="condition-select"
                          hide-label>
-              <a-select v-model="formModel.triggerCondition"
+              <a-select
+v-model="formModel.triggerCondition"
                         :options="toOptions(TriggerConditionKey)"
                         placeholder="请选择告警条件" />
             </a-form-item>
           </a-col>
           <!-- 触发阈值 -->
           <a-col :span="11">
-            <a-form-item field="threshold"
+            <a-form-item
+field="threshold"
                          style="padding-left: 16px;"
                          hide-label>
-              <a-input-number v-model="formModel.threshold"
+              <a-input-number
+v-model="formModel.threshold"
                               :precision="4"
                               placeholder="触发阈值"
                               hide-button
@@ -176,7 +198,8 @@
         </a-row>
         <!-- 规则描述 -->
         <a-form-item field="description" label="规则描述">
-          <a-textarea v-model="formModel.description"
+          <a-textarea
+v-model="formModel.description"
                       :auto-size="{ minRows: 4, maxRows: 4 }"
                       placeholder="请输入规则描述"
                       allow-clear />
@@ -188,7 +211,7 @@
 
 <script lang="ts">
   export default {
-    name: 'alarmRuleFormDrawer'
+    name: 'AlarmRuleFormDrawer'
   };
 </script>
 

@@ -1,21 +1,24 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
-                  :itemOptions="{ 4: { span: 2 } }"
+                  :item-options="{ 4: { span: 2 } }"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- 连接用户 -->
       <a-form-item field="userId" label="连接用户">
-        <user-selector v-model="formModel.userId"
+        <user-selector
+v-model="formModel.userId"
                        placeholder="请选择用户"
                        allow-clear />
       </a-form-item>
       <!-- 连接主机 -->
       <a-form-item field="hostId" label="连接主机">
-        <host-selector v-model="formModel.hostId"
+        <host-selector
+v-model="formModel.hostId"
                        placeholder="请选择主机"
                        allow-clear />
       </a-form-item>
@@ -25,14 +28,16 @@
       </a-form-item>
       <!-- 类型 -->
       <a-form-item field="type" label="类型">
-        <a-select v-model="formModel.type"
+        <a-select
+v-model="formModel.type"
                   placeholder="请选择类型"
                   :options="toOptions(connectTypeKey)"
                   allow-clear />
       </a-form-item>
       <!-- 开始时间 -->
       <a-form-item field="startTimeRange" label="开始时间">
-        <a-range-picker v-model="formModel.startTimeRange"
+        <a-range-picker
+v-model="formModel.startTimeRange"
                         :time-picker-props="{ defaultValue: ['00:00:00', '23:59:59'] }"
                         show-time
                         format="YYYY-MM-DD HH:mm:ss" />
@@ -51,8 +56,9 @@
       </div>
     </template>
     <!-- table -->
-    <a-table row-key="id"
-             ref="tableRef"
+    <a-table
+ref="tableRef"
+             row-key="id"
              class="table-resize"
              :loading="loading"
              :columns="columns"
@@ -70,7 +76,8 @@
           {{ record.hostName }}
         </span>
         <br>
-        <span class="table-cell-sub-value text-copy"
+        <span
+class="table-cell-sub-value text-copy"
               :title="record.hostAddress"
               @click="copy(record.hostAddress)">
           {{ record.hostAddress }}
@@ -89,7 +96,8 @@
           {{ record.extra?.location }}
         </span>
         <br>
-        <span class="table-cell-sub-value text-copy"
+        <span
+class="table-cell-sub-value text-copy"
               :title="record.extra?.address"
               @click="copy(record.extra?.address)">
           {{ record.extra?.address }}
@@ -99,18 +107,21 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 连接 -->
-          <a-button v-permission="['terminal:terminal:access']"
+          <a-button
+v-permission="['terminal:terminal:access']"
                     type="text"
                     size="mini"
                     @click="openNewRoute({ name: 'terminal', query: { connect: record.hostId, type: record.type } })">
             连接
           </a-button>
           <!-- 下线 -->
-          <a-popconfirm content="确认要强制下线吗?"
+          <a-popconfirm
+content="确认要强制下线吗?"
                         position="left"
                         type="warning"
                         @ok="forceOffline(record)">
-            <a-button v-permission="['terminal:terminal-connect-log:management:force-offline', 'terminal:terminal-connect-session:management:force-offline']"
+            <a-button
+v-permission="['terminal:terminal-connect-log:management:force-offline', 'terminal:terminal-connect-session:management:force-offline']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -125,7 +136,7 @@
 
 <script lang="ts">
   export default {
-    name: 'connectSessionTable'
+    name: 'ConnectSessionTable'
   };
 </script>
 

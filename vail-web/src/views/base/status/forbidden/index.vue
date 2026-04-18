@@ -10,7 +10,7 @@
 
 <script lang="ts">
   export default {
-    name: 'forbidden',
+    name: 'Forbidden',
   };
 </script>
 

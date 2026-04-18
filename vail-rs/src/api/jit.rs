@@ -103,7 +103,7 @@ async fn list_my_active(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let rows = sqlx::query_as::<_, (i64, String, String, Option<String>)>(
         "SELECT id, reason, status, expires_at::text

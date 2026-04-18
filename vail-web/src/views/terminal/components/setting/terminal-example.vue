@@ -1,10 +1,10 @@
 <template>
-  <div class="terminal-example" ref="viewport" />
+  <div ref="viewport" class="terminal-example" />
 </template>
 
 <script lang="ts">
   export default {
-    name: 'terminalExample'
+    name: 'TerminalExample'
   };
 </script>
 
@@ -30,11 +30,11 @@
     });
     terminal.open(viewport.value);
     terminal.write(
-      '[1;94m[root[0m@[1;96mOrionServer usr]#[0m\r\n' +
-      'dr-xr-xr-x.  2 root root [0m[01;34mbin[0m\r\n' +
-      'dr-xr-xr-x.  2 root root [01;34msbin[0m\r\n' +
-      'drwxr-xr-x.  4 root root [01;34msrc[0m\r\n' +
-      'lrwxrwxrwx.  1 root root [01;36mtmp[0m -> [30;42m../var/tmp[0m '
+      '\x1B[1;94m[root \x1B[0m@\x1B[1;96mOrionServer usr]# \x1B[0m\r\n' +
+      'dr-xr-xr-x.  2 root root  \x1B[0m\x1B[01;34mbin \x1B[0m\r\n' +
+      'dr-xr-xr-x.  2 root root  \x1B[01;34msbin \x1B[0m\r\n' +
+      'drwxr-xr-x.  4 root root  \x1B[01;34msrc \x1B[0m\r\n' +
+      'lrwxrwxrwx.  1 root root  \x1B[01;36mtmp \x1B[0m -> \x1B[30;42m../var/tmp \x1B[0m '
     );
     term.value = markRaw(terminal);
   });

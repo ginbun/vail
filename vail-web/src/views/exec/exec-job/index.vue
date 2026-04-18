@@ -1,14 +1,16 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
-    <exec-job-table ref="table"
+    <exec-job-table
+ref="table"
                     @open-add="() => drawer.openAdd()"
                     @open-update="(e) => drawer.openUpdate(e)"
                     @open-detail="(e) => detail.open(e)"
                     @update-exec-user="(e) => execUserModal.open(e)"
                     @test-cron="openNextCron" />
     <!-- 添加修改模态框 -->
-    <exec-job-form-drawer ref="drawer"
+    <exec-job-form-drawer
+ref="drawer"
                           @added="() => table.reload()"
                           @updated="() => table.reload()"
                           @open-host="(e) => hostModal.open(e)"
@@ -22,13 +24,16 @@
     <!-- cron 执行时间模态框 -->
     <cron-next-modal ref="nextCron" />
     <!-- cron 生成模态框 -->
-    <cron-generator-modal ref="genModal"
+    <cron-generator-modal
+ref="genModal"
                           @ok="(e) => drawer.setExpression(e)" />
     <!-- 执行模板模态框 -->
-    <exec-template-modal ref="templateModal"
+    <exec-template-modal
+ref="templateModal"
                          @selected="(e) => drawer.setWithTemplate(e)" />
     <!-- 主机模态框 -->
-    <authorized-host-modal ref="hostModal"
+    <authorized-host-modal
+ref="hostModal"
                            type="SSH"
                            @selected="(e) => drawer.setSelectedHost(e)" />
   </div>
@@ -36,7 +41,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execJob'
+    name: 'ExecJob'
   };
 </script>
 

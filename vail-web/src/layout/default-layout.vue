@@ -6,7 +6,8 @@
     </div>
     <a-layout style="flex-direction: row;">
       <!-- 左侧菜单栏 -->
-      <a-layout-sider v-if="renderMenu"
+      <a-layout-sider
+v-if="renderMenu"
                       v-show="!hideMenu"
                       class="layout-sider"
                       breakpoint="xl"
@@ -21,7 +22,8 @@
         </div>
       </a-layout-sider>
       <!-- 顶部菜单栏 -->
-      <a-drawer v-if="hideMenu"
+      <a-drawer
+v-if="hideMenu"
                 :visible="drawerVisible"
                 placement="left"
                 :header="false"
@@ -38,7 +40,8 @@
         <!-- 页面 -->
         <a-layout-content style="height: 100%; width: 100%;">
           <!-- 水印 -->
-          <a-watermark :grayscale="true"
+          <a-watermark
+:grayscale="true"
                        :alpha=".6"
                        :z-index="9999"
                        style="width: 100%; height: 100%;"

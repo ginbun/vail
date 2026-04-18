@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             title="计划任务详情"
             width="70%"
             :mask-closable="false"
@@ -7,14 +8,16 @@
             ok-text="关闭"
             :hide-cancel="true"
             @cancel="handleClose">
-    <a-descriptions class="detail-container"
+    <a-descriptions
+class="detail-container"
                     size="large"
                     table-layout="fixed"
                     :label-style="{ width: '90px' }"
                     :column="2">
       <!-- 任务id -->
       <a-descriptions-item label="任务id">
-        <span class="text-copy"
+        <span
+class="text-copy"
               title="复制"
               @click="copy(record.id+'')">
           {{ record.id }}
@@ -26,7 +29,8 @@
       </a-descriptions-item>
       <!-- cron -->
       <a-descriptions-item label="cron">
-        <span class="text-copy"
+        <span
+class="text-copy"
               title="复制"
               @click="copy(record.expression)">
          {{ record.expression }}
@@ -60,7 +64,8 @@
           <span class="host-label">执行主机</span>
         </template>
         <a-space wrap>
-          <a-tag v-for="host in record.hostList"
+          <a-tag
+v-for="host in record.hostList"
                  :key="host.id">
             {{ host.name }}
           </a-tag>
@@ -68,7 +73,8 @@
       </a-descriptions-item>
       <!-- 执行命令 -->
       <a-descriptions-item label="执行命令" :span="2">
-        <editor v-model="record.command"
+        <editor
+v-model="record.command"
                 language="shell"
                 theme="vs-dark"
                 container-class="command-editor"
@@ -76,10 +82,12 @@
                 :suggestions="false" />
       </a-descriptions-item>
       <!-- 执行参数 -->
-      <a-descriptions-item v-if="record.parameterSchema"
+      <a-descriptions-item
+v-if="record.parameterSchema"
                            label="执行参数"
                            :span="2">
-        <editor v-model="record.parameterSchema"
+        <editor
+v-model="record.parameterSchema"
                 language="json"
                 theme="vs-dark"
                 container-class="json-editor"
@@ -92,7 +100,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execJobDetailDrawer'
+    name: 'ExecJobDetailDrawer'
   };
 </script>
 

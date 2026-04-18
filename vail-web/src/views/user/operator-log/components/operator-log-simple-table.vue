@@ -1,7 +1,8 @@
 <template>
   <!-- 表格 -->
-  <a-table row-key="id"
-           ref="tableRef"
+  <a-table
+ref="tableRef"
+           row-key="id"
            class="table-resize"
            :loading="loading"
            :columns="tableColumns"
@@ -32,15 +33,18 @@
     <!-- 操作日志 -->
     <template #originLogInfo="{ record }">
       <!-- 操作日志 -->
-      <a-tooltip position="tl"
+      <a-tooltip
+position="tl"
                  :content="record.originLogInfo">
-        <span v-html="replaceHtmlTag(record.logInfo)"
-              class="text-copy"
-              @click="copy(record.originLogInfo, true)" />
+        <span
+class="text-copy"
+              @click="copy(record.originLogInfo, true)"
+              v-html="replaceHtmlTag(record.logInfo)" />
       </a-tooltip>
       <!-- 错误消息 -->
       <br v-if="record.errorMessage">
-      <span v-if="record.errorMessage"
+      <span
+v-if="record.errorMessage"
             class="table-cell-sub-value text-copy error-message"
             @click="copy(record.errorMessage, true)">
         {{ record.errorMessage }}
@@ -52,7 +56,8 @@
         {{ record.location }}
       </span>
       <br>
-      <span class="table-cell-sub-value text-copy"
+      <span
+class="table-cell-sub-value text-copy"
             :title="record.address"
             @click="copy(record.address)">
         {{ record.address }}
@@ -62,7 +67,8 @@
     <template #handle="{ record }">
       <div class="table-handle-wrapper">
         <!-- 详情 -->
-        <a-button type="text"
+        <a-button
+type="text"
                   size="mini"
                   @click="openLogDetail(record)">
           详情
@@ -76,7 +82,7 @@
 
 <script lang="ts">
   export default {
-    name: 'operatorLogSimpleTable'
+    name: 'OperatorLogSimpleTable'
   };
 </script>
 

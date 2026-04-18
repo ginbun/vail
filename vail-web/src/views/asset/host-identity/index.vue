@@ -1,19 +1,22 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
-    <host-identity-table v-if="renderTable"
+    <host-identity-table
+v-if="renderTable"
                          ref="table"
                          @open-add="() => modal.openAdd()"
                          @open-update="(e) => modal.openUpdate(e)"
                          @open-key-view="(e) => keyDrawer.openView(e) " />
     <!-- 列表-卡片 -->
-    <host-identity-card-list v-else
+    <host-identity-card-list
+v-else
                              ref="card"
                              @open-add="() => modal.openAdd()"
                              @open-update="(e) => modal.openUpdate(e)"
                              @open-key-view="(e) => keyDrawer.openView(e) " />
     <!-- 添加修改模态框 -->
-    <host-identity-form-modal ref="modal"
+    <host-identity-form-modal
+ref="modal"
                               @added="reload"
                               @updated="reload" />
     <!-- 主机密钥抽屉 -->
@@ -23,7 +26,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostIdentity'
+    name: 'HostIdentity'
   };
 </script>
 

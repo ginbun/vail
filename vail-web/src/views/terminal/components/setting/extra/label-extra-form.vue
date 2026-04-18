@@ -4,7 +4,8 @@
     <!-- 颜色选择 -->
     <div class="color-setting-container">
       <!-- 透明色 -->
-      <div class="color-wrapper"
+      <div
+class="color-wrapper"
            :style="{ '--color': 'transparent' }"
            @click="clickColor('')">
         <div class="color-item">
@@ -15,7 +16,8 @@
       </div>
       <!-- 其他颜色 -->
       <template v-for="color in toOptions(tabColorKey)">
-        <div class="color-wrapper"
+        <div
+class="color-wrapper"
              :class="[formModel.color === color.value ? 'selected-color' : '']"
              :style="{ '--color': `${color.color}` }"
              @click="clickColor(color.value as string)">
@@ -30,7 +32,7 @@
 
 <script lang="ts">
   export default {
-    name: 'labelExtraForm'
+    name: 'LabelExtraForm'
   };
 </script>
 

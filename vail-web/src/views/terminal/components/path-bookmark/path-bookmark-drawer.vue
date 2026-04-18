@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             :width="388"
             :footer="false"
             @close="emits('closed')">
@@ -14,20 +15,23 @@
       <!-- 路径头部 -->
       <div class="path-header">
         <!-- 搜索框 -->
-        <a-input-search class="path-header-input"
-                        v-model="filterValue"
+        <a-input-search
+v-model="filterValue"
+                        class="path-header-input"
                         placeholder="请输入名称/路径"
                         allow-clear />
         <!-- 右侧侧按钮 -->
         <a-space size="small">
           <!-- 创建路径 -->
-          <a-button class="path-header-icon icon-button"
+          <a-button
+class="path-header-icon icon-button"
                     title="创建路径"
                     @click="openAdd">
             <icon-plus />
           </a-button>
           <!-- 刷新 -->
-          <a-button class="path-header-icon icon-button"
+          <a-button
+class="path-header-icon icon-button"
                     title="刷新"
                     @click="fetchData">
             <icon-refresh />
@@ -35,15 +39,18 @@
         </a-space>
       </div>
       <!-- 加载中 -->
-      <a-skeleton v-if="loading"
+      <a-skeleton
+v-if="loading"
                   class="loading-skeleton"
                   :animation="true">
-        <a-skeleton-line :rows="4"
+        <a-skeleton-line
+:rows="4"
                          :line-height="66"
                          :line-spacing="12" />
       </a-skeleton>
       <!-- 无数据 -->
-      <a-empty v-else-if="bookmarkGroups.length === 0 && ungroupedItems.length === 0"
+      <a-empty
+v-else-if="bookmarkGroups.length === 0 && ungroupedItems.length === 0"
                style="padding: 28px 0">
         <span>暂无数据</span><br>
         <span>点击上方 '<icon-plus />' 添加一条数据吧~</span>
@@ -53,7 +60,8 @@
         <!-- 路径书签组 -->
         <a-collapse :bordered="false">
           <template v-for="group in bookmarkGroups">
-            <a-collapse-item v-if="calcGroupTotal(group) > 0"
+            <a-collapse-item
+v-if="calcGroupTotal(group) > 0"
                              :key="group.id"
                              :header="group.name">
               <!-- 总量 -->
@@ -62,7 +70,8 @@
               </template>
               <!-- 路径 -->
               <template v-for="item in group.items">
-                <path-bookmark-item v-if="item.visible"
+                <path-bookmark-item
+v-if="item.visible"
                                     :key="item.id"
                                     :item="item"
                                     @copy="(s: string) => copy(s, true)"
@@ -78,7 +87,8 @@
         <!-- 未分组路径书签 -->
         <div class="ungrouped-path-container">
           <template v-for="item in ungroupedItems">
-            <path-bookmark-item v-if="item.visible"
+            <path-bookmark-item
+v-if="item.visible"
                                 :key="item.id"
                                 :item="item"
                                 @copy="(s: string) => copy(s, true)"
@@ -92,7 +102,8 @@
       </div>
     </div>
     <!-- 路径编辑抽屉 -->
-    <path-bookmark-form-drawer ref="formDrawer"
+    <path-bookmark-form-drawer
+ref="formDrawer"
                                @added="onAdded"
                                @updated="onUpdated" />
   </a-drawer>
@@ -100,7 +111,7 @@
 
 <script lang="ts">
   export default {
-    name: 'pathBookmarkDrawer'
+    name: 'PathBookmarkDrawer'
   };
 </script>
 

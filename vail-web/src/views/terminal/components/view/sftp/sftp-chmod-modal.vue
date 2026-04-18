@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            title="修改权限"
@@ -7,27 +8,32 @@
            :mask-closable="false"
            :unmount-on-close="true"
            :on-before-ok="handlerOk">
-    <a-form :model="formModel"
-            ref="formRef"
+    <a-form
+ref="formRef"
+            :model="formModel"
             label-align="right"
             :auto-label-width="true">
       <!-- 文件路径 -->
-      <a-form-item field="path"
+      <a-form-item
+field="path"
                    disabled
                    label="文件路径">
-        <a-textarea v-model="formModel.path"
+        <a-textarea
+v-model="formModel.path"
                     placeholder="原始路径"
                     :auto-size="{ minRows: 3, maxRows: 3 }" />
       </a-form-item>
       <!-- 文件权限 -->
-      <a-form-item field="mod"
+      <a-form-item
+field="mod"
                    label="文件权限"
                    :rules="[{ required: true, message: '请输入文件权限' }]">
         <div class="mod-wrapper">
           <!-- 权限输入框 -->
-          <a-input-number ref="modRef"
-                          class="mod-input"
+          <a-input-number
+ref="modRef"
                           v-model="formModel.mod"
+                          class="mod-input"
                           placeholder="请输入文件权限"
                           hide-button
                           @input="updatePreview" />
@@ -41,7 +47,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sftpChmodModal'
+    name: 'SftpChmodModal'
   };
 </script>
 

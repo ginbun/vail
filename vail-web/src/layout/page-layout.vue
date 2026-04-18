@@ -2,7 +2,8 @@
   <router-view v-slot="{ Component, route }">
     <transition name="fade" mode="out-in" appear>
       <!-- 渲染组件 -->
-      <component :is="Component"
+      <component
+:is="Component"
                  v-if="route.meta.ignoreCache"
                  :key="route.fullPath" />
       <!-- 渲染缓存组件 -->

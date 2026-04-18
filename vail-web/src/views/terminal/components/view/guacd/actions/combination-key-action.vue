@@ -1,6 +1,7 @@
 <template>
   <a-row :gutter="[12, 12]" wrap>
-    <a-col v-for="item in GuacdCombinationKeyItems"
+    <a-col
+v-for="item in GuacdCombinationKeyItems"
            :key="item.name"
            :span="12"
            class="combination-key-item"
@@ -12,7 +13,7 @@
 
 <script lang="ts">
   export default {
-    name: 'combinationKeyAction'
+    name: 'CombinationKeyAction'
   };
 </script>
 

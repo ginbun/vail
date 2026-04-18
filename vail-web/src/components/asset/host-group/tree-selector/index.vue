@@ -1,5 +1,6 @@
 <template>
-  <a-tree-select v-model="value"
+  <a-tree-select
+v-model="value"
                  :multiple="true"
                  :data="treeData"
                  :loading="loading"
@@ -10,7 +11,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostGroupTreeSelector'
+    name: 'HostGroupTreeSelector'
   };
 </script>
 

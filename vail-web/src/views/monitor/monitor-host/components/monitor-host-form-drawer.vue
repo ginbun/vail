@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             title="修改监控主机配置"
             :width="470"
             :mask-closable="false"
@@ -9,8 +10,9 @@
             :on-before-ok="handlerOk"
             @cancel="handleClose">
     <a-spin class="full drawer-form-small" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :label-width="120"
               :rules="formRules">
@@ -24,23 +26,27 @@
         </a-form-item>
         <!-- 负责人 -->
         <a-form-item field="ownerUserId" label="负责人">
-          <user-selector v-model="formModel.ownerUserId"
+          <user-selector
+v-model="formModel.ownerUserId"
                          placeholder="请选择负责人"
                          allow-clear />
         </a-form-item>
         <!-- 告警策略 -->
         <a-form-item field="policyId" label="告警策略">
-          <alarm-policy-selector v-model="formModel.policyId"
+          <alarm-policy-selector
+v-model="formModel.policyId"
                                  type="HOST"
                                  placeholder="请选择告警策略"
                                  allow-clear />
         </a-form-item>
         <!-- 告警开关 -->
-        <a-form-item field="alarmSwitch"
+        <a-form-item
+field="alarmSwitch"
                      label="告警开关"
                      style="margin-bottom: 0;"
                      hide-asterisk>
-          <a-switch v-model="formModel.alarmSwitch"
+          <a-switch
+v-model="formModel.alarmSwitch"
                     type="round"
                     :checked-value="AlarmSwitch.ON"
                     :unchecked-value="AlarmSwitch.OFF"
@@ -60,13 +66,15 @@
         <!--        </a-form-item>-->
         <!-- 磁盘 -->
         <a-form-item field="diskName" label="磁盘">
-          <a-select v-model="formModel.diskName"
+          <a-select
+v-model="formModel.diskName"
                     :options="hostRecord.meta?.disks || []"
                     placeholder="请选择展示的磁盘名称" />
         </a-form-item>
         <!-- 网卡 -->
         <a-form-item field="networkName" label="网卡">
-          <a-select v-model="formModel.networkName"
+          <a-select
+v-model="formModel.networkName"
                     :options="hostRecord.meta?.nets || []"
                     placeholder="请选择展示的网卡名称" />
         </a-form-item>
@@ -77,7 +85,7 @@
 
 <script lang="ts">
   export default {
-    name: 'monitorHostFormDrawer'
+    name: 'MonitorHostFormDrawer'
   };
 </script>
 

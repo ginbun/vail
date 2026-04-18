@@ -1,5 +1,6 @@
 <template>
-  <div v-if="render"
+  <div
+v-if="render"
        class="host-terminal-layout"
        :class="{ 'terminal-full-layout': layoutState.fullscreen }">
     <!-- 头部区域 -->
@@ -17,7 +18,8 @@
         <!-- 主机加载中骨架 -->
         <loading-skeleton v-if="loading" />
         <!-- 终端内容区域 -->
-        <main-content v-else
+        <main-content
+v-else
                       @open-command-snippet="() => snippetRef.open()"
                       @open-path-bookmark="() => pathRef.open()"
                       @open-transfer-list="() => transferRef.open()"
@@ -26,7 +28,8 @@
       </main>
       <!-- 右侧操作栏 -->
       <div class="host-terminal-layout-right">
-        <right-sidebar @open-command-snippet="() => snippetRef.open()"
+        <right-sidebar
+@open-command-snippet="() => snippetRef.open()"
                        @open-path-bookmark="() => pathRef.open()"
                        @open-transfer-list="() => transferRef.open()"
                        @open-command-bar="openCommandBar"
@@ -34,7 +37,8 @@
       </div>
     </main>
     <!-- 退出全屏 -->
-    <a-button v-if="layoutState.fullscreen"
+    <a-button
+v-if="layoutState.fullscreen"
               class="exit-fullscreen"
               shape="circle"
               title="退出全屏"
@@ -52,7 +56,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminal'
+    name: 'Terminal'
   };
 </script>
 

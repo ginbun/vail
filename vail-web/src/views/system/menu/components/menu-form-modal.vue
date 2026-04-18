@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            :title="title"
@@ -13,14 +14,16 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
         <!-- 上级菜单 -->
         <a-form-item field="parentId" label="上级菜单">
-          <menu-tree-selector v-model:model-value="formModel.parentId as number"
+          <menu-tree-selector
+v-model:model-value="formModel.parentId as number"
                               :disabled="formModel.type === MenuType.PARENT_MENU" />
         </a-form-item>
         <!-- 菜单名称 -->
@@ -28,15 +31,18 @@
           <a-input v-model="formModel.name" placeholder="请输入菜单名称" />
         </a-form-item>
         <!-- 菜单类型 -->
-        <a-form-item v-if="isAddHandle"
+        <a-form-item
+v-if="isAddHandle"
                      field="type"
                      label="菜单类型">
-          <a-radio-group type="button"
-                         v-model="formModel.type"
+          <a-radio-group
+v-model="formModel.type"
+                         type="button"
                          :options="toRadioOptions(menuTypeKey)" />
         </a-form-item>
         <!-- 菜单图标 -->
-        <a-form-item v-if="formModel.type !== MenuType.FUNCTION"
+        <a-form-item
+v-if="formModel.type !== MenuType.FUNCTION"
                      field="icon"
                      label="菜单图标">
           <icon-picker v-model:icon="formModel.icon as string">
@@ -46,69 +52,82 @@
           </icon-picker>
         </a-form-item>
         <!-- 菜单权限 -->
-        <a-form-item v-if="formModel.type === MenuType.FUNCTION"
+        <a-form-item
+v-if="formModel.type === MenuType.FUNCTION"
                      field="permission"
                      label="菜单权限">
-          <a-input v-model="formModel.permission"
+          <a-input
+v-model="formModel.permission"
                    placeholder="菜单权限 infra:system-menu:query"
                    allow-clear />
         </a-form-item>
         <!-- 组件名称 -->
-        <a-form-item v-if="formModel.type !== MenuType.FUNCTION"
+        <a-form-item
+v-if="formModel.type !== MenuType.FUNCTION"
                      field="component"
                      label="组件名称">
-          <a-input v-model="formModel.component"
+          <a-input
+v-model="formModel.component"
                    placeholder="路由组件名称"
                    allow-clear />
         </a-form-item>
         <!-- 外链地址 -->
-        <a-form-item v-if="formModel.type !== MenuType.FUNCTION"
+        <a-form-item
+v-if="formModel.type !== MenuType.FUNCTION"
                      field="path"
                      label="外链地址"
                      tooltip="输入组件名称后则不会生效">
-          <a-input v-model="formModel.path"
+          <a-input
+v-model="formModel.path"
                    placeholder="组件名称与外链地址二选一"
                    allow-clear />
         </a-form-item>
         <!-- 菜单排序 -->
         <a-form-item field="sort" label="菜单排序">
-          <a-input-number v-model="formModel.sort"
+          <a-input-number
+v-model="formModel.sort"
                           placeholder="排序"
                           :style="{ width: '120px' }"
                           allow-clear
                           hide-button />
         </a-form-item>
         <!-- 是否可见 -->
-        <a-form-item v-if="formModel.type !== MenuType.FUNCTION"
+        <a-form-item
+v-if="formModel.type !== MenuType.FUNCTION"
                      field="type"
                      label="是否可见"
                      tooltip="选择隐藏后不会在菜单以及 tab 中显示 但是可以访问">
-          <a-switch type="round"
-                    v-model="formModel.visible"
+          <a-switch
+v-model="formModel.visible"
+                    type="round"
                     :checked-text="getDictValue(menuVisibleKey, EnabledStatus.ENABLED)"
                     :unchecked-text="getDictValue(menuVisibleKey, EnabledStatus.DISABLED)"
                     :checked-value="EnabledStatus.ENABLED"
                     :unchecked-value="EnabledStatus.DISABLED" />
         </a-form-item>
         <!-- 是否新窗口打开 -->
-        <a-form-item v-if="formModel.type !== MenuType.FUNCTION"
+        <a-form-item
+v-if="formModel.type !== MenuType.FUNCTION"
                      field="type"
                      label="新窗口打开"
                      tooltip="选择后点击菜单会使用新页面打开">
-          <a-switch type="round"
-                    v-model="formModel.newWindow"
+          <a-switch
+v-model="formModel.newWindow"
+                    type="round"
                     :checked-text="getDictValue(menuNewWindowKey, EnabledStatus.ENABLED)"
                     :unchecked-text="getDictValue(menuNewWindowKey, EnabledStatus.DISABLED)"
                     :checked-value="EnabledStatus.ENABLED"
                     :unchecked-value="EnabledStatus.DISABLED" />
         </a-form-item>
         <!-- 是否缓存 -->
-        <a-form-item v-if="formModel.type !== MenuType.FUNCTION"
+        <a-form-item
+v-if="formModel.type !== MenuType.FUNCTION"
                      field="type"
                      label="是否缓存"
                      tooltip="选择缓存后则会使用 keep-alive 缓存组件">
-          <a-switch type="round"
-                    v-model="formModel.cache"
+          <a-switch
+v-model="formModel.cache"
+                    type="round"
                     :checked-text="getDictValue(menuCacheKey, EnabledStatus.ENABLED)"
                     :unchecked-text="getDictValue(menuCacheKey, EnabledStatus.DISABLED)"
                     :checked-value="EnabledStatus.ENABLED"
@@ -121,7 +140,7 @@
 
 <script lang="ts">
   export default {
-    name: 'menuFormModal'
+    name: 'MenuFormModal'
   };
 </script>
 
@@ -137,7 +156,7 @@
   import { createMenu, updateMenu } from '@/api/system/menu';
   import { Message } from '@arco-design/web-vue';
   import { useDictStore } from '@/store';
-  import IconPicker from '@sanqi377/arco-vue-icon-picker';
+  import IconPicker from '@/components/icon-picker/index.vue';
   import MenuTreeSelector from '@/components/system/menu/tree-selector/index.vue';
 
   const { visible, setVisible } = useVisible();

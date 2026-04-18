@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            title-align="start"
            title="授权主机"
            :top="60"
@@ -14,10 +15,12 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <!-- 加载中 -->
-    <a-skeleton v-if="loading"
+    <a-skeleton
+v-if="loading"
                 style="padding: 16px"
                 :animation="true">
-      <a-skeleton-line :rows="6"
+      <a-skeleton-line
+:rows="6"
                        :line-height="42"
                        :line-spacing="12" />
     </a-skeleton>
@@ -26,12 +29,14 @@
       <!-- 顶部操作 -->
       <div class="top-side-container">
         <!-- 视图类型 -->
-        <a-radio-group v-model="newConnectionType"
+        <a-radio-group
+v-model="newConnectionType"
                        type="button"
                        class="usn"
                        :options="toRadioOptions(newConnectionTypeKey)" />
         <!-- 过滤 -->
-        <a-auto-complete v-model="filterValue"
+        <a-auto-complete
+v-model="filterValue"
                          class="host-filter"
                          placeholder="别名/名称/编码/IP @标签"
                          :allow-clear="true"
@@ -53,14 +58,16 @@
       <!-- 主机列表 -->
       <div class="host-container">
         <!-- 分组视图 -->
-        <host-group v-if="newConnectionType === NewConnectionType.GROUP"
+        <host-group
+v-if="newConnectionType === NewConnectionType.GROUP"
                     v-model:selected-keys="selectedKeys"
                     v-model:selected-group="selectedGroup"
                     :host-list="hostList"
                     :groups="hosts?.groupTree as any"
                     :nodes="treeNodes as any" />
         <!-- 列表视图 -->
-        <host-table v-else
+        <host-table
+v-else
                     v-model:selected-keys="selectedKeys"
                     :host-list="hostList"
                     :empty-message="emptyMessage" />
@@ -71,7 +78,7 @@
 
 <script lang="ts">
   export default {
-    name: 'authorizedHostModal'
+    name: 'AuthorizedHostModal'
   };
 </script>
 

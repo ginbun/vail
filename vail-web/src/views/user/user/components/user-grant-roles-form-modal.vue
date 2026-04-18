@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            title="分配角色"
@@ -13,8 +14,9 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true">
         <!-- 用户名 -->
@@ -27,7 +29,8 @@
         </a-form-item>
         <!-- 角色 -->
         <a-form-item field="roles" label="角色">
-          <role-selector v-model="formModel.roleIdList"
+          <role-selector
+v-model="formModel.roleIdList"
                          :multiple="true" />
         </a-form-item>
       </a-form>
@@ -37,7 +40,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userGrantRolesFormModal'
+    name: 'UserGrantRolesFormModal'
   };
 </script>
 

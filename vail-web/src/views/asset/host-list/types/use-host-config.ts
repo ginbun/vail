@@ -5,7 +5,6 @@ import { getHostConfig, updateHostConfig } from '@/api/asset/host-config';
 import type { FieldRule } from '@arco-design/web-vue';
 import { Message } from '@arco-design/web-vue';
 import { baseFormRules } from './form.rules';
-import { encrypt } from '@/utils/rsa';
 
 // 主机配置表单信息
 export interface UseHostConfigFormOptions<T extends HostBaseConfig> {
@@ -46,13 +45,7 @@ export default function useHostConfigForm<T extends HostBaseConfig>(options: Use
     if (error) {
       return;
     }
-    // 加密密码
     const data = { ...formModel.value };
-    try {
-      data.password = await encrypt(data.password);
-    } catch (e) {
-      return;
-    }
     try {
       setLoading(true);
       // 更新

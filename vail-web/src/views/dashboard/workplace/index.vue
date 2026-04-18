@@ -1,17 +1,21 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 头部 -->
-    <workplace-header class="mb16"
+    <workplace-header
+class="mb16"
                       :data="statisticsData" />
     <!-- 统计信息 -->
-    <workplace-statistics class="mb16"
+    <workplace-statistics
+class="mb16"
                           :data="statisticsData" />
     <a-row :gutter="16" class="mb16" align="stretch">
       <!-- 最近终端连接表格 -->
-      <terminal-connect-table :loading="terminalLoading"
+      <terminal-connect-table
+:loading="terminalLoading"
                               :data="statisticsData" />
       <!-- 最近批量执行表格 -->
-      <batch-exec-table :loading="execLoading"
+      <batch-exec-table
+:loading="execLoading"
                         :data="statisticsData" />
       <!-- 快捷操作 -->
       <quick-operation />
@@ -20,7 +24,8 @@
       <!-- 每日操作数量图表 -->
       <operator-log-chart :data="statisticsData" />
       <!-- 用户登录日志 -->
-      <user-login-table :loading="infraLoading"
+      <user-login-table
+:loading="infraLoading"
                         :data="statisticsData" />
     </a-row>
   </div>
@@ -28,7 +33,7 @@
 
 <script lang="ts">
   export default {
-    name: 'workplace',
+    name: 'Workplace',
   };
 </script>
 

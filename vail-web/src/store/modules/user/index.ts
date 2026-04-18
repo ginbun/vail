@@ -1,7 +1,6 @@
 import type { UserState } from './types';
 import type { LoginRequest } from '@/api/user/auth';
 import { userLogin, userLogout } from '@/api/user/auth';
-import { md5 } from '@/utils';
 import { defineStore } from 'pinia';
 import { clearToken, setToken } from '@/utils/auth';
 import { removeRouteListener } from '@/utils/route-listener';
@@ -96,7 +95,7 @@ export default defineStore('user', {
       try {
         const loginRequest: LoginRequest = {
           username: loginForm.username,
-          password: md5(loginForm.password as string),
+          password: loginForm.password,
         };
         // 执行登录
         const res = await userLogin(loginRequest);

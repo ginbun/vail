@@ -12,7 +12,8 @@
       <template v-for="parentMenu in menuData" :key="parentMenu.id">
         <!-- 有子菜单 -->
         <template v-if="parentMenu.children?.length">
-          <tr v-for="(childrenMenu, i) in parentMenu.children"
+          <tr
+v-for="(childrenMenu, i) in parentMenu.children"
               :key="childrenMenu.id">
             <!-- 父菜单 -->
             <td v-if="i === 0" :rowspan="parentMenu.children.length">
@@ -23,7 +24,8 @@
             <!-- 子菜单 -->
             <td>
               <!-- 默认路由 -->
-              <a-checkbox v-if="childrenMenu.component === DEFAULT_ROUTE_NAME"
+              <a-checkbox
+v-if="childrenMenu.component === DEFAULT_ROUTE_NAME"
                           :value="childrenMenu.id">
                 {{ childrenMenu.name }} <span class="span-red">(必选)</span>
               </a-checkbox>
@@ -35,7 +37,8 @@
             <!-- 功能 -->
             <td>
               <a-row v-if="childrenMenu.children && childrenMenu.children.length">
-                <a-col v-for="item in childrenMenu.children"
+                <a-col
+v-for="item in childrenMenu.children"
                        :key="item.id"
                        :span="8">
                   <a-checkbox :value="item.id">
@@ -71,7 +74,7 @@
 
 <script lang="ts">
   export default {
-    name: 'menuGrantTable'
+    name: 'MenuGrantTable'
   };
 </script>
 

@@ -1,11 +1,13 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 表格 -->
-    <menu-table ref="table"
+    <menu-table
+ref="table"
                 @open-add="(e) => modal.openAdd(e)"
                 @open-update="(e) => modal.openUpdate(e)" />
     <!-- 添加修改模态框 -->
-    <menu-form-modal ref="modal"
+    <menu-form-modal
+ref="modal"
                      @added="() => table.reload()"
                      @updated="() => table.reload()" />
   </div>
@@ -13,7 +15,7 @@
 
 <script lang="ts">
   export default {
-    name: 'systemMenu'
+    name: 'SystemMenu'
   };
 </script>
 

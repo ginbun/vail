@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            title="清理上传任务"
@@ -13,44 +14,51 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
+      <a-form
+:model="formModel"
               label-align="right"
               :auto-label-width="true">
         <!-- 上传时间 -->
         <a-form-item field="createTimeRange" label="上传时间">
-          <a-range-picker v-model="formModel.createTimeRange"
+          <a-range-picker
+v-model="formModel.createTimeRange"
                           :time-picker-props="{ defaultValue: ['00:00:00', '23:59:59'] }"
                           show-time
                           format="YYYY-MM-DD HH:mm:ss" />
         </a-form-item>
         <!-- 上传用户 -->
         <a-form-item field="userId" label="上传用户">
-          <user-selector v-model="formModel.userId"
+          <user-selector
+v-model="formModel.userId"
                          placeholder="请选择上传用户"
                          allow-clear />
         </a-form-item>
         <!-- 远程路径 -->
         <a-form-item field="remotePath" label="远程路径">
-          <a-input v-model="formModel.remotePath"
+          <a-input
+v-model="formModel.remotePath"
                    placeholder="请输入远程路径"
                    allow-clear />
         </a-form-item>
         <!-- 上传描述 -->
         <a-form-item field="description" label="上传描述">
-          <a-input v-model="formModel.description"
+          <a-input
+v-model="formModel.description"
                    placeholder="请输入上传描述"
                    allow-clear />
         </a-form-item>
         <!-- 上传状态 -->
         <a-form-item field="status" label="上传状态">
-          <a-select v-model="formModel.status"
+          <a-select
+v-model="formModel.status"
                     :options="toOptions(uploadTaskStatusKey)"
                     placeholder="请选择状态"
                     allow-clear />
         </a-form-item>
         <!-- 数量限制 -->
         <a-form-item field="limit" label="数量限制">
-          <a-input-number v-model="formModel.limit"
+          <a-input-number
+v-model="formModel.limit"
                           :min="1"
                           :max="maxClearLimit"
                           :placeholder="`请输入数量限制 最大: ${maxClearLimit}`"
@@ -64,7 +72,7 @@
 
 <script lang="ts">
   export default {
-    name: 'uploadTaskFormModal'
+    name: 'UploadTaskFormModal'
   };
 </script>
 

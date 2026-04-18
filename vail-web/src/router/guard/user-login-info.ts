@@ -1,5 +1,4 @@
 import type { RouteLocationRaw, Router } from 'vue-router';
-import NProgress from 'nprogress';
 import { useUserStore } from '@/store';
 import { isLogin } from '@/utils/auth';
 import { Message } from '@arco-design/web-vue';
@@ -10,7 +9,6 @@ import { LOGIN_ROUTE_NAME, UPDATE_PASSWORD_ROUTE_NAME } from '@/router/constants
  */
 export default function setupUserLoginInfoGuard(router: Router) {
   router.beforeEach(async (to, from, next) => {
-    NProgress.start();
     const userStore = useUserStore();
     if (isLogin()) {
       if (userStore.id) {

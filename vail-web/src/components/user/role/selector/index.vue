@@ -1,5 +1,6 @@
 <template>
-  <a-select v-model:model-value="value as any"
+  <a-select
+v-model:model-value="value as any"
             :options="optionData"
             :allow-search="true"
             :multiple="multiple"
@@ -11,7 +12,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userRoleSelector'
+    name: 'UserRoleSelector'
   };
 </script>
 

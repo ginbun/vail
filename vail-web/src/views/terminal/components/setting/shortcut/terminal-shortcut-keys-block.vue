@@ -9,15 +9,16 @@
     <!-- 内容区域 -->
     <div class="terminal-setting-body terminal-shortcut-container">
       <template v-for="item in items">
-        <div class="shortcut-row" v-if="item.type === type">
+        <div v-if="item.type === type" class="shortcut-row">
           <!-- 名称 -->
           <span class="shortcut-name">{{ item.content }}</span>
           <!-- 快捷键 -->
           <div class="shortcut-key-container">
             <!-- 启用-修改中 -->
-            <a-input v-if="item.editable && item.enabled"
-                     v-model="item.shortcutKey"
+            <a-input
+v-if="item.editable && item.enabled"
                      :ref="setAutoFocus"
+                     v-model="item.shortcutKey"
                      class="trigger-input"
                      size="small"
                      placeholder="请按下快捷键"
@@ -31,22 +32,25 @@
           <!-- 操作 -->
           <a-space class="shortcut-actions">
             <!-- 屏蔽 -->
-            <a-button class="shortcut-action icon-button"
-                      v-if="item.enabled"
+            <a-button
+v-if="item.enabled"
+                      class="shortcut-action icon-button"
                       title="屏蔽"
                       @click="updateEnabledStatus(item, false)">
               <icon-message-banned />
             </a-button>
             <!-- 恢复 -->
-            <a-button class="shortcut-action icon-button"
-                      v-if="!item.enabled"
+            <a-button
+v-if="!item.enabled"
+                      class="shortcut-action icon-button"
                       title="恢复"
                       @click="updateEnabledStatus(item, true)">
               <icon-message />
             </a-button>
             <!-- 设置 -->
-            <a-button class="shortcut-action icon-button"
-                      v-if="!item.editable && item.enabled"
+            <a-button
+v-if="!item.editable && item.enabled"
+                      class="shortcut-action icon-button"
                       title="设置"
                       @click="setEditableStatus(item)">
               <icon-settings />
@@ -67,7 +71,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalShortcutKeysBlock'
+    name: 'TerminalShortcutKeysBlock'
   };
 </script>
 

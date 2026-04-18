@@ -1,7 +1,8 @@
 <template>
   <div v-if="session.state.connectStatus === TerminalStatus.CONNECTED">
     <!-- 工具栏 -->
-    <a-popover v-model:popup-visible="visible"
+    <a-popover
+v-model:popup-visible="visible"
                :title="undefined"
                trigger="click"
                :content-class="['guacd-action-bar-popover', direction]"
@@ -14,17 +15,20 @@
       <!-- 工具内容 -->
       <template #content>
         <!-- 按钮 -->
-        <a-space class="action-bar-actions"
+        <a-space
+class="action-bar-actions"
                  :direction="direction === ActionBarPosition.RIGHT ? 'vertical' : 'horizontal'"
                  :size="16">
           <div v-for="action in actions" :key="action.item">
-            <a-tooltip :mini="true"
+            <a-tooltip
+:mini="true"
                        :auto-fix-position="false"
                        :position="direction === ActionBarPosition.RIGHT ? 'left' : 'bottom'"
                        content-class="terminal-tooltip-content"
                        :show-arrow="false"
                        :content="action.content">
-              <a-button class="action-bar-button"
+              <a-button
+class="action-bar-button"
                         :disabled="!action.enabled()"
                         :type="action.active ? 'primary' : 'secondary'"
                         @click="toggleAction(action.item)">
@@ -57,8 +61,9 @@
         </div>
         <!-- RDP 文件上传 -->
         <div v-else-if="current === GuacdActionItemKeys.RDP_UPLOAD" class="action-bar-content">
-          <a-upload class="action-bar-upload"
-                    v-model:file-list="fileList"
+          <a-upload
+v-model:file-list="fileList"
+                    class="action-bar-upload"
                     :auto-upload="false"
                     :show-file-list="false"
                     :draggable="true"
@@ -69,7 +74,8 @@
             <a-button size="small" @click="clearUploadFile">
               清空
             </a-button>
-            <a-button type="primary"
+            <a-button
+type="primary"
                       size="small"
                       :disabled="!fileList.length"
                       @click="uploadFile">
@@ -86,7 +92,7 @@
 
 <script lang="ts">
   export default {
-    name: 'rdpActionBar'
+    name: 'RdpActionBar'
   };
 </script>
 
@@ -100,7 +106,7 @@
     ActionBarPosition, TerminalSessionTypes
   } from '@/views/terminal/types/const';
   import { computed, ref, watch, onMounted } from 'vue';
-  import { saveAs } from 'file-saver';
+  import { downloadFile } from '@/utils';
   import { useTerminalStore } from '@/store';
   import useVisible from '@/hooks/visible';
   import InfoAction from '../guacd/actions/info-action.vue';
@@ -191,7 +197,7 @@
     const port = props.session.info.port;
     const username = props.session.info.username;
     const content = `auto connect:i:1\nfull address:s:${address}:${port}\nusername:s:${username}`;
-    saveAs(new Blob([content], { type: 'text/plain;charset=utf-8' }), `${address}.rdp`);
+    downloadFile(new Blob([content], { type: 'text/plain;charset=utf-8' }), `${address}.rdp`);
   };
 
   // 上传文件

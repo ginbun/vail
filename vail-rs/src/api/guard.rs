@@ -1,9 +1,10 @@
 use axum::http::HeaderMap;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{decode, decode_header, Validation};
 use serde::Deserialize;
 
 use crate::{
     api::AppState,
+    config::JwtConfig,
     error::{AppError, AppResult},
 };
 
@@ -20,20 +21,28 @@ fn bearer_token(headers: &HeaderMap) -> AppResult<&str> {
         .ok_or_else(|| AppError::Auth("Missing token".to_string()))
 }
 
-fn parse_user_id(token: &str, secret: &str) -> AppResult<i64> {
-    let claims = decode::<GuardClaims>(
-        token,
-        &DecodingKey::from_secret(secret.as_bytes()),
-        &Validation::default(),
-    )
-    .map_err(|e| AppError::Auth(e.to_string()))?;
+fn parse_user_id(token: &str, jwt: &JwtConfig) -> AppResult<i64> {
+    let header = decode_header(token).map_err(|e| AppError::Auth(e.to_string()))?;
+    let validation = Validation::new(jwt.algorithm);
+
+    if header.alg != jwt.algorithm {
+        return Err(AppError::Auth(format!(
+            "Unexpected jwt algorithm in token: {:?}",
+            header.alg
+        )));
+    }
+
+    let key = jwt.verification_key().map_err(AppError::Auth)?;
+
+    let claims = decode::<GuardClaims>(token, &key, &validation)
+        .map_err(|e| AppError::Auth(e.to_string()))?;
 
     Ok(claims.claims.user_id)
 }
 
-pub fn current_user_id(headers: &HeaderMap, secret: &str) -> AppResult<i64> {
+pub fn current_user_id(headers: &HeaderMap, jwt: &JwtConfig) -> AppResult<i64> {
     let token = bearer_token(headers)?;
-    parse_user_id(token, secret)
+    parse_user_id(token, jwt)
 }
 
 pub async fn require_permission(
@@ -41,7 +50,7 @@ pub async fn require_permission(
     headers: &HeaderMap,
     permission_code: &str,
 ) -> AppResult<i64> {
-    let user_id = current_user_id(headers, &state.config.jwt.secret)?;
+    let user_id = current_user_id(headers, &state.config.jwt)?;
 
     let allowed = sqlx::query_scalar::<_, bool>(
         "SELECT EXISTS(
@@ -68,7 +77,7 @@ pub async fn require_permission(
 #[cfg(test)]
 mod tests {
     use axum::http::HeaderValue;
-    use jsonwebtoken::{encode, EncodingKey, Header};
+    use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
     use serde::Serialize;
 
     use super::*;
@@ -81,6 +90,9 @@ mod tests {
         sub: String,
         session_id: String,
     }
+
+    const TEST_ED25519_PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIHCDX8ke/yslwa9SElPghVHhz700q1H6SO9hmUJ6i8Ld\n-----END PRIVATE KEY-----\n";
+    const TEST_ED25519_PUBLIC_KEY: &str = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAsA29J+hOVKaDdV0/Ksm2B3zFrbDqFphgTpO79LTQ4zk=\n-----END PUBLIC KEY-----\n";
 
     #[test]
     fn bearer_token_extracts_value() {
@@ -107,7 +119,48 @@ mod tests {
         )
         .expect("jwt encode");
 
-        let user_id = parse_user_id(&token, secret).expect("jwt parse");
+        let jwt = JwtConfig {
+            algorithm: Algorithm::HS256,
+            secret: secret.to_string(),
+            private_key: String::new(),
+            public_key: String::new(),
+            expiration: 3600,
+            refresh_expiration: 604800,
+        };
+
+        let user_id = parse_user_id(&token, &jwt).expect("jwt parse");
         assert_eq!(user_id, 42);
+    }
+
+    #[test]
+    fn parse_user_id_decodes_eddsa_jwt_claim() {
+        let claims = TestClaims {
+            user_id: 7,
+            exp: 4_102_444_800,
+            iat: 1_700_000_000,
+            sub: "demo".to_string(),
+            session_id: "session".to_string(),
+        };
+
+        let mut header = Header::new(Algorithm::EdDSA);
+        header.typ = Some("JWT".to_string());
+        let token = encode(
+            &header,
+            &claims,
+            &EncodingKey::from_ed_pem(TEST_ED25519_PRIVATE_KEY.as_bytes()).expect("ed key"),
+        )
+        .expect("jwt encode");
+
+        let jwt = JwtConfig {
+            algorithm: Algorithm::EdDSA,
+            secret: String::new(),
+            private_key: TEST_ED25519_PRIVATE_KEY.to_string(),
+            public_key: TEST_ED25519_PUBLIC_KEY.to_string(),
+            expiration: 3600,
+            refresh_expiration: 604800,
+        };
+
+        let user_id = parse_user_id(&token, &jwt).expect("jwt parse");
+        assert_eq!(user_id, 7);
     }
 }

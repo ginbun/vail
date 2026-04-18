@@ -51,7 +51,7 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
     this.inst.options = {
       ...(preference.sshDisplaySetting as any),
       theme: preference.sshTheme.schema,
-      fastScrollModifier: !!preference.sshInteractSetting.fastScrollModifier ? 'alt' : 'none',
+      fastScrollModifier: preference.sshInteractSetting.fastScrollModifier ? 'alt' : 'none',
       altClickMovesCursor: !!preference.sshInteractSetting.altClickMovesCursor,
       rightClickSelectsWord: !!preference.sshInteractSetting.rightClickSelectsWord,
       wordSeparator: preference.sshInteractSetting.wordSeparator,

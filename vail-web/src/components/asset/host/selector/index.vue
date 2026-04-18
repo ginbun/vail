@@ -1,5 +1,6 @@
 <template>
-  <a-select v-model:model-value="value"
+  <a-select
+v-model:model-value="value"
             :options="optionData"
             :loading="loading"
             :multiple="multiple"
@@ -9,7 +10,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostSelector'
+    name: 'HostSelector'
   };
 </script>
 

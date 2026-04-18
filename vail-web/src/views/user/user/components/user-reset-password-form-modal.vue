@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            title="重置密码"
@@ -13,8 +14,9 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true">
         <!-- 用户名 -->
@@ -36,7 +38,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userResetPasswordFormModal'
+    name: 'UserResetPasswordFormModal'
   };
 </script>
 
@@ -48,7 +50,6 @@
   import { password } from '../types/form.rules';
   import { resetUserPassword } from '@/api/user/user';
   import { Message } from '@arco-design/web-vue';
-  import { md5 } from '@/utils';
 
   const { visible, setVisible } = useVisible();
   const { loading, setLoading } = useLoading();
@@ -85,7 +86,7 @@
       // 修改
       await resetUserPassword({
         id: updateUser.value.id,
-        password: md5(formModel.value.password as string)
+        password: formModel.value.password
       });
       Message.success('修改成功');
       // 清空

@@ -5,19 +5,22 @@
     <!-- 终端右键菜单 -->
     <ssh-context-menu :session="session" @handle="doTerminalHandle">
       <!-- 终端容器 -->
-      <div class="ssh-wrapper"
+      <div
+class="ssh-wrapper"
            :style="{ background: preference.sshTheme.schema.background }">
         <!-- 终端实例 -->
-        <div class="ssh-viewport" ref="viewport" />
+        <div ref="viewport" class="ssh-viewport" />
         <!-- 搜索模态框 -->
-        <xterm-search-modal ref="searchModal"
+        <xterm-search-modal
+ref="searchModal"
                             class="search-modal"
                             @find="findWords"
                             @close="focus" />
       </div>
     </ssh-context-menu>
     <!-- 上传文件模态框 -->
-    <sftp-upload-modal ref="uploadModal"
+    <sftp-upload-modal
+ref="uploadModal"
                        :session="session"
                        @closed="focus" />
   </div>
@@ -25,7 +28,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sshView'
+    name: 'SshView'
   };
 </script>
 

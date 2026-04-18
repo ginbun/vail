@@ -7,20 +7,24 @@
       </h3>
     </div>
     <!-- 加载中 -->
-    <a-skeleton v-if="loading"
+    <a-skeleton
+v-if="loading"
                 class="skeleton-wrapper"
                 :animation="true">
-      <a-skeleton-line :rows="6"
+      <a-skeleton-line
+:rows="6"
                        :line-height="64"
                        :line-spacing="24" />
     </a-skeleton>
     <!-- 内容区域 -->
     <div v-else class="terminal-setting-body terminal-theme-container">
       <!-- 终端主题 -->
-      <div class="theme-row"
-           v-for="(themeArr, index) in themes"
-           :key="index">
-        <a-card v-for="(theme, colIndex) in themeArr"
+      <div
+v-for="(themeArr, index) in themes"
+           :key="index"
+           class="theme-row">
+        <a-card
+v-for="(theme, colIndex) in themeArr"
                 :key="theme.name"
                 class="terminal-theme-card simple-card"
                 :class="{
@@ -39,8 +43,9 @@
           <!-- 样例 -->
           <terminal-example :schema="theme.schema" />
           <!-- 选中按钮 -->
-          <icon-check class="theme-check-icon"
-                      v-show="theme.name === currentThemeName" />
+          <icon-check
+v-show="theme.name === currentThemeName"
+                      class="theme-check-icon" />
         </a-card>
       </div>
     </div>
@@ -49,7 +54,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalSshThemeBlock'
+    name: 'TerminalSshThemeBlock'
   };
 </script>
 

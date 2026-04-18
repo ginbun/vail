@@ -6,19 +6,22 @@
       <!-- 操作 -->
       <a-button-group size="mini">
         <!-- 重置 -->
-        <a-button v-if="status.value === UploadTaskStepStatus.WAITING.value"
+        <a-button
+v-if="status.value === UploadTaskStepStatus.WAITING.value"
                   @click="emits('clear')">
           重置
         </a-button>
         <!-- 取消上传 -->
-        <a-button v-if="status.value === UploadTaskStepStatus.REQUESTING.value"
+        <a-button
+v-if="status.value === UploadTaskStepStatus.REQUESTING.value"
                   type="primary"
                   status="warning"
                   @click="emits('abort')">
           取消上传
         </a-button>
         <!-- 开始上传 -->
-        <a-button v-if="status.value === UploadTaskStepStatus.WAITING.value"
+        <a-button
+v-if="status.value === UploadTaskStepStatus.WAITING.value"
                   type="primary"
                   @click="submit">
           开始上传
@@ -26,24 +29,28 @@
       </a-button-group>
     </div>
     <!-- 表单 -->
-    <a-form :model="formModel"
-            ref="formRef"
+    <a-form
+ref="formRef"
+            :model="formModel"
             class="form-wrapper"
             label-align="right"
             :auto-label-width="true"
             :rules="formRules">
       <!-- 上传描述 -->
       <a-form-item field="description" label="上传描述">
-        <a-input v-model="formModel.description"
+        <a-input
+v-model="formModel.description"
                  placeholder="请输入上传描述"
                  allow-clear />
       </a-form-item>
       <!-- 上传路径 -->
-      <a-form-item field="remotePath"
+      <a-form-item
+field="remotePath"
                    style="margin-bottom: 4px;"
                    label="上传路径"
                    help="${username} 用户名 ${home} 用户家目录">
-        <a-input v-model="formModel.remotePath"
+        <a-input
+v-model="formModel.remotePath"
                  placeholder="请输入上传路径"
                  allow-clear />
       </a-form-item>
@@ -51,7 +58,7 @@
       <a-form-item field="hostIdList" label="上传主机">
         <div class="selected-host">
           <!-- 已选择数量 -->
-          <span class="usn" v-if="formModel.hostIdList?.length">
+          <span v-if="formModel.hostIdList?.length" class="usn">
             已选择<span class="selected-host-count span-blue">{{ formModel.hostIdList?.length }}</span>台主机
           </span>
           <span class="usn pointer span-blue" @click="emits('openHost')">
@@ -65,7 +72,7 @@
 
 <script lang="ts">
   export default {
-    name: 'batchUploadForm'
+    name: 'BatchUploadForm'
   };
 </script>
 

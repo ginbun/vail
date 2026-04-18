@@ -4,14 +4,16 @@
       <div class="card-title">
         <p class="card-title-left">用户登录日志</p>
         <!-- 跳转 -->
-        <span class="pointer span-blue"
+        <span
+class="pointer span-blue"
               title="详情"
               @click="router.push({ name: 'userInfo', query: { tab: 'loginHistory' } })">
           详情
         </span>
       </div>
       <div class="card-body">
-        <a-table row-key="id"
+        <a-table
+row-key="id"
                  class="table-resize"
                  :loading="loading"
                  :columns="userLoginColumns"
@@ -38,7 +40,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userLoginTable'
+    name: 'UserLoginTable'
   };
 </script>
 

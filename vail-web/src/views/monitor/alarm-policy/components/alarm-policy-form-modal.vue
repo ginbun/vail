@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            :title="title"
@@ -13,27 +14,31 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
         <!-- 策略名称 -->
         <a-form-item field="name" label="策略名称">
-          <a-input v-model="formModel.name"
+          <a-input
+v-model="formModel.name"
                    placeholder="请输入策略名称"
                    allow-clear />
         </a-form-item>
         <!-- 策略描述 -->
         <a-form-item field="description" label="策略描述">
-          <a-textarea v-model="formModel.description"
+          <a-textarea
+v-model="formModel.description"
                       placeholder="请输入策略描述"
                       :auto-size="{ minRows: 3, maxRows: 3}"
                       allow-clear />
         </a-form-item>
         <!-- 通知渠道 -->
         <a-form-item field="notifyIdList" label="通知渠道">
-          <notify-template-selector v-model="formModel.notifyIdList"
+          <notify-template-selector
+v-model="formModel.notifyIdList"
                                     biz-type="ALARM"
                                     multiple
                                     @change="setChangeNotify(true)" />
@@ -45,7 +50,7 @@
 
 <script lang="ts">
   export default {
-    name: 'alarmPolicyFormModal'
+    name: 'AlarmPolicyFormModal'
   };
 </script>
 

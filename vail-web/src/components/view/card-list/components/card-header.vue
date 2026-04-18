@@ -8,10 +8,11 @@
         <breadcrumb />
         <!-- 分页部分 -->
         <div class="pagination-wrapper">
-          <a-pagination v-if="pagination"
-                        size="mini"
+          <a-pagination
+v-if="pagination"
                         v-model:current="(pagination as any).current"
                         v-model:page-size="(pagination as any).pageSize"
+                        size="mini"
                         v-bind="pagination as any"
                         :auto-adjust="false"
                         @change="(page: number) => bubblesEmitter(HeaderEmitter.PAGE_CHANGE, page, (pagination as any).pageSize)"
@@ -24,8 +25,9 @@
         <div class="card-list-handler-left">
           <a-space>
             <!-- 创建 -->
-            <a-button v-permission="addPermission"
-                      v-if="!handleVisible?.disableAdd"
+            <a-button
+v-if="!handleVisible?.disableAdd"
+                      v-permission="addPermission"
                       class="icon-button card-header-icon-button"
                       title="创建"
                       @click="bubblesEmitter(HeaderEmitter.ADD)">
@@ -41,10 +43,12 @@
             <!-- 右侧操作槽位 -->
             <slot name="rightHandle" />
             <!-- 搜索框 -->
-            <div v-if="!handleVisible?.disableSearchInput"
+            <div
+v-if="!handleVisible?.disableSearchInput"
                  class="header-input-wrapper"
                  :style="{width: searchInputWidth}">
-              <a-input v-model="searchValueRef"
+              <a-input
+v-model="searchValueRef"
                        :placeholder="searchInputPlaceholder as string"
                        size="small"
                        allow-clear
@@ -54,7 +58,8 @@
             </div>
             <!-- 过滤条件 -->
             <a-popover position="br" trigger="click" content-class="card-filter-wrapper">
-              <a-button v-if="!handleVisible?.disableFilter"
+              <a-button
+v-if="!handleVisible?.disableFilter"
                         ref="filterRef"
                         class="icon-button card-header-icon-button"
                         title="选择过滤条件">
@@ -77,24 +82,28 @@
               </template>
             </a-popover>
             <!-- 搜索 -->
-            <a-button v-if="!handleVisible?.disableSearch"
+            <a-button
+v-if="!handleVisible?.disableSearch"
                       class="icon-button card-header-icon-button"
                       title="搜索"
                       @click="bubblesEmitter(HeaderEmitter.SEARCH)">
               <icon-search />
             </a-button>
             <!-- 重置 -->
-            <a-button v-if="!handleVisible?.disableReset"
+            <a-button
+v-if="!handleVisible?.disableReset"
                       class="icon-button card-header-icon-button"
                       title="重置"
                       @click="bubblesEmitter(HeaderEmitter.RESET)">
               <icon-refresh />
             </a-button>
             <!-- 调整字段 -->
-            <card-field-adjust v-if="fieldsHook"
+            <card-field-adjust
+v-if="fieldsHook"
                                :fields-hook="fieldsHook" />
             <!-- 调整排序 -->
-            <card-sort-adjust v-if="queryOrder"
+            <card-sort-adjust
+v-if="queryOrder"
                               :query-order="queryOrder"
                               @query="bubblesEmitter(HeaderEmitter.SEARCH)" />
           </a-space>
@@ -106,7 +115,7 @@
 
 <script lang="ts">
   export default {
-    name: 'cardHeader'
+    name: 'CardHeader'
   };
 </script>
 

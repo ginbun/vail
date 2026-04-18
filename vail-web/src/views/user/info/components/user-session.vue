@@ -9,14 +9,16 @@
       </template>
     </span>
     <!-- 加载中 -->
-    <a-skeleton v-if="loading"
+    <a-skeleton
+v-if="loading"
                 style="width: 70%;"
                 :animation="true">
       <a-skeleton-line :rows="4" />
     </a-skeleton>
     <!-- 登录会话时间线 -->
     <a-timeline v-else-if="list.length">
-      <template v-for="item in list"
+      <template
+v-for="item in list"
                 :key="item.loginTime">
         <a-timeline-item v-if="item.visible">
           <!-- 图标 -->
@@ -33,7 +35,8 @@
               <span>{{ item.address }}</span>
               <span>{{ item.location }}</span>
               <a-tag v-if="item.current" color="arcoblue">当前会话</a-tag>
-              <a-button v-else-if="!user || hasPermission('infra:system-user:management:offline-session')"
+              <a-button
+v-else-if="!user || hasPermission('infra:system-user:management:offline-session')"
                         style="font-weight: 600;"
                         type="text"
                         size="mini"
@@ -61,7 +64,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userSession'
+    name: 'UserSession'
   };
 </script>
 

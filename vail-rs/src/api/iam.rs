@@ -533,7 +533,7 @@ async fn get_me_summary(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let role_codes = sqlx::query_scalar::<_, String>(
         "SELECT r.code
@@ -582,7 +582,7 @@ async fn get_me_hosts(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let hosts = sqlx::query_as::<
         _,

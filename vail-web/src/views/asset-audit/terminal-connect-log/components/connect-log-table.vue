@@ -1,27 +1,31 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
-                  :itemOptions="{ 6: { span: 2 } }"
+                  :item-options="{ 6: { span: 2 } }"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- 连接用户 -->
       <a-form-item field="userId" label="连接用户">
-        <user-selector v-model="formModel.userId"
+        <user-selector
+v-model="formModel.userId"
                        placeholder="请选择用户"
                        allow-clear />
       </a-form-item>
       <!-- 连接主机 -->
       <a-form-item field="hostId" label="连接主机">
-        <host-selector v-model="formModel.hostId"
+        <host-selector
+v-model="formModel.hostId"
                        placeholder="请选择主机"
                        allow-clear />
       </a-form-item>
       <!-- 状态 -->
       <a-form-item field="status" label="状态">
-        <a-select v-model="formModel.status"
+        <a-select
+v-model="formModel.status"
                   placeholder="请选择状态"
                   :options="toOptions(connectStatusKey)"
                   allow-clear />
@@ -36,14 +40,16 @@
       </a-form-item>
       <!-- 类型 -->
       <a-form-item field="type" label="类型">
-        <a-select v-model="formModel.type"
+        <a-select
+v-model="formModel.type"
                   placeholder="请选择类型"
                   :options="toOptions(connectTypeKey)"
                   allow-clear />
       </a-form-item>
       <!-- 开始时间 -->
       <a-form-item field="startTimeRange" label="开始时间">
-        <a-range-picker v-model="formModel.startTimeRange"
+        <a-range-picker
+v-model="formModel.startTimeRange"
                         :time-picker-props="{ defaultValue: ['00:00:00', '23:59:59'] }"
                         show-time
                         format="YYYY-MM-DD HH:mm:ss" />
@@ -64,7 +70,8 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 清理 -->
-          <a-button v-permission="['terminal:terminal-connect-log:management:clear']"
+          <a-button
+v-permission="['terminal:terminal-connect-log:management:clear']"
                     status="danger"
                     @click="openClear">
             清理
@@ -73,11 +80,13 @@
             </template>
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm :content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
+          <a-popconfirm
+:content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
                         position="br"
                         type="warning"
                         @ok="deleteSelectedRows">
-            <a-button v-permission="['terminal:terminal-connect-log:management:delete']"
+            <a-button
+v-permission="['terminal:terminal-connect-log:management:delete']"
                       type="primary"
                       status="danger"
                       :disabled="selectedKeys.length === 0">
@@ -88,7 +97,8 @@
             </a-button>
           </a-popconfirm>
           <!-- 调整 -->
-          <table-adjust :columns="logColumns"
+          <table-adjust
+:columns="logColumns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -96,9 +106,10 @@
       </div>
     </template>
     <!-- table -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+ref="tableRef"
+             v-model:selected-keys="selectedKeys"
              row-key="id"
-             ref="tableRef"
              class="table-resize"
              :loading="loading"
              :row-selection="rowSelection"
@@ -119,7 +130,8 @@
           {{ record.hostName }}
         </span>
         <br>
-        <span class="table-cell-sub-value text-copy"
+        <span
+class="table-cell-sub-value text-copy"
               :title="record.hostAddress"
               @click="copy(record.hostAddress)">
           {{ record.hostAddress }}
@@ -133,7 +145,8 @@
       </template>
       <!-- 状态 -->
       <template #status="{ record }">
-        <span class="circle" :style="{
+        <span
+class="circle" :style="{
            background: getDictValue(connectStatusKey, record.status, 'color')
         }" />
         {{ getDictValue(connectStatusKey, record.status) }}
@@ -144,7 +157,8 @@
           {{ record.extra?.location }}
         </span>
         <br>
-        <span class="table-cell-sub-value text-copy"
+        <span
+class="table-cell-sub-value text-copy"
               :title="record.extra?.address"
               @click="copy(record.extra?.address)">
           {{ record.extra?.address }}
@@ -163,19 +177,22 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 连接 -->
-          <a-button v-permission="['terminal:terminal:access']"
+          <a-button
+v-permission="['terminal:terminal:access']"
                     type="text"
                     size="mini"
                     @click="openNewRoute({ name: 'terminal', query: { connect: record.hostId, type: record.type } })">
             连接
           </a-button>
           <!-- 下线 -->
-          <a-popconfirm v-if="record.status === HostConnectStatus.CONNECTING"
+          <a-popconfirm
+v-if="record.status === HostConnectStatus.CONNECTING"
                         content="确认要强制下线吗?"
                         position="left"
                         type="warning"
                         @ok="forceOffline(record)">
-            <a-button v-permission="['terminal:terminal-connect-log:management:force-offline', 'terminal:terminal-connect-session:management:force-offline']"
+            <a-button
+v-permission="['terminal:terminal-connect-log:management:force-offline', 'terminal:terminal-connect-session:management:force-offline']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -183,17 +200,20 @@
             </a-button>
           </a-popconfirm>
           <!-- 详情 -->
-          <a-button type="text"
+          <a-button
+type="text"
                     size="mini"
                     @click="emits('openDetail', record)">
             详情
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['terminal:terminal-connect-log:management:delete']"
+            <a-button
+v-permission="['terminal:terminal-connect-log:management:delete']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -208,7 +228,7 @@
 
 <script lang="ts">
   export default {
-    name: 'connectLogTable'
+    name: 'ConnectLogTable'
   };
 </script>
 

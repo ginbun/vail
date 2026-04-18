@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            :title="title"
@@ -13,48 +14,56 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
         <!-- 名称 -->
         <a-form-item field="name" label="名称">
-          <a-input v-model="formModel.name"
+          <a-input
+v-model="formModel.name"
                    placeholder="请输入名称"
                    allow-clear />
         </a-form-item>
         <!-- 类型 -->
         <a-form-item field="type" label="类型">
-          <a-radio-group v-model="formModel.type"
+          <a-radio-group
+v-model="formModel.type"
                          type="button"
                          class="usn"
                          :options="toRadioOptions(identityTypeKey)" />
         </a-form-item>
         <!-- 用户名 -->
         <a-form-item field="username" label="用户名">
-          <a-input v-model="formModel.username"
+          <a-input
+v-model="formModel.username"
                    placeholder="请输入用户名"
                    allow-clear />
         </a-form-item>
         <!-- 用户密码 -->
-        <a-form-item v-if="formModel.type === IdentityType.PASSWORD"
+        <a-form-item
+v-if="formModel.type === IdentityType.PASSWORD"
                      field="password"
                      label="用户密码"
                      :rules="passwordRules">
-          <a-input-password v-model="formModel.password"
+          <a-input-password
+v-model="formModel.password"
                             :disabled="!isAddHandle && !formModel.useNewPassword"
                             :class="[isAddHandle ? 'password-input-full' : 'password-input']"
                             placeholder="请输入用户密码" />
-          <a-switch v-model="formModel.useNewPassword"
-                    v-if="!isAddHandle"
+          <a-switch
+v-if="!isAddHandle"
+                    v-model="formModel.useNewPassword"
                     class="password-switch"
                     type="round"
                     checked-text="使用新密码"
                     unchecked-text="使用原密码" />
         </a-form-item>
         <!-- 主机密钥 -->
-        <a-form-item v-if="formModel.type === IdentityType.KEY"
+        <a-form-item
+v-if="formModel.type === IdentityType.KEY"
                      field="keyId"
                      label="主机密钥"
                      :hide-asterisk="true">
@@ -62,7 +71,8 @@
         </a-form-item>
         <!-- 描述 -->
         <a-form-item field="description" label="描述">
-          <a-textarea v-model="formModel.description"
+          <a-textarea
+v-model="formModel.description"
                       placeholder="请输入描述"
                       allow-clear />
         </a-form-item>
@@ -73,7 +83,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostIdentityFormModal'
+    name: 'HostIdentityFormModal'
   };
 </script>
 
@@ -88,7 +98,6 @@
   import { Message } from '@arco-design/web-vue';
   import { IdentityType, identityTypeKey } from '../types/const';
   import { useDictStore } from '@/store';
-  import { encrypt } from '@/utils/rsa';
   import HostKeySelector from '@/components/asset/host-key/selector/index.vue';
 
   const { toRadioOptions, getDictValue } = useDictStore();
@@ -162,21 +171,14 @@
       if (error) {
         return false;
       }
-      // 加密参数
-      let password = undefined;
-      try {
-        password = await encrypt(formModel.value.password);
-      } catch (e) {
-        return false;
-      }
       if (isAddHandle.value) {
         // 新增
-        await createHostIdentity({ ...formModel.value, password });
+        await createHostIdentity(formModel.value);
         Message.success('创建成功');
         emits('added');
       } else {
         // 修改
-        await updateHostIdentity({ ...formModel.value, password });
+        await updateHostIdentity(formModel.value);
         Message.success('修改成功');
         emits('updated');
       }

@@ -1,5 +1,6 @@
 <template>
-  <a-select v-model:model-value="value"
+  <a-select
+v-model:model-value="value"
             placeholder="请选择路径分组"
             :options="optionData"
             :loading="loading"
@@ -9,7 +10,7 @@
 
 <script lang="ts">
   export default {
-    name: 'pathBookmarkGroupSelector'
+    name: 'PathBookmarkGroupSelector'
   };
 </script>
 

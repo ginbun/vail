@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             :title="title"
             :width="520"
             :mask-closable="false"
@@ -12,27 +13,31 @@
       <a-alert class="keygen-alert">
         请使用 ssh-keygen -m PEM -t rsa 生成密钥
       </a-alert>
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
         <!-- 名称 -->
         <a-form-item field="name" label="名称">
-          <a-input v-model="formModel.name"
+          <a-input
+v-model="formModel.name"
                    :disabled="isViewHandler"
                    placeholder="请输入名称" />
         </a-form-item>
         <!-- 公钥文本 -->
         <a-form-item field="publicKey" label="公钥">
-          <a-upload :auto-upload="false"
+          <a-upload
+:auto-upload="false"
                     :show-file-list="false"
                     :draggable="true"
                     :disabled="isViewHandler"
                     @change="selectPublicFile"
                     @click.prevent="() => {}">
             <template #upload-button>
-              <a-textarea v-model="formModel.publicKey"
+              <a-textarea
+v-model="formModel.publicKey"
                           :disabled="isViewHandler"
                           placeholder="请输入公钥文本或将文件拖拽到此处"
                           :auto-size="{ minRows: 8, maxRows: 8}" />
@@ -41,14 +46,16 @@
         </a-form-item>
         <!-- 私钥文本 -->
         <a-form-item field="privateKey" label="私钥">
-          <a-upload :auto-upload="false"
+          <a-upload
+:auto-upload="false"
                     :show-file-list="false"
                     :draggable="true"
                     :disabled="isViewHandler"
                     @change="selectPrivateFile"
                     @click.prevent="() => {}">
             <template #upload-button>
-              <a-textarea v-model="formModel.privateKey"
+              <a-textarea
+v-model="formModel.privateKey"
                           :disabled="isViewHandler"
                           placeholder="请输入私钥文本或将文件拖拽到此处"
                           :auto-size="{ minRows: 8, maxRows: 8}" />
@@ -56,17 +63,20 @@
           </a-upload>
         </a-form-item>
         <!-- 密码 -->
-        <a-form-item v-if="!isViewHandler"
+        <a-form-item
+v-if="!isViewHandler"
                      field="password"
                      label="密码"
                      :rules="passwordRules">
-          <a-input-password v-model="formModel.password"
+          <a-input-password
+v-model="formModel.password"
                             :disabled="!isAddHandle && !formModel.useNewPassword"
                             :class="[isAddHandle ? 'password-input-full' : 'password-input']"
                             class="password-input"
                             placeholder="请输入私钥密码" />
-          <a-switch v-model="formModel.useNewPassword"
-                    v-if="!isAddHandle"
+          <a-switch
+v-if="!isAddHandle"
+                    v-model="formModel.useNewPassword"
                     class="password-switch"
                     type="round"
                     checked-text="使用新密码"
@@ -74,7 +84,8 @@
         </a-form-item>
         <!-- 描述 -->
         <a-form-item field="description" label="描述">
-          <a-textarea v-model="formModel.description"
+          <a-textarea
+v-model="formModel.description"
                       placeholder="请输入描述"
                       allow-clear />
         </a-form-item>
@@ -85,7 +96,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostKeyFormDrawer'
+    name: 'HostKeyFormDrawer'
   };
 </script>
 
@@ -99,7 +110,6 @@
   import { createHostKey, updateHostKey, getHostKey } from '@/api/asset/host-key';
   import { Message } from '@arco-design/web-vue';
   import { readFileText } from '@/utils/file';
-  import { encrypt } from '@/utils/rsa';
 
   const { visible, setVisible } = useVisible();
   const { loading, setLoading } = useLoading();
@@ -208,25 +218,14 @@
       if (error) {
         return false;
       }
-      let publicKey = undefined;
-      let privateKey = undefined;
-      let password = undefined;
-      // 加密参数
-      try {
-        publicKey = await encrypt(formModel.value.publicKey);
-        privateKey = await encrypt(formModel.value.privateKey);
-        password = await encrypt(formModel.value.password);
-      } catch (e) {
-        return false;
-      }
       if (isAddHandle.value) {
         // 新增
-        await createHostKey({ ...formModel.value, publicKey, privateKey, password });
+        await createHostKey(formModel.value);
         Message.success('创建成功');
         emits('added');
       } else {
         // 修改
-        await updateHostKey({ ...formModel.value, publicKey, privateKey, password });
+        await updateHostKey(formModel.value);
         Message.success('修改成功');
         emits('updated');
       }

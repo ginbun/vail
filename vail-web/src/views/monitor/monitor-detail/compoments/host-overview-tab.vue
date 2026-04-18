@@ -3,7 +3,8 @@
     <a-row :gutter="[24, 24]" align="stretch">
       <!-- 主机信息 -->
       <a-col :span="8">
-        <a-card v-if="host && host.spec"
+        <a-card
+v-if="host && host.spec"
                 class="host-info-card"
                 size="small"
                 :bordered="false"
@@ -13,7 +14,8 @@
             <h3>主机信息</h3>
           </template>
           <div class="host-info-content">
-            <a-descriptions :column="1"
+            <a-descriptions
+:column="1"
                             :label-style="{ width: '100px' }"
                             :value-style="{ fontWeight: '600' }">
               <a-descriptions-item label="SN">{{ host.spec?.sn || '-' }}</a-descriptions-item>
@@ -37,14 +39,16 @@
       </a-col>
       <!-- 第一层加载中 -->
       <a-col v-if="renderLoading" :span="16">
-        <a-card class="metric-card"
+        <a-card
+class="metric-card"
                 size="small"
                 :bordered="false"
                 style="height: 376px;"
                 :header-style="{ height: '48px', borderBottom: 'none' }"
                 :body-style="{ padding: '24px' }">
           <a-skeleton :animation="true">
-            <a-skeleton-line :rows="5"
+            <a-skeleton-line
+:rows="5"
                              :line-height="56"
                              :line-spacing="12" />
           </a-skeleton>
@@ -52,7 +56,8 @@
       </a-col>
       <!-- 第一层无数据 -->
       <a-col v-else-if="nodata" :span="16">
-        <a-card class="metric-card"
+        <a-card
+class="metric-card"
                 size="small"
                 :bordered="false"
                 style="height: 376px;"
@@ -66,7 +71,8 @@
         <a-row :gutter="[24, 24]">
           <!-- cpu -->
           <a-col :span="12">
-            <a-card class="metric-card"
+            <a-card
+class="metric-card"
                     size="small"
                     :bordered="false"
                     :header-style="{ height: '48px', borderBottom: 'none' }"
@@ -75,19 +81,22 @@
                 <h3>CPU</h3>
               </template>
               <div class="card-content">
-                <a-statistic title="总计"
+                <a-statistic
+title="总计"
                              :value="cpuMetrics.total"
                              :precision="2"
                              :value-style="{ color: getPercentProgressColor(cpuMetrics.total / 100, '') }">
                   <template #suffix>%</template>
                 </a-statistic>
-                <a-statistic title="用户态"
+                <a-statistic
+title="用户态"
                              :value="cpuMetrics.user"
                              :precision="2"
                              :value-style="{ color: getPercentProgressColor(cpuMetrics.user / 100, '') }">
                   <template #suffix>%</template>
                 </a-statistic>
-                <a-statistic title="内核态"
+                <a-statistic
+title="内核态"
                              :value="cpuMetrics.system"
                              :precision="2"
                              :value-style="{ color: getPercentProgressColor(cpuMetrics.system / 100, '') }">
@@ -98,7 +107,8 @@
           </a-col>
           <!-- 内存 -->
           <a-col :span="12">
-            <a-card class="metric-card"
+            <a-card
+class="metric-card"
                     size="small"
                     :bordered="false"
                     :header-style="{ height: '48px', borderBottom: 'none' }"
@@ -111,13 +121,15 @@
                 </a-space>
               </template>
               <div class="card-content">
-                <a-statistic title="已使用"
+                <a-statistic
+title="已使用"
                              :value="memoryMetrics.used"
                              :precision="2"
                              :value-style="{ color: getPercentProgressColor(memoryMetrics.usedPercent / 100, '') }">
                   <template #suffix>{{ memoryMetrics.usedUnit }}<span style="margin: 0 4px;" />{{ memoryMetrics.usedPercent.toFixed(2) }}%</template>
                 </a-statistic>
-                <a-statistic title="交换分区"
+                <a-statistic
+title="交换分区"
                              :value="memoryMetrics.swapUsed"
                              :precision="2"
                              :value-style="{ color: getPercentProgressColor(memoryMetrics.swapUsedPercent, '') }">
@@ -128,7 +140,8 @@
           </a-col>
           <!-- 负载 -->
           <a-col :span="12">
-            <a-card class="metric-card"
+            <a-card
+class="metric-card"
                     size="small"
                     :bordered="false"
                     :header-style="{ height: '48px', borderBottom: 'none' }"
@@ -137,15 +150,18 @@
                 <h3>负载</h3>
               </template>
               <div class="card-content">
-                <a-statistic title="1分钟"
+                <a-statistic
+title="1分钟"
                              :value="loadMetrics.load1"
                              :precision="2">
                 </a-statistic>
-                <a-statistic title="5分钟"
+                <a-statistic
+title="5分钟"
                              :value="loadMetrics.load5"
                              :precision="2">
                 </a-statistic>
-                <a-statistic title="15分钟"
+                <a-statistic
+title="15分钟"
                              :value="loadMetrics.load15"
                              :precision="2">
                 </a-statistic>
@@ -154,7 +170,8 @@
           </a-col>
           <!-- 连接数 -->
           <a-col :span="12">
-            <a-card class="metric-card"
+            <a-card
+class="metric-card"
                     size="small"
                     :bordered="false"
                     :header-style="{ height: '48px', borderBottom: 'none' }"
@@ -177,7 +194,8 @@
       <template v-if="!renderLoading && !nodata">
         <!-- 磁盘 -->
         <a-col v-for="disk in diskMetrics" :span="6">
-          <a-card class="metric-card"
+          <a-card
+class="metric-card"
                   size="small"
                   :bordered="false"
                   :header-style="{ height: '48px', borderBottom: 'none' }"
@@ -190,13 +208,15 @@
               </a-space>
             </template>
             <div class="card-content">
-              <a-statistic title="使用率"
+              <a-statistic
+title="使用率"
                            :value="disk.usedPercent"
                            :precision="2"
                            :value-style="{ color: getPercentProgressColor(disk.usedPercent / 100, '') }">
                 <template #suffix>%</template>
               </a-statistic>
-              <a-statistic title="使用量"
+              <a-statistic
+title="使用量"
                            :value="disk.used"
                            :precision="2"
                            :value-style="{ color: getPercentProgressColor(disk.usedPercent / 100, '') }">
@@ -207,7 +227,8 @@
         </a-col>
         <!-- 磁盘吞吐量 -->
         <a-col :span="6">
-          <a-card class="metric-card"
+          <a-card
+class="metric-card"
                   size="small"
                   :bordered="false"
                   :header-style="{ height: '48px', borderBottom: 'none' }"
@@ -216,7 +237,8 @@
               <h3>磁盘吞吐量</h3>
             </template>
             <div class="card-content">
-              <a-statistic title="读取/秒"
+              <a-statistic
+title="读取/秒"
                            :value="ioMetrics.readBytesPerSecond"
                            :precision="2"
                            :value-style="{ color: 'rgb(var(--green-6))' }">
@@ -225,7 +247,8 @@
                 </template>
                 <template #suffix>{{ ioMetrics.readsUnit }}</template>
               </a-statistic>
-              <a-statistic title="写入/秒"
+              <a-statistic
+title="写入/秒"
                            :value="ioMetrics.writeBytesPerSecond"
                            :precision="2"
                            :value-style="{ color: 'rgb(var(--arcoblue-6))' }">
@@ -239,7 +262,8 @@
         </a-col>
         <!-- 磁盘 IOPS -->
         <a-col :span="6">
-          <a-card class="metric-card"
+          <a-card
+class="metric-card"
                   size="small"
                   :bordered="false"
                   :header-style="{ height: '48px', borderBottom: 'none' }"
@@ -248,7 +272,8 @@
               <h3>磁盘 IOPS</h3>
             </template>
             <div class="card-content">
-              <a-statistic title="读取/秒"
+              <a-statistic
+title="读取/秒"
                            :value="ioMetrics.readsPerSecond"
                            :precision="2"
                            :value-style="{ color: 'rgb(var(--green-6))' }">
@@ -257,7 +282,8 @@
                 </template>
                 <template #suffix>次</template>
               </a-statistic>
-              <a-statistic title="写入/秒"
+              <a-statistic
+title="写入/秒"
                            :value="ioMetrics.writesPerSecond"
                            :precision="2"
                            :value-style="{ color: 'rgb(var(--arcoblue-6))' }">
@@ -271,7 +297,8 @@
         </a-col>
         <!-- 网络 -->
         <a-col v-for="network in networkMetrics" :span="6">
-          <a-card class="metric-card"
+          <a-card
+class="metric-card"
                   size="small"
                   :bordered="false"
                   :header-style="{ height: '48px', borderBottom: 'none' }"
@@ -281,7 +308,8 @@
               <a-tag color="arcoblue">name: {{ network.name }}</a-tag>
             </template>
             <div class="card-content">
-              <a-statistic title="上行速率/秒"
+              <a-statistic
+title="上行速率/秒"
                            :value="network.sentBytesPerSecond"
                            :precision="2"
                            :value-style="{ color: 'rgb(var(--green-6))' }">
@@ -290,7 +318,8 @@
                 </template>
                 <template #suffix>{{ network.sentUnit }}</template>
               </a-statistic>
-              <a-statistic title="下行速率/秒"
+              <a-statistic
+title="下行速率/秒"
                            :value="network.recvBytesPerSecond"
                            :precision="2"
                            :value-style="{ color: 'rgb(var(--arcoblue-6))' }">
@@ -308,7 +337,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostOverviewTab'
+    name: 'HostOverviewTab'
   };
 </script>
 

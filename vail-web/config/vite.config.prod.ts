@@ -1,34 +1,29 @@
 import { mergeConfig } from 'vite';
 import baseConfig from './vite.config.base';
-import configCompressPlugin from './plugin/compress';
 import configVisualizerPlugin from './plugin/visualizer';
 import configArcoResolverPlugin from './plugin/arcoResolver';
-import configImageminPlugin from './plugin/imagemin';
 
 export default mergeConfig(
   {
     mode: 'production',
     plugins: [
-      configCompressPlugin('gzip'),
       configVisualizerPlugin(),
       configArcoResolverPlugin(),
-      configImageminPlugin(),
     ],
     build: {
       rollupOptions: {
         output: {
-          manualChunks: {
-            arco: ['@arco-design/web-vue'],
-            arcoExt: ['@sanqi377/arco-vue-icon-picker', '@dangojs/a-query-header'],
-            chart: ['echarts', 'vue-echarts'],
-            vue: ['vue', 'vue-router', 'pinia', '@vueuse/core', 'vue-i18n'],
-            axios: ['axios'],
-            xterm: ['@xterm/xterm', '@xterm/addon-canvas', '@xterm/addon-fit',
-              '@xterm/addon-image', '@xterm/addon-search', '@xterm/addon-unicode11',
-              '@xterm/addon-web-links', '@xterm/addon-webgl'],
-            monaco: ['monaco-editor'],
-            crypto: ['ts-md5', 'jsencrypt'],
-            pkg: ['dayjs', 'cron-parser', 'file-saver', 'html2canvas']
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('@arco-design/web-vue')) return 'arco';
+              if (id.includes('echarts') || id.includes('vue-echarts')) return 'chart';
+              if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia') || id.includes('@vueuse/core') || id.includes('vue-i18n')) return 'vue';
+              if (id.includes('axios')) return 'axios';
+              if (id.includes('@xterm')) return 'xterm';
+              if (id.includes('monaco-editor')) return 'monaco';
+              if (id.includes('dayjs') || id.includes('cron-parser')) return 'pkg';
+              return 'vendor';
+            }
           },
         },
       },

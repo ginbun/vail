@@ -1,14 +1,16 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
-    <host-table v-if="renderTable"
+    <host-table
+v-if="renderTable"
                 ref="table"
                 @open-host-group="() => hostGroup.open()"
                 @open-copy="(e) => drawer.openCopy(e.id)"
                 @open-add="() => drawer.openAdd()"
                 @open-update="(e) => drawer.openUpdate(e.id)" />
     <!-- 列表-卡片 -->
-    <host-card-list v-else
+    <host-card-list
+v-else
                     ref="card"
                     @open-host-group="() => hostGroup.open()"
                     @open-copy="(e) => drawer.openCopy(e.id)"
@@ -23,7 +25,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostList'
+    name: 'HostList'
   };
 </script>
 

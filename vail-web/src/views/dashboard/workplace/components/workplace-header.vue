@@ -8,7 +8,8 @@
     </a-col>
     <a-col :span="16" class="header-right flex-center flex-content-end">
       <!-- 未读消息数-->
-      <a-tag v-if="data.infra?.unreadMessageCount"
+      <a-tag
+v-if="data.infra?.unreadMessageCount"
              class="pointer"
              title="查看消息"
              color="arcoblue"
@@ -18,12 +19,14 @@
         </template>
         您有 {{ data.infra.unreadMessageCount }} 条未读消息
       </a-tag>
-      <a-divider v-if="data.infra?.unreadMessageCount"
+      <a-divider
+v-if="data.infra?.unreadMessageCount"
                  direction="vertical"
                  :margin="14"
                  style="height: 20px;" />
       <!-- 上次登录时间 -->
-      <div v-if="data.infra?.lastLoginTime"
+      <div
+v-if="data.infra?.lastLoginTime"
            class="last-login-wrapper">
         <span class="last-login-label usn">上次登录时间</span>
         <a-tag color="purple">
@@ -39,7 +42,7 @@
 
 <script lang="ts">
   export default {
-    name: 'workplaceHeader'
+    name: 'WorkplaceHeader'
   };
 </script>
 

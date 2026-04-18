@@ -18,9 +18,7 @@ services:
       retries: 10
 
   backend:
-    build:
-      context: .
-      dockerfile: vail-rs/Dockerfile
+    image: ${VAIL_BACKEND_IMAGE:-ghcr.io/ginbun/vail:latest}
     environment:
       VAIL_CONFIG: /app/config.toml
       RUST_LOG: info

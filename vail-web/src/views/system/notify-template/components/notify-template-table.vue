@@ -1,34 +1,39 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- id -->
       <a-form-item field="id" label="id">
-        <a-input-number v-model="formModel.id"
+        <a-input-number
+v-model="formModel.id"
                         placeholder="请输入id"
                         hide-button
                         allow-clear />
       </a-form-item>
       <!-- 通知名称 -->
       <a-form-item field="name" label="通知名称">
-        <a-input v-model="formModel.name"
+        <a-input
+v-model="formModel.name"
                  placeholder="请输入通知名称"
                  allow-clear />
       </a-form-item>
       <!-- 渠道类型 -->
       <a-form-item field="channelType" label="渠道类型">
-        <a-select v-model="formModel.channelType"
+        <a-select
+v-model="formModel.channelType"
                   :options="toOptions(ChannelTypeKey)"
                   placeholder="请选择渠道类型"
                   allow-clear />
       </a-form-item>
       <!-- 通知描述 -->
       <a-form-item field="name" label="通知描述">
-        <a-input v-model="formModel.name"
+        <a-input
+v-model="formModel.name"
                  placeholder="请输入通知描述"
                  allow-clear />
       </a-form-item>
@@ -38,12 +43,14 @@
   <div class="container-content">
     <!-- 业务类型 -->
     <a-card class="general-card table-search-card biz-card">
-      <a-tabs v-model:active-key="bizType"
+      <a-tabs
+v-model:active-key="bizType"
               direction="vertical"
               type="rounded"
               :hide-content="true"
               @change="reload">
-        <a-tab-pane v-for="item in toOptions(BizTypeKey)"
+        <a-tab-pane
+v-for="item in toOptions(BizTypeKey)"
                     :key="item.value as string"
                     :title="item.label" />
       </a-tabs>
@@ -62,7 +69,8 @@
         <div class="table-right-bar-handle">
           <a-space>
             <!-- 新增 -->
-            <a-button v-permission="['infra:notify-template:create']"
+            <a-button
+v-permission="['infra:notify-template:create']"
                       type="primary"
                       @click="emits('openAdd')">
               新增
@@ -71,7 +79,8 @@
               </template>
             </a-button>
             <!-- 调整 -->
-            <table-adjust :columns="columns"
+            <table-adjust
+:columns="columns"
                           :columns-hook="columnsHook"
                           :query-order="queryOrder"
                           @query="fetchTableData" />
@@ -79,8 +88,9 @@
         </div>
       </template>
       <!-- table -->
-      <a-table row-key="id"
-               ref="tableRef"
+      <a-table
+ref="tableRef"
+               row-key="id"
                class="table-resize"
                :loading="loading"
                :columns="tableColumns"
@@ -99,7 +109,8 @@
         <!-- 消息标识 -->
         <template #messageTag="{ record }">
           <!-- webhook -->
-          <span v-if="getDictValue(ChannelTypeKey, record.channelType, 'notifyType') === NotifyType.WEBHOOK"
+          <span
+v-if="getDictValue(ChannelTypeKey, record.channelType, 'notifyType') === NotifyType.WEBHOOK"
                 class="text-copy"
                 @click="copy(extraWebhook(record), true)">
             {{ extraWebhook(record) }}
@@ -113,25 +124,29 @@
         <template #handle="{ record }">
           <div class="table-handle-wrapper">
             <!-- 修改 -->
-            <a-button v-permission="['infra:notify-template:update']"
+            <a-button
+v-permission="['infra:notify-template:update']"
                       type="text"
                       size="mini"
                       @click="emits('openUpdate', record)">
               修改
             </a-button>
             <!-- 复制 -->
-            <a-button v-permission="['infra:notify-template:create']"
+            <a-button
+v-permission="['infra:notify-template:create']"
                       type="text"
                       size="mini"
                       @click="emits('openCopy', record)">
               复制
             </a-button>
             <!-- 删除 -->
-            <a-popconfirm content="确认删除这条记录吗?"
+            <a-popconfirm
+content="确认删除这条记录吗?"
                           position="left"
                           type="warning"
                           @ok="deleteRow(record)">
-              <a-button v-permission="['infra:notify-template:delete']"
+              <a-button
+v-permission="['infra:notify-template:delete']"
                         type="text"
                         size="mini"
                         status="danger">
@@ -147,7 +162,7 @@
 
 <script lang="ts">
   export default {
-    name: 'notifyTemplateTable'
+    name: 'NotifyTemplateTable'
   };
 </script>
 

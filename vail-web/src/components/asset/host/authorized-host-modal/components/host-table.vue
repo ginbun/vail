@@ -1,7 +1,8 @@
 <template>
-  <a-table v-model:selected-keys="selectedKeysValue"
+  <a-table
+ref="tableRef"
+           v-model:selected-keys="selectedKeysValue"
            row-key="id"
-           ref="tableRef"
            class="table-resize"
            :columns="columns"
            :row-selection="rowSelection"
@@ -32,10 +33,12 @@
     </template>
     <!-- 标签 -->
     <template #tags="{ record }">
-      <a-space v-if="record.tags"
+      <a-space
+v-if="record.tags"
                style="margin-bottom: -8px;"
                :wrap="true">
-        <a-tag v-for="tag in record.tags"
+        <a-tag
+v-for="tag in record.tags"
                :key="tag.id"
                :color="dataColor(tag.name, tagColor)">
           {{ tag.name }}
@@ -47,7 +50,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostTable'
+    name: 'HostTable'
   };
 </script>
 

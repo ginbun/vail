@@ -1,16 +1,19 @@
 <template>
   <div class="layout-container">
     <!-- 列表-表格 -->
-    <dict-value-table ref="table"
+    <dict-value-table
+ref="table"
                       @open-add="() => modal.openAdd()"
                       @open-update="(e) => modal.openUpdate(e)"
                       @open-history="(e) => history.open(e.id, e.label)" />
     <!-- 添加修改模态框 -->
-    <dict-value-form-modal ref="modal"
+    <dict-value-form-modal
+ref="modal"
                            @added="() => table.reload()"
                            @updated="() => table.reload()" />
     <!-- 历史值模态框 -->
-    <history-value-modal ref="history"
+    <history-value-modal
+ref="history"
                          :type="historyType"
                          :rollback="rollback"
                          @updated="() => table.reload()" />
@@ -19,7 +22,7 @@
 
 <script lang="ts">
   export default {
-    name: 'dictValue'
+    name: 'DictValue'
   };
 </script>
 

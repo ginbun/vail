@@ -4,7 +4,8 @@
       <div class="card-title">
         <p class="card-title-left">最近终端连接记录</p>
         <!-- 跳转 -->
-        <span class="pointer span-blue"
+        <span
+class="pointer span-blue"
               title="详情"
               @click="router.push({ name: 'terminalConnectLog', query: { action: 'self' } })">
           详情
@@ -12,7 +13,8 @@
       </div>
       <div class="card-body">
         <!-- 表格 -->
-        <a-table row-key="id"
+        <a-table
+row-key="id"
                  class="table-resize"
                  :loading="loading"
                  :columns="terminalLogColumns"
@@ -31,7 +33,8 @@
               {{ record.hostName }}
             </span>
             <br>
-            <span class="table-cell-sub-value text-copy"
+            <span
+class="table-cell-sub-value text-copy"
                   :title="record.hostAddress"
                   @click="copy(record.hostAddress)">
               {{ record.hostAddress }}
@@ -47,7 +50,8 @@
           <template #handle="{ record }">
             <div class="table-handle-wrapper">
               <!-- 连接 -->
-              <a-button v-permission="['terminal:terminal:access']"
+              <a-button
+v-permission="['terminal:terminal:access']"
                         type="text"
                         size="mini"
                         @click="openNewRoute({ name: 'terminal', query: { connect: record.hostId, type: record.type } })">
@@ -63,7 +67,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalConnectTable'
+    name: 'TerminalConnectTable'
   };
 </script>
 

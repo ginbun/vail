@@ -1,14 +1,16 @@
 <template>
-  <div class="log-panel-container" v-if="execLog && appender">
+  <div v-if="execLog && appender" class="log-panel-container">
     <!-- 执行主机 -->
-    <exec-host class="exec-host-container"
-               :visibleBack="visibleBack"
+    <exec-host
+class="exec-host-container"
+               :visible-back="visibleBack"
                :current="currentHostExecId"
                :hosts="execLog.hosts as any"
                @selected="selectedHost"
                @back="emits('back')" />
     <!-- 日志容器 -->
-    <log-view ref="logViewRef"
+    <log-view
+ref="logViewRef"
               class="log-view-container"
               :type="type"
               :current="currentHostExecId"
@@ -20,7 +22,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execLogPanel'
+    name: 'ExecLogPanel'
   };
 </script>
 

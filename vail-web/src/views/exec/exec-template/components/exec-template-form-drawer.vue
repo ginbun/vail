@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             width="70%"
             :title="title"
             :esc-to-close="false"
@@ -10,28 +11,33 @@
             :on-before-ok="handlerOk"
             @cancel="handleClose">
     <a-spin class="form-container drawer-form-small" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
         <a-row :gutter="16">
           <!-- 模板名称 -->
           <a-col :span="16">
-            <a-form-item field="name"
+            <a-form-item
+field="name"
                          label="模板名称"
                          :hide-asterisk="true">
-              <a-input v-model="formModel.name"
+              <a-input
+v-model="formModel.name"
                        placeholder="请输入模板名称"
                        allow-clear />
             </a-form-item>
           </a-col>
           <!-- 超时时间 -->
           <a-col :span="8">
-            <a-form-item field="timeout"
+            <a-form-item
+field="timeout"
                          label="超时时间"
                          :hide-asterisk="true">
-              <a-input-number v-model="formModel.timeout"
+              <a-input-number
+v-model="formModel.timeout"
                               placeholder="为0则不超时"
                               :min="0"
                               :max="100000"
@@ -44,12 +50,13 @@
           </a-col>
           <!-- 默认主机 -->
           <a-col :span="16">
-            <a-form-item field="hostIdList"
+            <a-form-item
+field="hostIdList"
                          label="默认主机"
                          :hide-asterisk="true">
               <div class="selected-host">
                 <!-- 已选择数量 -->
-                <span class="usn" v-if="formModel.hostIdList?.length">
+                <span v-if="formModel.hostIdList?.length" class="usn">
                   已选择<span class="selected-host-count span-blue">{{ formModel.hostIdList?.length }}</span>台主机
                 </span>
                 <span class="usn pointer span-blue" @click="openSelectHost">
@@ -60,11 +67,13 @@
           </a-col>
           <!-- 脚本执行 -->
           <a-col :span="8">
-            <a-form-item field="scriptExec"
+            <a-form-item
+field="scriptExec"
                          label="脚本执行"
                          :hide-asterisk="true">
               <div class="flex-center">
-                <a-switch v-model="formModel.scriptExec"
+                <a-switch
+v-model="formModel.scriptExec"
                           type="round"
                           :checked-value="EnabledStatus.ENABLED"
                           :unchecked-value="EnabledStatus.DISABLED" />
@@ -78,11 +87,13 @@
           </a-col>
           <!-- 模板命令 -->
           <a-col :span="24">
-            <a-form-item field="command"
+            <a-form-item
+field="command"
                          label="模板命令"
                          :hide-label="true"
                          :help="'使用 @{{ xxx }} 来替换参数, 输入_可以获取全部变量'">
-              <exec-editor v-model="formModel.command"
+              <exec-editor
+v-model="formModel.command"
                            container-class="command-editor"
                            theme="vs-dark"
                            :parameter="parameter" />
@@ -90,7 +101,8 @@
           </a-col>
           <!-- 命令参数 -->
           <a-col :span="24">
-            <a-form-item field="parameter"
+            <a-form-item
+field="parameter"
                          class="parameter-form-item"
                          label="命令参数">
               <!-- label -->
@@ -99,13 +111,15 @@
               </template>
               <!-- 参数 -->
               <template v-if="parameter.length">
-                <a-input-group v-for="(item, i) in parameter"
+                <a-input-group
+v-for="(item, i) in parameter"
                                :key="i"
                                class="parameter-item"
                                :class="[ i === parameter.length - 1 ? 'parameter-item-last' : '' ]">
                   <!-- 参数名 -->
-                  <a-input class="parameter-item-name"
-                           v-model="item.name"
+                  <a-input
+v-model="item.name"
+                           class="parameter-item-name"
                            placeholder="必填"
                            :max-length="24"
                            allow-clear>
@@ -114,8 +128,9 @@
                     </template>
                   </a-input>
                   <!-- 参数值 -->
-                  <a-input class="parameter-item-value"
-                           v-model="item.value"
+                  <a-input
+v-model="item.value"
+                           class="parameter-item-value"
                            placeholder="非必填"
                            allow-clear>
                     <template #prepend>
@@ -123,8 +138,9 @@
                     </template>
                   </a-input>
                   <!-- 描述 -->
-                  <a-input class="parameter-item-description"
-                           v-model="item.desc"
+                  <a-input
+v-model="item.desc"
+                           class="parameter-item-description"
                            placeholder="非必填"
                            :max-length="64"
                            allow-clear>
@@ -132,7 +148,8 @@
                       <span>描述</span>
                     </template>
                   </a-input>
-                  <a-button class="parameter-item-close icon-button"
+                  <a-button
+class="parameter-item-close icon-button"
                             title="移除"
                             @click="removeParameter(i)">
                     <icon-close />
@@ -155,7 +172,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execTemplateFormDrawer'
+    name: 'ExecTemplateFormDrawer'
   };
 </script>
 

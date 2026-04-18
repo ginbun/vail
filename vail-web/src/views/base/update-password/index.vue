@@ -3,24 +3,28 @@
     <!-- 原因 -->
     <p class="reason">{{ reason }}</p>
     <!-- 表单 -->
-    <a-form :model="formModel"
-            ref="formRef"
+    <a-form
+ref="formRef"
+            :model="formModel"
             label-align="right"
             :rules="rules">
       <!-- 原始密码 -->
-      <a-form-item field="beforePassword"
+      <a-form-item
+field="beforePassword"
                    label="原始密码"
                    hide-label>
         <a-input-password v-model="formModel.beforePassword" placeholder="请输入原始密码" />
       </a-form-item>
       <!-- 新密码 -->
-      <a-form-item field="password"
+      <a-form-item
+field="password"
                    label="新密码"
                    hide-label>
         <a-input-password v-model="formModel.password" placeholder="请输入新密码" />
       </a-form-item>
       <!-- 确认密码 -->
-      <a-form-item field="checkPassword"
+      <a-form-item
+field="checkPassword"
                    label="确认密码"
                    hide-label>
         <a-input-password v-model="formModel.checkPassword" placeholder="请再次输入新密码" />
@@ -29,13 +33,15 @@
     <!-- 按钮 -->
     <a-space>
       <!-- 确认修改 -->
-      <a-button class="action"
+      <a-button
+class="action"
                 type="primary"
                 @click="doUpdate">
         确认修改
       </a-button>
       <!-- 退出登录 -->
-      <a-button class="action"
+      <a-button
+class="action"
                 type="primary"
                 @click="() => logout()">
         退出登录
@@ -46,7 +52,7 @@
 
 <script lang="ts">
   export default {
-    name: 'updatePassword',
+    name: 'UpdatePassword',
   };
 </script>
 
@@ -55,7 +61,6 @@
   import type { FieldRule } from '@arco-design/web-vue';
   import { onMounted, ref } from 'vue';
   import { useRoute } from 'vue-router';
-  import { md5 } from '@/utils';
   import useUser from '@/hooks/user';
   import useLoading from '@/hooks/loading';
   import { useDictStore } from '@/store';
@@ -113,8 +118,8 @@
       }
       // 修改密码
       await updateCurrentUserPassword({
-        beforePassword: md5(formModel.value.beforePassword as string),
-        password: md5(formModel.value.password as string)
+        beforePassword: formModel.value.beforePassword,
+        password: formModel.value.password
       });
       // 退出登录
       await logout('修改成功');

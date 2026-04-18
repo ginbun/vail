@@ -3,12 +3,14 @@
   <div class="container-content">
     <!-- 业务类型 -->
     <a-card class="general-card table-search-card biz-card">
-      <a-tabs v-model:active-key="tagType"
+      <a-tabs
+v-model:active-key="tagType"
               direction="vertical"
               type="rounded"
               :hide-content="true"
               @change="reload">
-        <a-tab-pane v-for="item in toOptions(TagTypeKey)"
+        <a-tab-pane
+v-for="item in toOptions(TagTypeKey)"
                     :key="item.value as string"
                     :title="item.label" />
       </a-tabs>
@@ -27,13 +29,15 @@
         <div class="table-right-bar-handle">
           <a-space>
             <!-- 标签名称 -->
-            <a-input v-model="formModel.name"
+            <a-input
+v-model="formModel.name"
                      style="width: 168px;"
                      placeholder="标签名称"
                      allow-clear
                      @press-enter="reload" />
             <!-- 重置 -->
-            <a-button v-permission="['infra:tag:create']"
+            <a-button
+v-permission="['infra:tag:create']"
                       @click="resetQuery">
               重置
               <template #icon>
@@ -41,7 +45,8 @@
               </template>
             </a-button>
             <!-- 查询 -->
-            <a-button v-permission="['infra:tag:create']"
+            <a-button
+v-permission="['infra:tag:create']"
                       type="primary"
                       @click="() => fetchTableData()">
               查询
@@ -49,11 +54,13 @@
                 <icon-search />
               </template>
             </a-button>
-            <a-divider direction="vertical"
+            <a-divider
+direction="vertical"
                        style="height: 22px; margin: 0 8px"
                        :size="2" />
             <!-- 新增 -->
-            <a-button v-permission="['infra:tag:create']"
+            <a-button
+v-permission="['infra:tag:create']"
                       type="primary"
                       @click="emits('openAdd', tagType)">
               <template #icon>
@@ -62,7 +69,8 @@
               新增
             </a-button>
             <!-- 调整 -->
-            <table-adjust :columns="columns"
+            <table-adjust
+:columns="columns"
                           :columns-hook="columnsHook"
                           :query-order="queryOrder"
                           @query="fetchTableData" />
@@ -70,8 +78,9 @@
         </div>
       </template>
       <!-- table -->
-      <a-table row-key="id"
-               ref="tableRef"
+      <a-table
+ref="tableRef"
+               row-key="id"
                class="table-resize"
                :loading="loading"
                :columns="tableColumns"
@@ -97,18 +106,21 @@
         <template #handle="{ record }">
           <div class="table-handle-wrapper">
             <!-- 修改 -->
-            <a-button v-permission="['infra:tag:update']"
+            <a-button
+v-permission="['infra:tag:update']"
                       type="text"
                       size="mini"
                       @click="emits('openUpdate', record)">
               修改
             </a-button>
             <!-- 删除 -->
-            <a-popconfirm content="确认删除这个标签以及关联关系吗?"
+            <a-popconfirm
+content="确认删除这个标签以及关联关系吗?"
                           position="left"
                           type="warning"
                           @ok="deleteRow(record)">
-              <a-button v-permission="['infra:tag:delete']"
+              <a-button
+v-permission="['infra:tag:delete']"
                         type="text"
                         size="mini"
                         status="danger">
@@ -124,7 +136,7 @@
 
 <script lang="ts">
   export default {
-    name: 'systemTagTable'
+    name: 'SystemTagTable'
   };
 </script>
 

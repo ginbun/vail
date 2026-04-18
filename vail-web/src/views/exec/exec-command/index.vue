@@ -1,14 +1,15 @@
 <template>
-  <div class="layout-container full" v-if="render">
+  <div v-if="render" class="layout-container full">
     <!-- 执行面板 -->
     <div v-show="!logVisible" class="panel-wrapper">
       <exec-command-panel @submit="openLog" />
     </div>
     <!-- 执行日志 -->
     <div v-if="logVisible" class="panel-wrapper">
-      <exec-log-panel ref="log"
+      <exec-log-panel
+ref="log"
                       type="BATCH"
-                      :visibleBack="true"
+                      :visible-back="true"
                       @back="setLogVisible(false)" />
     </div>
   </div>
@@ -16,7 +17,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execCommand'
+    name: 'ExecCommand'
   };
 </script>
 

@@ -2,7 +2,8 @@
   <!-- 查询头 -->
   <a-card class="general-card table-search-card">
     <!-- 查询头组件 -->
-    <operator-log-query-header :model="formModel"
+    <operator-log-query-header
+:model="formModel"
                                @submit="fetchTableData" />
   </a-card>
   <!-- 表格 -->
@@ -19,7 +20,8 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 清理 -->
-          <a-button v-permission="['infra:operator-log:management:clear']"
+          <a-button
+v-permission="['infra:operator-log:management:clear']"
                     status="danger"
                     @click="openClear">
             清理
@@ -28,11 +30,13 @@
             </template>
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm :content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
+          <a-popconfirm
+:content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
                         position="br"
                         type="warning"
                         @ok="deleteSelectedRows">
-            <a-button v-permission="['infra:operator-log:delete']"
+            <a-button
+v-permission="['infra:operator-log:delete']"
                       type="primary"
                       status="danger"
                       :disabled="selectedKeys.length === 0">
@@ -43,7 +47,8 @@
             </a-button>
           </a-popconfirm>
           <!-- 调整 -->
-          <table-adjust :columns="columns"
+          <table-adjust
+:columns="columns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -51,9 +56,10 @@
       </div>
     </template>
     <!-- 表格 -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+ref="tableRef"
+             v-model:selected-keys="selectedKeys"
              row-key="id"
-             ref="tableRef"
              class="table-resize"
              :loading="loading"
              :row-selection="rowSelection"
@@ -85,15 +91,18 @@
       <!-- 操作日志 -->
       <template #originLogInfo="{ record }">
         <!-- 操作日志 -->
-        <a-tooltip position="tl"
+        <a-tooltip
+position="tl"
                    :content="record.originLogInfo">
-          <span v-html="replaceHtmlTag(record.logInfo)"
-                class="text-copy"
-                @click="copy(record.originLogInfo, true)" />
+          <span
+class="text-copy"
+                @click="copy(record.originLogInfo, true)"
+                v-html="replaceHtmlTag(record.logInfo)" />
         </a-tooltip>
         <!-- 错误消息 -->
         <br v-if="record.errorMessage">
-        <span v-if="record.errorMessage"
+        <span
+v-if="record.errorMessage"
               class="table-cell-sub-value text-copy error-message"
               @click="copy(record.errorMessage, true)">
           {{ record.errorMessage }}
@@ -105,7 +114,8 @@
           {{ record.location }}
         </span>
         <br>
-        <span class="table-cell-sub-value text-copy"
+        <span
+class="table-cell-sub-value text-copy"
               :title="record.address"
               @click="copy(record.address)">
           {{ record.address }}
@@ -115,17 +125,20 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 详情 -->
-          <a-button type="text"
+          <a-button
+type="text"
                     size="mini"
                     @click="emits('openDetail', record)">
             详情
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['infra:operator-log:delete']"
+            <a-button
+v-permission="['infra:operator-log:delete']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -140,7 +153,7 @@
 
 <script lang="ts">
   export default {
-    name: 'operatorLogTable'
+    name: 'OperatorLogTable'
   };
 </script>
 

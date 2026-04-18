@@ -1,22 +1,27 @@
 <template>
   <a-row :gutter="16">
     <!-- 统计信息 -->
-    <a-col v-for="item in summaryItems"
+    <a-col
+v-for="item in summaryItems"
            :span="4"
            class="statistics-card">
-      <div class="card pointer"
+      <div
+class="card pointer"
            title="双击查看详情"
            @dblclick="item.go">
-        <a-statistic :title="item.title"
+        <a-statistic
+:title="item.title"
                      :value="item.value"
                      :value-from="0"
                      :animation-duration="1000"
                      animation
                      show-group-separator>
           <template #prefix>
-            <span class="statistic-prefix"
+            <span
+class="statistic-prefix"
                   :style="{ background: item.prefix.background }">
-              <component :is="item.prefix.icon"
+              <component
+:is="item.prefix.icon"
                          :style="{ color: item.prefix.iconColor }" />
             </span>
           </template>
@@ -25,14 +30,16 @@
     </a-col>
     <!-- 连接终端次数图表 -->
     <a-col :span="4" class="statistics-card">
-      <div class="card" :style="{
+      <div
+class="card" :style="{
             background: isDark
               ? 'linear-gradient(180deg, #284991 0%, #122B62 100%)'
               : 'linear-gradient(180deg, #CAE6FA 0%, #CAE6FA 100%)',
            }">
         <div class="chart-container">
           <div class="statistics-wrapper">
-            <a-statistic title="连接终端次数 (7日)"
+            <a-statistic
+title="连接终端次数 (7日)"
                          :value="data.terminal?.weekTerminalConnectCount || 0"
                          :value-from="0"
                          :animation-duration="1000"
@@ -47,14 +54,16 @@
     </a-col>
     <!-- 批量执行次数图表 -->
     <a-col :span="4" class="statistics-card">
-      <div class="card" :style="{
+      <div
+class="card" :style="{
             background: isDark
               ? 'linear-gradient(180deg, #424f32 0%, #424f32 100%)'
               : 'linear-gradient(180deg, #BCF5CF 0%, #BCF5CF 100%)',
            }">
         <div class="chart-container">
           <div class="statistics-wrapper">
-            <a-statistic title="批量执行次数 (7日)"
+            <a-statistic
+title="批量执行次数 (7日)"
                          :value="data.exec?.weekExecCommandCount || 0"
                          :value-from="0"
                          :animation-duration="1000"
@@ -72,7 +81,7 @@
 
 <script lang="ts">
   export default {
-    name: 'workplaceStatistics'
+    name: 'WorkplaceStatistics'
   };
 </script>
 

@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            :title="title"
@@ -13,14 +14,16 @@
            :on-before-ok="handleOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
         <!-- 标签名称 -->
         <a-form-item field="name" label="标签名称">
-          <a-input v-model="formModel.name"
+          <a-input
+v-model="formModel.name"
                    placeholder="请输入标签名称"
                    allow-clear />
         </a-form-item>
@@ -31,7 +34,7 @@
 
 <script lang="ts">
   export default {
-    name: 'systemTagFormModal'
+    name: 'SystemTagFormModal'
   };
 </script>
 

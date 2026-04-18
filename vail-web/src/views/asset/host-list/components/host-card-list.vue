@@ -1,5 +1,6 @@
 <template>
-  <card-list v-model:searchValue="formModel.searchValue"
+  <card-list
+v-model:search-value="formModel.searchValue"
              search-input-placeholder="输入 id / 名称 / 编码 / 地址"
              :create-card-position="false"
              :loading="loading"
@@ -18,7 +19,8 @@
     <!-- 左侧操作 -->
     <template #leftHandle>
       <!-- 主机分组 -->
-      <a-button v-permission="['asset:host-group:update']"
+      <a-button
+v-permission="['asset:host-group:update']"
                 class="card-header-button"
                 @click="emits('openHostGroup')">
         主机分组
@@ -27,7 +29,8 @@
         </template>
       </a-button>
       <!-- 角色授权 -->
-      <a-button v-permission="['asset:host-group:grant']"
+      <a-button
+v-permission="['asset:host-group:grant']"
                 class="card-header-button"
                 @click="router.push({ name: GrantRouteName, query: { key: GrantKey.HOST_GROUP_ROLE }})">
         角色授权
@@ -36,7 +39,8 @@
         </template>
       </a-button>
       <!-- 用户授权 -->
-      <a-button v-permission="['asset:host-group:grant']"
+      <a-button
+v-permission="['asset:host-group:grant']"
                 class="card-header-button"
                 @click="router.push({ name: GrantRouteName, query: { key: GrantKey.HOST_GROUP_USER }})">
         用户授权
@@ -47,16 +51,18 @@
     </template>
     <!-- 过滤条件 -->
     <template #filterContent>
-      <a-form :model="formModel"
+      <a-form
+ref="formRef"
+              :model="formModel"
               class="card-filter-form"
               size="small"
-              ref="formRef"
               label-align="right"
               :auto-label-width="true"
               @keyup.enter="() => fetchCardData()">
         <!-- id -->
         <a-form-item field="id" label="主机id">
-          <a-input-number v-model="formModel.id"
+          <a-input-number
+v-model="formModel.id"
                           placeholder="请输入主机id"
                           allow-clear
                           hide-button />
@@ -75,35 +81,40 @@
         </a-form-item>
         <!-- 主机协议 -->
         <a-form-item field="type" label="主机协议">
-          <a-select v-model="formModel.type"
+          <a-select
+v-model="formModel.type"
                     :options="toOptions(hostTypeKey)"
                     placeholder="请选择主机协议"
                     allow-clear />
         </a-form-item>
         <!-- 系统类型 -->
         <a-form-item field="osType" label="系统类型">
-          <a-select v-model="formModel.osType"
+          <a-select
+v-model="formModel.osType"
                     :options="toOptions(hostOsTypeKey)"
                     placeholder="请选择系统类型"
                     allow-clear />
         </a-form-item>
         <!-- 系统架构 -->
         <a-form-item field="archType" label="系统架构">
-          <a-select v-model="formModel.archType"
+          <a-select
+v-model="formModel.archType"
                     :options="toOptions(hostArchTypeKey)"
                     placeholder="请选择系统架构"
                     allow-clear />
         </a-form-item>
         <!-- 主机状态 -->
         <a-form-item field="status" label="主机状态">
-          <a-select v-model="formModel.status"
+          <a-select
+v-model="formModel.status"
                     :options="toOptions(hostStatusKey)"
                     placeholder="请选择主机状态"
                     allow-clear />
         </a-form-item>
         <!-- 主机标签 -->
         <a-form-item field="tags" label="主机标签">
-          <tag-multi-selector v-model="formModel.tags"
+          <tag-multi-selector
+v-model="formModel.tags"
                               type="HOST"
                               :limit="0"
                               :tag-color="tagColor"
@@ -111,7 +122,8 @@
         </a-form-item>
         <!-- 描述 -->
         <a-form-item field="description" label="描述">
-          <a-input v-model="formModel.description"
+          <a-input
+v-model="formModel.description"
                    placeholder="请输入描述"
                    allow-clear />
         </a-form-item>
@@ -121,8 +133,9 @@
     <template #title="{ record }">
       <div class="host-title">
         <!-- 系统类型图标 -->
-        <component v-if="getHostOsIcon(record.osType)"
-                   :is="getHostOsIcon(record.osType)"
+        <component
+:is="getHostOsIcon(record.osType)"
+                   v-if="getHostOsIcon(record.osType)"
                    class="os-icon" />
         <!-- 主机名称 -->
         <span class="host-name">{{ record.name }}</span>
@@ -140,10 +153,12 @@
     </template>
     <!-- 主机协议 -->
     <template #protocols="{ record }">
-      <a-space v-if="record.types?.length"
+      <a-space
+v-if="record.types?.length"
                style="margin-bottom: -8px;"
                wrap>
-        <a-tag v-for="type in record.types"
+        <a-tag
+v-for="type in record.types"
                :key="type"
                :color="getDictValue(hostTypeKey, type, 'color')">
           {{ getDictValue(hostTypeKey, type) }}
@@ -152,7 +167,8 @@
     </template>
     <!-- 主机地址 -->
     <template #address="{ record }">
-      <span class="span-blue text-copy host-address"
+      <span
+class="span-blue text-copy host-address"
             title="复制"
             @click="copy(record.address)">
           {{ record.address }}
@@ -183,10 +199,12 @@
     </template>
     <!-- 主机分组 -->
     <template #groups="{ record }">
-      <a-space v-if="record.groupIdList?.length"
+      <a-space
+v-if="record.groupIdList?.length"
                style="margin-bottom: -8px;"
                :wrap="true">
-        <template v-for="groupId in record.groupIdList"
+        <template
+v-for="groupId in record.groupIdList"
                   :key="groupId">
           <a-tag>{{ hostGroupList.find((s: HostGroupQueryResponse) => s.key === groupId)?.title || groupId }}</a-tag>
         </template>
@@ -194,10 +212,12 @@
     </template>
     <!-- 标签 -->
     <template #tags="{ record }">
-      <a-space v-if="record.tags?.length"
+      <a-space
+v-if="record.tags?.length"
                style="margin-bottom: -8px;"
                :wrap="true">
-        <a-tag v-for="tag in record.tags"
+        <a-tag
+v-for="tag in record.tags"
                :key="tag.id"
                :color="dataColor(tag.name, tagColor)">
           {{ tag.name }}
@@ -209,25 +229,29 @@
     <template #extra="{ record }">
       <a-space>
         <!-- 单协议连接 -->
-        <a-button v-if="record.types?.length === 1"
+        <a-button
+v-if="record.types?.length === 1"
+                  v-permission="['terminal:terminal:access']"
                   size="mini"
                   type="text"
-                  v-permission="['terminal:terminal:access']"
                   @click="openNewRoute({ name: 'terminal', query: { connect: record.id, type: record.types[0] } })">
           连接
         </a-button>
         <!-- 多协议连接 -->
-        <a-popover v-if="(record.types?.length || 0) > 1"
+        <a-popover
+v-if="(record.types?.length || 0) > 1"
                    :title="undefined"
                    :content-style="{ padding: '8px' }">
-          <a-button v-permission="['terminal:terminal:access']"
+          <a-button
+v-permission="['terminal:terminal:access']"
                     type="text"
                     size="mini">
             连接
           </a-button>
           <template #content>
             <a-space>
-              <a-button v-for="type in record.types"
+              <a-button
+v-for="type in record.types"
                         :key="type"
                         size="mini"
                         @click="openNewRoute({ name: 'terminal', query: { connect: record.id, type }})">
@@ -241,25 +265,30 @@
           <icon-more class="card-extra-icon" />
           <template #content>
             <!-- 修改 -->
-            <a-doption v-permission="['asset:host:update']"
+            <a-doption
+v-permission="['asset:host:update']"
                        @click="emits('openUpdate', record)">
               <span class="more-doption normal">修改</span>
             </a-doption>
             <!-- 修改状态 -->
-            <a-doption v-permission="['asset:host:update-status']"
+            <a-doption
+v-permission="['asset:host:update-status']"
                        @click="updateStatus(record as HostQueryResponse)">
-              <span class="more-doption"
+              <span
+class="more-doption"
                     :class="[toggleDictValue(hostStatusKey, record.status, 'status')]">
                 {{ toggleDictValue(hostStatusKey, record.status, 'label') }}
               </span>
             </a-doption>
             <!-- 复制 -->
-            <a-doption v-permission="['asset:host:create']"
+            <a-doption
+v-permission="['asset:host:create']"
                        @click="emits('openCopy', record)">
               <span class="more-doption normal">复制</span>
             </a-doption>
             <!-- 删除 -->
-            <a-doption v-permission="['asset:host:delete']"
+            <a-doption
+v-permission="['asset:host:delete']"
                        class="span-red"
                        @click="deleteRow(record.id)">
               <span class="more-doption error">删除</span>
@@ -273,7 +302,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostCardList'
+    name: 'HostCardList'
   };
 </script>
 

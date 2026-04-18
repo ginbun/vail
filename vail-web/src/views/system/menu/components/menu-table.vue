@@ -4,8 +4,9 @@
     <a-row>
       <!-- 搜索框 -->
       <a-col :span="12">
-        <a-form :model="formModel"
-                ref="formRef"
+        <a-form
+ref="formRef"
+                :model="formModel"
                 label-align="left"
                 :auto-label-width="true"
                 @keyup.enter="loadMenuData">
@@ -19,7 +20,8 @@
             <!-- 菜单状态 -->
             <a-col :span="12">
               <a-form-item field="status" label="菜单状态">
-                <a-select v-model="formModel.status"
+                <a-select
+v-model="formModel.status"
                           :options="toOptions(menuStatusKey)"
                           placeholder="请选择菜单状态"
                           allow-clear />
@@ -32,9 +34,10 @@
       <a-col :span="12" class="table-right-bar-handle">
         <a-space>
           <!-- 新增 -->
-          <a-button type="primary"
-                    @click="emits('openAdd',{ parentId: 0, sort: getMaxSort(tableRenderData) })"
-                    v-permission="['infra:system-menu:create']">
+          <a-button
+v-permission="['infra:system-menu:create']"
+                    type="primary"
+                    @click="emits('openAdd',{ parentId: 0, sort: getMaxSort(tableRenderData) })">
             新增
             <template #icon>
               <icon-plus />
@@ -48,7 +51,7 @@
             </template>
           </a-button>
           <!-- 重置 -->
-          <a-button @click="resetForm" :loading="fetchLoading">
+          <a-button :loading="fetchLoading" @click="resetForm">
             重置
             <template #icon>
               <icon-refresh />
@@ -63,11 +66,13 @@
             </template>
           </a-button>
           <!-- 刷新缓存 -->
-          <a-popconfirm content="确定要刷新全局菜单缓存吗?"
+          <a-popconfirm
+content="确定要刷新全局菜单缓存吗?"
                         position="left"
                         type="warning"
                         @ok="doRefreshCache">
-            <a-button v-permission="['infra:system-menu:management:refresh-cache']"
+            <a-button
+v-permission="['infra:system-menu:management:refresh-cache']"
                       type="primary"
                       status="warning">
               刷新缓存
@@ -82,8 +87,9 @@
   </a-card>
   <!-- 表格 -->
   <a-card class="general-card table-card">
-    <a-table row-key="id"
-             ref="tableRef"
+    <a-table
+ref="tableRef"
+             row-key="id"
              class="table-wrapper-16 table-resize"
              :loading="fetchLoading"
              :pagination="false"
@@ -97,7 +103,7 @@
       </template>
       <!-- 图标 -->
       <template #icon="{ record }">
-        <component v-if="record.icon" :is="record.icon" />
+        <component :is="record.icon" v-if="record.icon" />
       </template>
       <!-- 类型 -->
       <template #type="{ record }">
@@ -107,7 +113,8 @@
       <template #status="{ record }">
         <a-space>
           <!-- 菜单状态 -->
-          <a-popconfirm v-if="hasPermission('infra:system-menu:update-status')"
+          <a-popconfirm
+v-if="hasPermission('infra:system-menu:update-status')"
                         position="top"
                         type="warning"
                         :content="`确定要将当前节点以及所有子节点改为${toggleDictValue(menuStatusKey, record.status, 'label')}?`"
@@ -122,20 +129,23 @@
             {{ getDictValue(menuStatusKey, record.status) }}
           </a-tag>
           <!-- 显示状态 -->
-          <a-popconfirm v-if="hasPermission('infra:system-menu:update-status')"
+          <a-popconfirm
+v-if="hasPermission('infra:system-menu:update-status')"
                         position="top"
                         type="warning"
                         :content="`确定要将当前节点以及所有子节点改为${toggleDictValue(menuVisibleKey, record.visible, 'label')}?`"
                         @ok="updateVisible(record.id, toggleDictValue(menuVisibleKey, record.visible))">
             <a-tooltip content="点击切换状态">
-              <a-tag v-if="(record.visible || record.visible === 0) && record.type !== MenuType.FUNCTION"
+              <a-tag
+v-if="(record.visible || record.visible === 0) && record.type !== MenuType.FUNCTION"
                      :color="getDictValue(menuVisibleKey, record.visible, 'color')"
                      class="pointer">
                 {{ getDictValue(menuVisibleKey, record.visible) }}
               </a-tag>
             </a-tooltip>
           </a-popconfirm>
-          <a-tag v-else-if="(record.visible || record.visible === 0) && record.type !== MenuType.FUNCTION"
+          <a-tag
+v-else-if="(record.visible || record.visible === 0) && record.type !== MenuType.FUNCTION"
                  :color="getDictValue(menuVisibleKey, record.visible, 'color')">
             {{ getDictValue(menuVisibleKey, record.visible) }}
           </a-tag>
@@ -143,7 +153,8 @@
       </template>
       <!-- 权限标识 -->
       <template #permission="{ record }">
-        <span v-if="record.permission"
+        <span
+v-if="record.permission"
               class="text-copy"
               @click="copy(record.permission, true)">
           {{ record.permission }}
@@ -151,7 +162,8 @@
       </template>
       <!-- 组件名称 -->
       <template #component="{ record }">
-        <span v-if="record.component"
+        <span
+v-if="record.component"
               class="text-copy"
               @click="copy(record.component, true)">
           {{ record.component }}
@@ -159,7 +171,8 @@
       </template>
       <!-- 链接路径 -->
       <template #path="{ record }">
-        <span v-if="record.path"
+        <span
+v-if="record.path"
               class="text-copy"
               @click="copy(record.path, true)">
           {{ record.path }}
@@ -169,26 +182,30 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 新增 -->
-          <a-button type="text"
-                    size="mini"
-                    v-if="record.type !== MenuType.FUNCTION"
+          <a-button
+v-if="record.type !== MenuType.FUNCTION"
                     v-permission="['infra:system-menu:create']"
+                    type="text"
+                    size="mini"
                     @click="emits('openAdd', { parentId: record.id, type: record.type, sort: getMaxSort(record.children) })">
             新增
           </a-button>
           <!-- 修改 -->
-          <a-button type="text"
+          <a-button
+v-permission="['infra:system-menu:update']"
+                    type="text"
                     size="mini"
-                    v-permission="['infra:system-menu:update']"
                     @click="emits('openUpdate', record)">
             修改
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="doDeleteMenu(record)">
-            <a-button v-permission="['infra:system-menu:delete']"
+            <a-button
+v-permission="['infra:system-menu:delete']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -203,7 +220,7 @@
 
 <script lang="ts">
   export default {
-    name: 'menuTable'
+    name: 'MenuTable'
   };
 </script>
 

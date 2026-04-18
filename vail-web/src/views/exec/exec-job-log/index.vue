@@ -1,22 +1,27 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
-    <exec-job-log-table ref="tableRef"
+    <exec-job-log-table
+ref="tableRef"
                         @view-command="viewCommand"
                         @view-params="viewParams"
                         @view-log="viewLog"
                         @open-clear="openClearModal" />
     <!-- 清理模态框 -->
-    <exec-job-log-clear-modal ref="clearModal"
+    <exec-job-log-clear-modal
+ref="clearModal"
                               @clear="() => tableRef.reload()" />
     <!-- 执行日志模态框 -->
-    <exec-log-panel-modal ref="logModal"
+    <exec-log-panel-modal
+ref="logModal"
                           type="JOB" />
     <!-- json 模态框 -->
-    <json-editor-modal ref="jsonModal"
+    <json-editor-modal
+ref="jsonModal"
                        :esc-to-close="true" />
     <!-- shell 模态框 -->
-    <shell-editor-modal ref="shellModal"
+    <shell-editor-modal
+ref="shellModal"
                         :footer="false"
                         :esc-to-close="true" />
   </div>
@@ -24,7 +29,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execJobLog'
+    name: 'ExecJobLog'
   };
 </script>
 

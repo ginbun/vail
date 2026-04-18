@@ -1,24 +1,28 @@
 <template>
   <a-spin :loading="loading">
     <!-- 表单 -->
-    <a-form :model="formModel"
-            ref="formRef"
+    <a-form
+ref="formRef"
+            :model="formModel"
             label-align="right"
             :label-col-props="{ span: 6 }"
             :wrapper-col-props="{ span: 18 }"
             :rules="formRules">
       <!-- 端口 -->
-      <a-form-item field="port"
+      <a-form-item
+field="port"
                    label="端口"
                    hide-asterisk>
-        <a-input-number v-model="formModel.port"
+        <a-input-number
+v-model="formModel.port"
                         placeholder="请输入 VNC 端口"
                         hide-button />
       </a-form-item>
       <a-row>
         <a-col :span="8">
           <!-- 无用户名 -->
-          <a-form-item field="noUsername"
+          <a-form-item
+field="noUsername"
                        label="无用户名"
                        :label-col-props="{ span: 18 }"
                        :wrapper-col-props="{ span: 6 }"
@@ -28,7 +32,8 @@
         </a-col>
         <a-col :span="8">
           <!-- 无密码 -->
-          <a-form-item field="noPassword"
+          <a-form-item
+field="noPassword"
                        label="无密码"
                        :label-col-props="{ span: 18 }"
                        :wrapper-col-props="{ span: 6 }"
@@ -38,34 +43,41 @@
         </a-col>
       </a-row>
       <!-- 用户名 -->
-      <a-form-item v-if="formModel.noUsername !== true"
+      <a-form-item
+v-if="formModel.noUsername !== true"
                    field="username"
                    label="用户名"
                    :help="HostAuthType.IDENTITY === formModel.authType ? '将使用主机身份的用户名' : undefined"
                    hide-asterisk>
-        <a-input v-model="formModel.username"
+        <a-input
+v-model="formModel.username"
                  :disabled="HostAuthType.IDENTITY === formModel.authType"
                  placeholder="请输入用户名" />
       </a-form-item>
       <!-- 认证方式 -->
-      <a-form-item v-if="formModel.noPassword !== true"
+      <a-form-item
+v-if="formModel.noPassword !== true"
                    field="authType"
                    label="认证方式"
                    hide-asterisk>
-        <a-radio-group type="button"
+        <a-radio-group
+v-model="formModel.authType"
+                       type="button"
                        class="password-auth-type-group usn"
-                       v-model="formModel.authType"
                        :options="toRadioOptions(passwordAuthTypeKey)" />
       </a-form-item>
       <!-- 主机密码 -->
-      <a-form-item v-if="formModel.noPassword !== true && HostAuthType.PASSWORD === formModel.authType"
+      <a-form-item
+v-if="formModel.noPassword !== true && HostAuthType.PASSWORD === formModel.authType"
                    field="password"
                    label="主机密码"
                    hide-asterisk>
-        <a-input-password v-model="formModel.password"
+        <a-input-password
+v-model="formModel.password"
                           :disabled="!formModel.useNewPassword && formModel.hasPassword"
                           placeholder="主机密码" />
-        <a-switch v-if="formModel.hasPassword"
+        <a-switch
+v-if="formModel.hasPassword"
                   v-model="formModel.useNewPassword"
                   class="password-switch"
                   type="round"
@@ -73,33 +85,40 @@
                   unchecked-text="使用原密码" />
       </a-form-item>
       <!-- 主机身份 -->
-      <a-form-item v-if="HostAuthType.IDENTITY === formModel.authType"
+      <a-form-item
+v-if="HostAuthType.IDENTITY === formModel.authType"
                    field="identityId"
                    label="主机身份"
                    hide-asterisk>
-        <host-identity-selector v-model="formModel.identityId"
+        <host-identity-selector
+v-model="formModel.identityId"
                                 :type="IdentityType.PASSWORD" />
       </a-form-item>
       <!-- 系统时区 -->
-      <a-form-item field="timezone"
+      <a-form-item
+field="timezone"
                    label="系统时区"
                    hide-asterisk>
-        <a-select v-model="formModel.timezone"
+        <a-select
+v-model="formModel.timezone"
                   placeholder="请选择系统时区"
                   :options="toOptions(timezoneKey)" />
       </a-form-item>
       <!-- 剪切板编码 -->
-      <a-form-item field="clipboardEncoding"
+      <a-form-item
+field="clipboardEncoding"
                    label="剪切板编码"
                    hide-asterisk>
-        <a-select v-model="formModel.clipboardEncoding"
+        <a-select
+v-model="formModel.clipboardEncoding"
                   placeholder="请选择剪切板编码"
                   :options="toOptions(clipboardEncodingKey)" />
       </a-form-item>
       <!-- 操作 -->
       <a-form-item style="margin-bottom: 0;">
         <!-- 保存 -->
-        <a-button type="primary"
+        <a-button
+type="primary"
                   long
                   @click="saveConfig">
           保存
@@ -111,7 +130,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostFormVnc'
+    name: 'HostFormVnc'
   };
 </script>
 

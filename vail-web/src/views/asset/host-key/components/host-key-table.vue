@@ -1,27 +1,31 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- id -->
       <a-form-item field="id" label="id">
-        <a-input-number v-model="formModel.id"
+        <a-input-number
+v-model="formModel.id"
                         placeholder="请输入id"
                         allow-clear
                         hide-button />
       </a-form-item>
       <!-- 名称 -->
       <a-form-item field="name" label="名称">
-        <a-input v-model="formModel.name"
+        <a-input
+v-model="formModel.name"
                  placeholder="请输入名称"
                  allow-clear />
       </a-form-item>
       <!-- 描述 -->
       <a-form-item field="description" label="描述">
-        <a-input v-model="formModel.description"
+        <a-input
+v-model="formModel.description"
                  placeholder="请输入描述"
                  allow-clear />
       </a-form-item>
@@ -41,8 +45,9 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 角色授权 -->
-          <a-button type="primary"
-                    v-permission="['asset:host-key:grant']"
+          <a-button
+v-permission="['asset:host-key:grant']"
+                    type="primary"
                     @click="router.push({ name: GrantRouteName, query: { key: GrantKey.HOST_KEY_ROLE }})">
             角色授权
             <template #icon>
@@ -50,8 +55,9 @@
             </template>
           </a-button>
           <!-- 用户授权 -->
-          <a-button type="primary"
-                    v-permission="['asset:host-key:grant']"
+          <a-button
+v-permission="['asset:host-key:grant']"
+                    type="primary"
                     @click="router.push({ name: GrantRouteName, query: { key: GrantKey.HOST_KEY_USER }})">
             用户授权
             <template #icon>
@@ -59,8 +65,9 @@
             </template>
           </a-button>
           <!-- 新增 -->
-          <a-button type="primary"
-                    v-permission="['asset:host-key:create']"
+          <a-button
+v-permission="['asset:host-key:create']"
+                    type="primary"
                     @click="emits('openAdd')">
             新增
             <template #icon>
@@ -68,11 +75,13 @@
             </template>
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm :content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
+          <a-popconfirm
+:content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
                         position="br"
                         type="warning"
                         @ok="deleteSelectedRows">
-            <a-button v-permission="['asset:host-key:delete']"
+            <a-button
+v-permission="['asset:host-key:delete']"
                       type="primary"
                       status="danger"
                       :disabled="selectedKeys.length === 0">
@@ -83,7 +92,8 @@
             </a-button>
           </a-popconfirm>
           <!-- 调整 -->
-          <table-adjust :columns="columns"
+          <table-adjust
+:columns="columns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -91,9 +101,10 @@
       </div>
     </template>
     <!-- table -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+ref="tableRef"
+             v-model:selected-keys="selectedKeys"
              row-key="id"
-             ref="tableRef"
              class="table-resize"
              :loading="loading"
              :columns="tableColumns"
@@ -108,25 +119,29 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 详情 -->
-          <a-button type="text"
+          <a-button
+v-permission="['asset:host-key:detail', 'asset:host-key:update']"
+                    type="text"
                     size="mini"
-                    v-permission="['asset:host-key:detail', 'asset:host-key:update']"
                     @click="emits('openView', record)">
             详情
           </a-button>
           <!-- 修改 -->
-          <a-button type="text"
+          <a-button
+v-permission="['asset:host-key:update']"
+                    type="text"
                     size="mini"
-                    v-permission="['asset:host-key:update']"
                     @click="emits('openUpdate', record)">
             修改
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['asset:host-key:delete']"
+            <a-button
+v-permission="['asset:host-key:delete']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -141,7 +156,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostKeyTable'
+    name: 'HostKeyTable'
   };
 </script>
 

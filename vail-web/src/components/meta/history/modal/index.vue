@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            title-align="start"
            :title="title"
            :width="960"
@@ -19,7 +20,8 @@
         <!-- 右侧操作 -->
         <div class="table-right-bar-handle">
           <a-space>
-            <a-input-search v-model="form.searchValue"
+            <a-input-search
+v-model="form.searchValue"
                             placeholder="搜索值"
                             @search="() => fetchTableData()"
                             @keyup.enter="() => fetchTableData()" />
@@ -27,8 +29,9 @@
         </div>
       </template>
       <!-- table -->
-      <a-table row-key="id"
-               ref="tableRef"
+      <a-table
+ref="tableRef"
+               row-key="id"
                :loading="loading"
                :columns="columns"
                :data="tableRenderData"
@@ -38,7 +41,8 @@
                @page-size-change="(size: number) => fetchTableData(1, size)">
         <!-- 修改前 -->
         <template #beforeValue="{ record }">
-          <span class="copy-left"
+          <span
+class="copy-left"
                 title="复制"
                 @click="copy(record.beforeValue, true)">
             <icon-copy />
@@ -47,7 +51,8 @@
         </template>
         <!-- 修改后 -->
         <template #afterValue="{ record }">
-          <span class="copy-left"
+          <span
+class="copy-left"
                 title="复制"
                 @click="copy(record.afterValue, true)">
             <icon-copy />
@@ -58,7 +63,8 @@
         <template #handle="{ record }">
           <div class="table-handle-wrapper">
             <!-- 回滚 -->
-            <a-popconfirm content="确认要回滚到当前记录?"
+            <a-popconfirm
+content="确认要回滚到当前记录?"
                           position="left"
                           type="warning"
                           @ok="rollbackValue(record)">
@@ -75,7 +81,7 @@
 
 <script lang="ts">
   export default {
-    name: 'historyValueModal'
+    name: 'HistoryValueModal'
   };
 </script>
 

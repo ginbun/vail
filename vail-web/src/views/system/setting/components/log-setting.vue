@@ -3,16 +3,19 @@
     <!-- 标题 -->
     <h3 class="setting-header">日志设置</h3>
     <!-- 表单 -->
-    <a-form :model="setting"
-            ref="formRef"
+    <a-form
+ref="formRef"
+            :model="setting"
             class="setting-form"
             label-align="right"
             :auto-label-width="true">
       <!-- 执行详细日志 -->
-      <a-form-item label="执行详细日志"
+      <a-form-item
+label="执行详细日志"
                    :rules="[{required: true, message: '请选择此项'}]"
                    hide-asterisk>
-        <a-switch v-model="setting['log.exec-detail.enabled']"
+        <a-switch
+v-model="setting['log.exec-detail.enabled']"
                   type="round"
                   checked-value="true"
                   unchecked-value="false"
@@ -23,10 +26,12 @@
         </template>
       </a-form-item>
       <!-- 最大显示行数 -->
-      <a-form-item label="最大显示行数"
+      <a-form-item
+label="最大显示行数"
                    :rules="[{required: true, message: '请输入日志最大显示行数'}]"
                    hide-asterisk>
-        <a-input-number v-model="setting['log.web-scroll-lines']"
+        <a-input-number
+v-model="setting['log.web-scroll-lines']"
                         class="input-wrapper"
                         :min="0"
                         :max="999999"
@@ -42,10 +47,12 @@
         </template>
       </a-form-item>
       <!-- 日志加载行数 -->
-      <a-form-item label="日志加载行数"
+      <a-form-item
+label="日志加载行数"
                    :rules="[{required: true, message: '请输入日志加载行数'}]"
                    hide-asterisk>
-        <a-input-number v-model="setting['log.tracker-load-lines']"
+        <a-input-number
+v-model="setting['log.tracker-load-lines']"
                         class="input-wrapper"
                         :min="0"
                         :max="99999"
@@ -61,10 +68,12 @@
         </template>
       </a-form-item>
       <!-- 日志监听间隔 -->
-      <a-form-item label="日志监听间隔"
+      <a-form-item
+label="日志监听间隔"
                    :rules="[{required: true, message: '请输入日志监听间隔'}]"
                    hide-asterisk>
-        <a-input-number v-model="setting['log.tracker-load-interval']"
+        <a-input-number
+v-model="setting['log.tracker-load-interval']"
                         class="input-wrapper"
                         :min="0"
                         :max="99999"
@@ -82,7 +91,8 @@
       <!-- 按钮 -->
       <a-form-item v-permission="['infra:system-setting:update']">
         <!-- 保存 -->
-        <a-button type="primary"
+        <a-button
+type="primary"
                   size="small"
                   @click="save">
           保存
@@ -94,7 +104,7 @@
 
 <script lang="ts">
   export default {
-    name: 'logSetting',
+    name: 'LogSetting',
   };
 </script>
 

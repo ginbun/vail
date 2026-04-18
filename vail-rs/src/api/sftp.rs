@@ -227,7 +227,7 @@ async fn upload_batch(
     headers: HeaderMap,
     mut multipart: Multipart,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let mut host_id: Option<i64> = None;
     let mut remote_base_path: Option<String> = None;
@@ -354,7 +354,7 @@ async fn create_upload_task(
     headers: HeaderMap,
     axum::extract::Json(payload): axum::extract::Json<CreateUploadTaskRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let is_admin = has_host_read_permission(&state, user_id).await?;
     if !can_access_host(&state, user_id, payload.host_id, is_admin).await? {
         return Err(AppError::Auth("Host access denied".to_string()));
@@ -411,7 +411,7 @@ async fn upload_chunk(
     headers: HeaderMap,
     mut multipart: axum::extract::Multipart,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let mut task_id: Option<i64> = None;
     let mut chunk_index: Option<i32> = None;
@@ -495,7 +495,7 @@ async fn complete_upload(
     headers: HeaderMap,
     axum::extract::Json(payload): axum::extract::Json<serde_json::Value>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let task_id = payload
         .get("task_id")
@@ -625,7 +625,7 @@ async fn list_upload_tasks(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let is_admin = has_host_read_permission(&state, user_id).await?;
 
     let tasks = sqlx::query_as::<_, (i64, String, i64, i64, i64, i16, String)>(if is_admin {
@@ -647,7 +647,7 @@ async fn get_upload_task(
     headers: HeaderMap,
     axum::extract::Path(id): axum::extract::Path<i64>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let is_admin = has_host_read_permission(&state, user_id).await?;
 
     let task = if is_admin {

@@ -1,5 +1,5 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
     <file-log-table />
   </div>
@@ -7,7 +7,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalFileLog'
+    name: 'TerminalFileLog'
   };
 </script>
 

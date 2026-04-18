@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            title="分配菜单"
@@ -52,7 +53,7 @@
 
 <script lang="ts">
   export default {
-    name: 'roleMenuGrantModal'
+    name: 'RoleMenuGrantModal'
   };
 </script>
 

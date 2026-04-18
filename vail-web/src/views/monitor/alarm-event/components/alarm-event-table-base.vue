@@ -13,7 +13,8 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 清理 -->
-          <a-button v-if="showClearButton"
+          <a-button
+v-if="showClearButton"
                     v-permission="['monitor:alarm-event:management:clear']"
                     status="danger"
                     @click="openClear">
@@ -23,7 +24,8 @@
             </template>
           </a-button>
           <!-- 处理告警 -->
-          <a-button v-permission="['monitor:alarm-event:handle']"
+          <a-button
+v-permission="['monitor:alarm-event:handle']"
                     type="primary"
                     :disabled="selectedKeys.length === 0"
                     @click="openHandle(selectedKeys)">
@@ -33,7 +35,8 @@
             </template>
           </a-button>
           <!-- 标记误报 -->
-          <a-button v-permission="['monitor:alarm-event:handle']"
+          <a-button
+v-permission="['monitor:alarm-event:handle']"
                     type="primary"
                     :disabled="selectedKeys.length === 0"
                     @click="setFalseAlarm(selectedKeys, true)">
@@ -43,7 +46,8 @@
             </template>
           </a-button>
           <!-- 删除 -->
-          <a-button v-permission="['monitor:alarm-event:delete']"
+          <a-button
+v-permission="['monitor:alarm-event:delete']"
                     type="secondary"
                     status="danger"
                     :disabled="selectedKeys.length === 0"
@@ -54,7 +58,8 @@
             </template>
           </a-button>
           <!-- 调整 -->
-          <table-adjust :columns="columns"
+          <table-adjust
+:columns="columns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="$emit('query')" />
@@ -62,9 +67,10 @@
       </div>
     </template>
     <!-- table -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+ref="tableRef"
+             v-model:selected-keys="selectedKeys"
              row-key="id"
-             ref="tableRef"
              class="table-resize"
              :loading="loading"
              :columns="tableColumns"
@@ -82,7 +88,8 @@
           <!-- 主机名称 -->
           <div v-if="record.sourceType === AlarmSourceType.HOST && record.sourceInfo?.name" class="info-item">
             <span class="info-label">主机名称</span>
-            <span class="info-value text-copy text-ellipsis"
+            <span
+class="info-value text-copy text-ellipsis"
                   :title="record.sourceInfo.name"
                   @click="copy(record.sourceInfo.name, true)">
               {{ record.sourceInfo.name }}
@@ -91,7 +98,8 @@
           <!-- 主机地址 -->
           <div v-if="record.sourceType === AlarmSourceType.HOST && record.sourceInfo?.address" class="info-item">
             <span class="info-label">主机地址</span>
-            <span class="info-value span-blue text-copy text-ellipsis"
+            <span
+class="info-value span-blue text-copy text-ellipsis"
                   :title="record.sourceInfo.address"
                   @click="copy(record.sourceInfo.address, true)">
               {{ record.sourceInfo.address }}
@@ -148,7 +156,8 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 处理 -->
-          <a-button v-permission="['monitor:alarm-event:handle']"
+          <a-button
+v-permission="['monitor:alarm-event:handle']"
                     type="text"
                     size="mini"
                     @click="openHandle([record.id])">
@@ -161,12 +170,14 @@
             </a-button>
             <template #content>
               <!-- 标记误报 -->
-              <a-doption v-permission="['monitor:alarm-event:handle']"
+              <a-doption
+v-permission="['monitor:alarm-event:handle']"
                          @click="setFalseAlarm([record.id], false)">
                 <span class="more-doption normal">标记误报</span>
               </a-doption>
               <!-- 删除 -->
-              <a-doption v-permission="['monitor:alarm-event:delete']"
+              <a-doption
+v-permission="['monitor:alarm-event:delete']"
                          @click="deleteRows([record.id])">
                 <span class="more-doption error">删除</span>
               </a-doption>
@@ -176,10 +187,12 @@
       </template>
     </a-table>
     <!-- 处理模态框-->
-    <alarm-event-handle-modal ref="handleModal"
+    <alarm-event-handle-modal
+ref="handleModal"
                               @handled="alarmHandled" />
     <!-- 清理模态框-->
-    <alarm-event-clear-modal ref="clearModal"
+    <alarm-event-clear-modal
+ref="clearModal"
                              :source-type="sourceType"
                              @clear="emits('reload')" />
   </a-card>
@@ -187,7 +200,7 @@
 
 <script lang="ts">
   export default {
-    name: 'alarmEventTableBase'
+    name: 'AlarmEventTableBase'
   };
 </script>
 

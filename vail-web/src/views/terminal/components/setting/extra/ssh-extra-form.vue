@@ -1,35 +1,42 @@
 <template>
-  <a-form :model="formModel"
-          ref="formRef"
+  <a-form
+ref="formRef"
+          :model="formModel"
           label-align="right"
           :label-col-props="{ span: 5 }"
           :wrapper-col-props="{ span: 18 }">
     <!-- 认证方式 -->
     <a-form-item field="authType" label="认证方式">
-      <a-radio-group type="button"
-                     v-model="formModel.authType"
+      <a-radio-group
+v-model="formModel.authType"
+                     type="button"
                      :options="toRadioOptions(extraSshAuthTypeKey)" />
     </a-form-item>
     <!-- 用户名 -->
-    <a-form-item v-if="formModel.authType === ExtraHostAuthType.CUSTOM_KEY"
+    <a-form-item
+v-if="formModel.authType === ExtraHostAuthType.CUSTOM_KEY"
                  field="username"
                  label="用户名">
       <a-input v-model="formModel.username" placeholder="请输入用户名" />
     </a-form-item>
     <!-- 主机密钥 -->
-    <a-form-item v-if="formModel.authType === ExtraHostAuthType.CUSTOM_KEY"
+    <a-form-item
+v-if="formModel.authType === ExtraHostAuthType.CUSTOM_KEY"
                  field="keyId"
                  label="主机密钥"
                  :rules="{ required: true, message: '请选择主机密钥' }">
-      <host-key-selector v-model="formModel.keyId"
+      <host-key-selector
+v-model="formModel.keyId"
                          :authorized="true" />
     </a-form-item>
     <!-- 主机身份 -->
-    <a-form-item v-if="formModel.authType === ExtraHostAuthType.CUSTOM_IDENTITY"
+    <a-form-item
+v-if="formModel.authType === ExtraHostAuthType.CUSTOM_IDENTITY"
                  field="identityId"
                  label="主机身份"
                  :rules="{ required: true, message: '请选择主机身份' }">
-      <host-identity-selector v-model="formModel.identityId"
+      <host-identity-selector
+v-model="formModel.identityId"
                               :authorized="true" />
     </a-form-item>
   </a-form>
@@ -37,7 +44,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sshExtraForm'
+    name: 'SshExtraForm'
   };
 </script>
 

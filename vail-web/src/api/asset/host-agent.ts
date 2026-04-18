@@ -1,5 +1,5 @@
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 /**
  * 主机探针状态
@@ -69,7 +69,7 @@ export function getHostAgentStatus(idList: Array<number>) {
     promptBizErrorMessage: false,
     promptRequestErrorMessage: false,
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }
@@ -83,7 +83,7 @@ export function getAgentInstallLogStatus(idList: Array<number>) {
     promptBizErrorMessage: false,
     promptRequestErrorMessage: false,
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

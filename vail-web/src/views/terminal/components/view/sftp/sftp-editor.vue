@@ -1,5 +1,6 @@
 <template>
-  <editor ref="editorRef"
+  <editor
+ref="editorRef"
           language="txt"
           :auto-focus="true"
           :theme="preference.sshTheme.dark ? 'vs-dark' : 'vs'" />
@@ -7,7 +8,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sftpFileEditor'
+    name: 'SftpFileEditor'
   };
 </script>
 

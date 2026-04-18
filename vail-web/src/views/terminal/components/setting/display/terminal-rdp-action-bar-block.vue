@@ -8,20 +8,23 @@
     </div>
     <!-- 内容区域 -->
     <div class="terminal-setting-body block-body setting-body">
-      <a-form class="terminal-setting-form"
+      <a-form
+class="terminal-setting-form"
               :model="formModel"
               layout="vertical">
         <a-space size="large">
           <!-- 工具栏方向 -->
           <a-form-item field="position" label="工具栏方向">
-            <a-select v-model="formModel.position"
+            <a-select
+v-model="formModel.position"
                       style="width: 148px;"
                       placeholder="请选择工具栏方向"
                       :options="toOptions(graphActionBarPositionKey)" />
           </a-form-item>
           <!-- 工具栏按钮 -->
           <a-form-item field="actions" label="工具栏按钮">
-            <icon-actions class="form-item-actions"
+            <icon-actions
+class="form-item-actions"
                           :actions="actions"
                           position="bottom" />
           </a-form-item>
@@ -33,7 +36,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalRdpActionBarBlock'
+    name: 'TerminalRdpActionBarBlock'
   };
 </script>
 

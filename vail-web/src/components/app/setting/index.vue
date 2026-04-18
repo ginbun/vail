@@ -8,7 +8,8 @@
     </a-button>
   </div>
   <!-- 偏好配置抽屉 -->
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             title="偏好设置"
             :width="300"
             :footer="false"
@@ -22,11 +23,12 @@
       <!-- 页面视图 -->
       <block :options="viewsOpts" title="页面视图" />
       <!-- 保存为桌面程序 -->
-      <a-button v-if="visibleCreatePwaApp()"
+      <a-button
+v-if="visibleCreatePwaApp()"
                 class="mb16"
                 type="primary"
-                @click="createPwaApp"
-                long>
+                long
+                @click="createPwaApp">
         保存为桌面程序
       </a-button>
     </div>

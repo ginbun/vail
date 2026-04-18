@@ -6,7 +6,7 @@ use axum::{
     Router,
 };
 use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, Validation};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::net::SocketAddr;
@@ -47,7 +47,7 @@ pub fn create_token(
     user_id: i64,
     username: &str,
     session_id: &str,
-    secret: &str,
+    jwt: &crate::config::JwtConfig,
     expiration: u64,
 ) -> String {
     let now = Utc::now();
@@ -61,21 +61,23 @@ pub fn create_token(
         iat: now.timestamp(),
     };
 
-    encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(secret.as_bytes()),
-    )
-    .unwrap()
+    let mut header = jsonwebtoken::Header::new(jwt.algorithm);
+    header.typ = Some("JWT".to_string());
+    let key = jwt
+        .signing_key()
+        .unwrap_or_else(|e| panic!("invalid jwt signing key: {e}"));
+
+    encode(&header, &claims, &key).unwrap()
 }
 
-fn verify_token(token: &str, secret: &str) -> AppResult<Claims> {
-    let token_data = decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(secret.as_bytes()),
-        &Validation::default(),
-    )
-    .map_err(|e| crate::error::AppError::Auth(e.to_string()))?;
+fn verify_token(token: &str, jwt: &crate::config::JwtConfig) -> AppResult<Claims> {
+    let key = jwt
+        .verification_key()
+        .map_err(crate::error::AppError::Auth)?;
+    let validation = Validation::new(jwt.algorithm);
+
+    let token_data = decode::<Claims>(token, &key, &validation)
+        .map_err(|e| crate::error::AppError::Auth(e.to_string()))?;
 
     Ok(token_data.claims)
 }
@@ -129,7 +131,7 @@ async fn issue_token_pair(
         user_id,
         username,
         &session_id,
-        &state.config.jwt.secret,
+        &state.config.jwt,
         state.config.jwt.expiration,
     );
     let refresh_token = generate_refresh_token();
@@ -358,7 +360,7 @@ async fn me(State(state): State<AppState>, headers: HeaderMap) -> AppResult<impl
         .and_then(|v| v.strip_prefix("Bearer "))
         .ok_or_else(|| crate::error::AppError::Auth("Missing token".to_string()))?;
 
-    let claims = verify_token(token, &state.config.jwt.secret)?;
+    let claims = verify_token(token, &state.config.jwt)?;
 
     let user = sqlx::query_as::<_, (i64, String, Option<String>, Option<String>, Option<String>)>(
         "SELECT id, username, nickname, avatar, email FROM sys_user WHERE id = $1 AND deleted = 0",

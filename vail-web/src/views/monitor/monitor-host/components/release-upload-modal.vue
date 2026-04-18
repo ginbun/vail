@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            top="80px"
            width="400px"
            title-align="start"
@@ -14,8 +15,9 @@
            @cancel="handleClose">
     <a-spin class="upload-container" :loading="loading">
       <!-- 选择文件 -->
-      <a-upload class="file-list-uploader"
-                v-model:file-list="fileList"
+      <a-upload
+v-model:file-list="fileList"
+                class="file-list-uploader"
                 accept=".tar.gz"
                 :auto-upload="false"
                 :show-file-list="true"
@@ -27,7 +29,7 @@
 
 <script lang="ts">
   export default {
-    name: 'releaseUploadModal'
+    name: 'ReleaseUploadModal'
   };
 </script>
 

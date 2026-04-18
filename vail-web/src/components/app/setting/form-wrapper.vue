@@ -1,27 +1,31 @@
 <template>
   <!-- 数字框 -->
-  <a-input-number v-if="type === 'number'"
+  <a-input-number
+v-if="type === 'number'"
                   :style="{ width: '80px' }"
                   size="small"
                   :precision="0"
                   :default-value="defaultValue as number"
-                  @change="handleChange"
-                  hide-button />
+                  hide-button
+                  @change="handleChange" />
   <!-- 开关 -->
-  <a-switch v-else-if="type === 'switch'"
+  <a-switch
+v-else-if="type === 'switch'"
             type="round"
             :default-checked="defaultValue as boolean"
             size="small"
             @change="handleChange" />
   <!-- 单选按钮 -->
-  <a-radio-group v-else-if="type === 'radio-group'"
+  <a-radio-group
+v-else-if="type === 'radio-group'"
                  type="button"
                  size="small"
                  :default-value="defaultValue"
                  :options="options as Array<RadioOption>"
                  @change="handleChange" />
   <!-- 选择框 -->
-  <a-select v-else-if="type === 'select'"
+  <a-select
+v-else-if="type === 'select'"
             size="small"
             style="width: 128px;"
             :default-value="defaultValue"

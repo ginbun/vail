@@ -2,7 +2,8 @@
   <div class="container">
     <!-- 顶部 logo -->
     <div class="logo">
-      <img class="logo-img"
+      <img
+class="logo-img"
            alt="logo"
            src="@/assets/logo.svg?url" />
       <div class="logo-text">Orion Visor</div>
@@ -25,7 +26,7 @@
 
 <script lang="ts">
   export default {
-    name: 'login',
+    name: 'Login',
   };
 </script>
 

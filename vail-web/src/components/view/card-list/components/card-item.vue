@@ -1,6 +1,7 @@
 <template>
   <!-- 卡片 -->
-  <a-card :class="[
+  <a-card
+:class="[
             'card-list-item',
             item.disabled === true ? 'card-list-item-disabled' : undefined,
             !!cardClass ? cardClass : undefined
@@ -23,14 +24,16 @@
     <template v-if="fieldConfig && fieldConfig.fields">
       <div :class="['fields-container', fieldConfig.bodyClass]">
         <template v-for="(field, index) in fieldConfig.fields">
-          <a-row :align="fieldConfig.rowAlign || field.rowAlign || 'center'"
+          <a-row
+:align="fieldConfig.rowAlign || field.rowAlign || 'center'"
                  :style="{
                    'margin-bottom': index !== fieldConfig.fields.length - 1 ? (fieldConfig.rowGap || '12px') : false,
                    'height': fieldConfig.height || field.height || 'unset',
                    'min-height': fieldConfig.minHeight || field.minHeight || 'unset'
                  }">
             <!-- label -->
-            <a-col :span="fieldConfig.labelSpan || 8" :offset="fieldConfig.labelOffset || 0"
+            <a-col
+:span="fieldConfig.labelSpan || 8" :offset="fieldConfig.labelOffset || 0"
                    :style="{ 'text-align': fieldConfig.labelAlign || 'left' }"
                    :class="[
                      fieldConfig.labelClass,
@@ -40,7 +43,8 @@
               <span>{{ field.label + (fieldConfig.showColon ? ' :' : '') }}</span>
             </a-col>
             <!-- value -->
-            <a-col :span="24 - (fieldConfig.labelSpan || 8) + (fieldConfig.labelOffset || 0)"
+            <a-col
+:span="24 - (fieldConfig.labelSpan || 8) + (fieldConfig.labelOffset || 0)"
                    :style="{ 'text-align': fieldConfig.valueAlign || 'left' }"
                    :class="[
                      fieldConfig.valueClass,
@@ -48,10 +52,11 @@
                      'field-value',
                      field.ellipsis ? 'field-value-ellipsis' : ''
                    ]">
-              <slot :name="field.slotName"
+              <slot
+:name="field.slotName"
                     :record="item"
                     :index="index"
-                    :rowKey="item[rowKey as string]">
+                    :row-key="item[rowKey as string]">
                 <a-tooltip v-if="field.tooltip" :content="item[field.dataIndex]">
                   <span v-if="field.render" v-html="field.render({ record: item, index })" />
                   <span v-else>{{ item[field.dataIndex] }}</span>
@@ -77,7 +82,7 @@
 
 <script lang="ts">
   export default {
-    name: 'cardItem'
+    name: 'CardItem'
   };
 </script>
 

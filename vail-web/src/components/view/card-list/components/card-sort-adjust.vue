@@ -1,6 +1,7 @@
 <template>
   <!-- 调整排序 -->
-  <a-popover class="table-adjust-popover"
+  <a-popover
+class="table-adjust-popover"
              position="br"
              trigger="click"
              :content-style="{ padding: 0 }"
@@ -20,7 +21,8 @@
       <!-- 分隔符 -->
       <a-divider :margin="4" />
       <!-- 排序信息 -->
-      <a-radio-group v-model="orderValue"
+      <a-radio-group
+v-model="orderValue"
                      direction="vertical"
                      @change="sortChanged">
         <a-radio :value="ASC">
@@ -36,7 +38,7 @@
 
 <script lang="ts">
   export default {
-    name: 'cardSortAdjust'
+    name: 'CardSortAdjust'
   };
 </script>
 

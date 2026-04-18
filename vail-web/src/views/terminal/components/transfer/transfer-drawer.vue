@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             class="transfer-drawer"
             :width="388"
             :unmount-on-close="false"
@@ -17,7 +18,8 @@
         <!-- 左侧按钮 -->
         <a-space size="small">
           <!-- 清空 -->
-          <a-button class="transfer-header-icon icon-button"
+          <a-button
+class="transfer-header-icon icon-button"
                     title="清空"
                     @click="removeAllTask">
             <icon-close />
@@ -25,7 +27,8 @@
         </a-space>
         <!-- 右侧数量 -->
         <a-space size="small">
-          <a-tag v-for="option in toOptions(transferStatusKey)"
+          <a-tag
+v-for="option in toOptions(transferStatusKey)"
                  class="pointer px12"
                  size="large"
                  :color="option.color as string"
@@ -43,7 +46,8 @@
         </a-space>
       </div>
       <!-- 文件列表 -->
-      <a-list class="transfer-item-container"
+      <a-list
+class="transfer-item-container"
               size="small"
               max-height="100%"
               :hoverable="true"
@@ -65,7 +69,7 @@
 
 <script lang="ts">
   export default {
-    name: 'transferDrawer'
+    name: 'TransferDrawer'
   };
 </script>
 

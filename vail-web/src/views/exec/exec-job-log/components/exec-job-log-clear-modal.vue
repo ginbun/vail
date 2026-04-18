@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            title="清理计划任务日志"
@@ -13,38 +14,44 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
+      <a-form
+:model="formModel"
               label-align="right"
               :auto-label-width="true">
         <!-- 执行时间 -->
         <a-form-item field="startTimeRange" label="执行时间">
-          <a-range-picker v-model="formModel.startTimeRange"
+          <a-range-picker
+v-model="formModel.startTimeRange"
                           :time-picker-props="{ defaultValue: ['00:00:00', '23:59:59'] }"
                           show-time
                           format="YYYY-MM-DD HH:mm:ss" />
         </a-form-item>
         <!-- 计划任务 -->
         <a-form-item field="sourceId" label="计划任务">
-          <exec-job-selector v-model:model-value="formModel.sourceId"
+          <exec-job-selector
+v-model:model-value="formModel.sourceId"
                              v-model:name="formModel.description"
                              allow-create
                              allow-clear />
         </a-form-item>
         <!-- 执行命令 -->
         <a-form-item field="command" label="执行命令">
-          <a-input v-model="formModel.command"
+          <a-input
+v-model="formModel.command"
                    placeholder="请输入执行命令"
                    allow-clear />
         </a-form-item>
         <!-- 执行状态 -->
         <a-form-item field="status" label="执行状态">
-          <a-select v-model="formModel.status"
+          <a-select
+v-model="formModel.status"
                     :options="toOptions(execStatusKey)"
                     placeholder="请选择执行状态" />
         </a-form-item>
         <!-- 数量限制 -->
         <a-form-item field="limit" label="数量限制">
-          <a-input-number v-model="formModel.limit"
+          <a-input-number
+v-model="formModel.limit"
                           :min="1"
                           :max="maxClearLimit"
                           :placeholder="`请输入数量限制 最大: ${maxClearLimit}`"
@@ -58,7 +65,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execJobLogClearModal'
+    name: 'ExecJobLogClearModal'
   };
 </script>
 

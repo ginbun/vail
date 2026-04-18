@@ -2,22 +2,26 @@
   <a-scrollbar>
     <div class="user-container">
       <!-- 用户列表 -->
-      <tab-router v-if="usersRouter.length"
-                  class="user-router"
+      <tab-router
+v-if="usersRouter.length"
                   v-model="value"
+                  class="user-router"
                   :items="usersRouter"
                   @change="(key: number, item: any) => emits('change', key, item)" />
       <!-- 加载中 -->
-      <a-skeleton v-else-if="loading"
+      <a-skeleton
+v-else-if="loading"
                   class="skeleton-wrapper"
                   :animation="true">
         <a-skeleton-line :rows="4" />
       </a-skeleton>
       <!-- 暂无数据 -->
       <a-empty v-else class="user-empty">
-        <div slot="description">
+        <template #description>
+<div >
           暂无用户数据
         </div>
+</template>
       </a-empty>
     </div>
   </a-scrollbar>
@@ -25,7 +29,7 @@
 
 <script lang="ts">
   export default {
-    name: 'routerUsers'
+    name: 'RouterUsers'
   };
 </script>
 

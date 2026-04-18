@@ -2,7 +2,8 @@
   <div class="terminal-header">
     <!-- 左侧 logo -->
     <div class="terminal-header-left">
-      <img alt="logo"
+      <img
+alt="logo"
            class="terminal-header-logo"
            draggable="false"
            src="@/assets/logo.svg?url" />
@@ -10,13 +11,15 @@
     </div>
     <!-- 左侧 tabs -->
     <div class="terminal-header-tabs">
-      <a-tabs v-model:active-key="tabManager.active"
+      <a-tabs
+v-model:active-key="tabManager.active"
               :editable="true"
               :hide-content="true"
               :auto-switch="true"
               @tab-click="(k) => tabManager.clickTab(k as string)"
               @delete="(k) => tabManager.deleteTab(k as string)">
-        <a-tab-pane v-for="tab in tabManager.items"
+        <a-tab-pane
+v-for="tab in tabManager.items"
                     :key="tab.key">
           <!-- 标题 -->
           <template #title>
@@ -33,7 +36,8 @@
     <!-- 右侧操作 -->
     <div class="terminal-header-right">
       <!-- 操作按钮 -->
-      <icon-actions class="terminal-header-right-actions"
+      <icon-actions
+class="terminal-header-right-actions"
                     :actions="actions"
                     position="br"
                     icon-class="terminal-header-icon" />
@@ -43,7 +47,7 @@
 
 <script lang="ts">
   export default {
-    name: 'layoutHeader'
+    name: 'LayoutHeader'
   };
 </script>
 

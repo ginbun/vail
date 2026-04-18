@@ -4,7 +4,8 @@
     <a-descriptions :column="1" bordered>
       <!-- SN -->
       <a-descriptions-item label="SN" :span="2">
-        <a-input v-if="editing"
+        <a-input
+v-if="editing"
                  v-model="formModel.sn"
                  class="input"
                  size="mini"
@@ -13,7 +14,8 @@
       </a-descriptions-item>
       <!-- 制造商 -->
       <a-descriptions-item label="制造商" :span="2">
-        <a-input v-if="editing"
+        <a-input
+v-if="editing"
                  v-model="formModel.vendor"
                  class="input"
                  size="mini"
@@ -22,7 +24,8 @@
       </a-descriptions-item>
       <!-- 设备型号 -->
       <a-descriptions-item label="设备型号" :span="2">
-        <a-input v-if="editing"
+        <a-input
+v-if="editing"
                  v-model="formModel.model"
                  class="input"
                  size="mini"
@@ -31,7 +34,8 @@
       </a-descriptions-item>
       <!-- 系统名称 -->
       <a-descriptions-item label="系统名称" :span="2">
-        <a-input v-if="editing"
+        <a-input
+v-if="editing"
                  v-model="formModel.osName"
                  class="input"
                  size="mini"
@@ -40,7 +44,8 @@
       </a-descriptions-item>
       <!-- CPU型号 -->
       <a-descriptions-item label="CPU型号" :span="2">
-        <a-input v-if="editing"
+        <a-input
+v-if="editing"
                  v-model="formModel.cpuModel"
                  class="input"
                  size="mini"
@@ -49,7 +54,8 @@
       </a-descriptions-item>
       <!-- CPU核心数 -->
       <a-descriptions-item label="CPU核心数">
-        <a-input-number v-if="editing"
+        <a-input-number
+v-if="editing"
                         v-model="formModel.cpuPhysicalCore"
                         class="input"
                         size="mini"
@@ -59,7 +65,8 @@
       </a-descriptions-item>
       <!-- CPU线程数 -->
       <a-descriptions-item label="CPU线程数">
-        <a-input-number v-if="editing"
+        <a-input-number
+v-if="editing"
                         v-model="formModel.cpuLogicalCore"
                         class="input"
                         size="mini"
@@ -69,7 +76,8 @@
       </a-descriptions-item>
       <!-- CPU速率 -->
       <a-descriptions-item label="CPU速率">
-        <a-input-number v-if="editing"
+        <a-input-number
+v-if="editing"
                         v-model="formModel.cpuFrequency"
                         class="input"
                         size="mini"
@@ -83,7 +91,8 @@
       </a-descriptions-item>
       <!-- 内存 -->
       <a-descriptions-item label="内存">
-        <a-input-number v-if="editing"
+        <a-input-number
+v-if="editing"
                         v-model="formModel.memorySize"
                         class="input"
                         size="mini"
@@ -97,7 +106,8 @@
       </a-descriptions-item>
       <!-- 磁盘 -->
       <a-descriptions-item label="磁盘">
-        <a-input-number v-if="editing"
+        <a-input-number
+v-if="editing"
                         v-model="formModel.diskSize"
                         class="input"
                         size="mini"
@@ -111,7 +121,8 @@
       </a-descriptions-item>
       <!-- 上行带宽 -->
       <a-descriptions-item label="上行带宽">
-        <a-input-number v-if="editing"
+        <a-input-number
+v-if="editing"
                         v-model="formModel.inBandwidth"
                         class="input"
                         size="mini"
@@ -125,7 +136,8 @@
       </a-descriptions-item>
       <!-- 下行带宽 -->
       <a-descriptions-item label="下行带宽">
-        <a-input-number v-if="editing"
+        <a-input-number
+v-if="editing"
                         v-model="formModel.outBandwidth"
                         class="input"
                         size="mini"
@@ -139,7 +151,8 @@
       </a-descriptions-item>
       <!-- 公网地址 -->
       <a-descriptions-item label="公网地址" :span="2">
-        <a-input-tag v-if="editing"
+        <a-input-tag
+v-if="editing"
                      v-model="formModel.publicIpAddresses"
                      class="input"
                      size="mini"
@@ -153,7 +166,8 @@
       </a-descriptions-item>
       <!-- 私网地址 -->
       <a-descriptions-item label="私网地址" :span="2">
-        <a-input-tag v-if="editing"
+        <a-input-tag
+v-if="editing"
                      v-model="formModel.privateIpAddresses"
                      class="input"
                      size="mini"
@@ -167,7 +181,8 @@
       </a-descriptions-item>
       <!-- 负责人 -->
       <a-descriptions-item label="负责人" :span="2">
-        <a-input v-if="editing"
+        <a-input
+v-if="editing"
                  v-model="formModel.ownerPerson"
                  class="input"
                  size="mini"
@@ -176,7 +191,8 @@
       </a-descriptions-item>
       <!-- 创建时间 -->
       <a-descriptions-item label="创建时间" :span="2">
-        <a-date-picker v-if="editing"
+        <a-date-picker
+v-if="editing"
                        v-model="formModel.createdTime"
                        class="input"
                        size="mini"
@@ -187,7 +203,8 @@
       </a-descriptions-item>
       <!-- 到期时间 -->
       <a-descriptions-item label="到期时间" :span="2">
-        <a-date-picker v-if="editing"
+        <a-date-picker
+v-if="editing"
                        v-model="formModel.expiredTime"
                        value-format="timestamp"
                        class="input"
@@ -199,11 +216,13 @@
       </a-descriptions-item>
       <!-- 自定义规格 -->
       <template v-if="formModel.items?.length">
-        <a-descriptions-item v-for="(item, index) in formModel.items"
+        <a-descriptions-item
+v-for="(item, index) in formModel.items"
                              :key="index"
                              :span="2">
           <template #label>
-            <a-input v-if="editing"
+            <a-input
+v-if="editing"
                      v-model="item.label"
                      value-format="timestamp"
                      class="label"
@@ -213,14 +232,16 @@
           </template>
           <!-- 值 -->
           <div class="item-wrapper">
-            <a-input v-if="editing"
+            <a-input
+v-if="editing"
                      v-model="item.value"
                      class="input"
                      size="mini"
                      allow-clear />
             <span v-else class="text">{{ item.value }}</span>
             <!-- 移除 -->
-            <a-button v-if="editing"
+            <a-button
+v-if="editing"
                       class="ml4"
                       size="mini"
                       type="text"
@@ -236,7 +257,8 @@
       <!-- 未编辑 -->
       <template v-if="!editing">
         <!-- 编辑 -->
-        <a-button type="primary"
+        <a-button
+type="primary"
                   long
                   @click="() => toggleEditing()">
           编辑
@@ -245,20 +267,23 @@
       <!-- 编辑中 -->
       <template v-else>
         <!-- 保存 -->
-        <a-button type="primary"
+        <a-button
+type="primary"
                   long
                   @click="saveSpec">
           保存
         </a-button>
         <!-- 取消 -->
-        <a-button class="extra-button"
+        <a-button
+class="extra-button"
                   type="primary"
                   long
                   @click="fetchHostSpec">
           取消
         </a-button>
         <!-- 新增规格 -->
-        <a-button class="extra-button"
+        <a-button
+class="extra-button"
                   type="primary"
                   long
                   @click="addSpec">
@@ -271,7 +296,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostFormSpec'
+    name: 'HostFormSpec'
   };
 </script>
 

@@ -1,7 +1,7 @@
 import type { DataGrid, Options, OrderDirection, Pagination } from '@/types/global';
 import type { TableData } from '@arco-design/web-vue';
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 /**
  * 字典配置值创建请求
@@ -93,7 +93,7 @@ export function getDictValueList(keys: string[]) {
   return axios.get<Record<string, Array<DictValueOptionsQueryResponse>>>('/infra/dict-value/list', {
     params: { keys },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }
@@ -119,7 +119,7 @@ export function batchDeleteDictValue(idList: Array<number>) {
   return axios.delete('/infra/dict-value/batch-delete', {
     params: { idList },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

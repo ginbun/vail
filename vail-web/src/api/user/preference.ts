@@ -1,5 +1,5 @@
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 export type PreferenceType = 'SYSTEM' | 'TERMINAL'
 
@@ -44,7 +44,7 @@ export function getPreference<T>(type: PreferenceType, items: Array<string> | un
       items
     },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }
@@ -59,7 +59,7 @@ export function getDefaultPreference<T>(type: PreferenceType, items: Array<strin
       items
     },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

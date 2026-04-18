@@ -1,6 +1,6 @@
 import type { IFileDownloadTask, FileTransferItem, IRdpSession } from '@/views/terminal/interfaces';
 import { TransferType, TransferStatus, TerminalMessages, TransferSource } from '../../types/const';
-import { saveAs } from 'file-saver';
+import { downloadFile } from '@/utils';
 import Guacamole from 'guacamole-common-js';
 import BaseFileTransferTask from './base-file-transfer-task';
 
@@ -77,7 +77,7 @@ export default class RdpFileDownloadTask extends BaseFileTransferTask implements
     this.state.status = TransferStatus.SUCCESS;
     // 完成下载文件
     const blob = this.reader.getBlob();
-    saveAs(blob, this.fileItem.name);
+    downloadFile(blob, this.fileItem.name);
     // 释放资源
     this.releaseResource();
   }

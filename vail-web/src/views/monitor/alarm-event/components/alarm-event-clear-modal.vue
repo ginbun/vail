@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            title="清理操作日志"
@@ -13,12 +14,14 @@
            :on-before-ok="handleOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
+      <a-form
+:model="formModel"
               label-align="right"
               :auto-label-width="true">
         <!-- 处理状态 -->
         <a-form-item field="handleStatus" label="处理状态">
-          <a-select v-model="formModel.handleStatus"
+          <a-select
+v-model="formModel.handleStatus"
                     :options="toOptions(HandleStatusKey)"
                     placeholder="请选择处理状态"
                     allow-clear />
@@ -26,69 +29,79 @@
         <!-- 告警来源 -->
         <a-form-item field="agentKey" label="告警来源">
           <!-- 选择告警来源 -->
-          <monitor-host-selector v-if="sourceType === AlarmSourceType.HOST"
+          <monitor-host-selector
+v-if="sourceType === AlarmSourceType.HOST"
                                  v-model="formModel.agentKey"
                                  placeholder="请选择告警来源"
                                  allow-clear />
         </a-form-item>
         <!-- 告警级别 -->
         <a-form-item field="alarmLevel" label="告警级别">
-          <a-select v-model="formModel.alarmLevel"
+          <a-select
+v-model="formModel.alarmLevel"
                     :options="toOptions(AlarmLevelKey)"
                     placeholder="请选择告警级别"
                     allow-clear />
         </a-form-item>
         <!-- 处理人 -->
         <a-form-item field="handleUserId" label="处理人">
-          <user-selector v-model="formModel.handleUserId"
+          <user-selector
+v-model="formModel.handleUserId"
                          placeholder="请选择处理人"
                          hide-button
                          allow-clear />
         </a-form-item>
         <!-- 处理备注 -->
         <a-form-item field="handleRemark" label="处理备注">
-          <a-input v-model="formModel.handleRemark"
+          <a-input
+v-model="formModel.handleRemark"
                    placeholder="请输入处理备注"
                    allow-clear />
         </a-form-item>
         <!-- 告警策略 -->
         <a-form-item field="policyId" label="告警策略">
-          <alarm-policy-selector v-model="formModel.policyId"
+          <alarm-policy-selector
+v-model="formModel.policyId"
                                  placeholder="请输入告警策略"
                                  hide-button
                                  allow-clear />
         </a-form-item>
         <!-- 数据集 -->
         <a-form-item field="metricsMeasurement" label="数据集">
-          <a-select v-model="formModel.metricsMeasurement"
+          <a-select
+v-model="formModel.metricsMeasurement"
                     :options="toOptions(MetricsMeasurementKey)"
                     placeholder="数据集"
                     allow-clear />
         </a-form-item>
         <!-- 告警指标 -->
         <a-form-item field="metricsId" label="告警指标">
-          <monitor-metrics-selector v-model="formModel.metricsId"
+          <monitor-metrics-selector
+v-model="formModel.metricsId"
                                     placeholder="请选择告警指标"
                                     hide-button
                                     allow-clear />
         </a-form-item>
         <!-- 是否误报 -->
         <a-form-item field="falseAlarm" label="是否误报">
-          <a-select v-model="formModel.falseAlarm"
+          <a-select
+v-model="formModel.falseAlarm"
                     :options="toOptions(FalseAlarmKey)"
                     placeholder="请选择是否误报"
                     allow-clear />
         </a-form-item>
         <!-- id -->
         <a-form-item field="id" label="id">
-          <a-input-number v-model="formModel.id"
+          <a-input-number
+v-model="formModel.id"
                           placeholder="请输入id"
                           hide-button
                           allow-clear />
         </a-form-item>
         <!-- 告警时间 -->
         <a-form-item field="createTimeRange" label="告警时间">
-          <a-range-picker v-model="formModel.createTimeRange"
+          <a-range-picker
+v-model="formModel.createTimeRange"
                           style="width: 100%;"
                           :time-picker-props="{ defaultValue: ['00:00:00', '23:59:59'] }"
                           show-time
@@ -101,7 +114,7 @@
 
 <script lang="ts">
   export default {
-    name: 'alarmEventClearModal'
+    name: 'AlarmEventClearModal'
   };
 </script>
 

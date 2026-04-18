@@ -1,38 +1,43 @@
 <template>
-  <a-spin v-if="hostId"
+  <a-spin
+v-if="hostId"
           class="container"
           :loading="!host">
     <!-- 头部 -->
-    <detail-header v-if="host"
-                   v-model:activeKey="activeKey"
-                   v-model:chartCompose="chartCompose"
+    <detail-header
+v-if="host"
+                   v-model:active-key="activeKey"
+                   v-model:chart-compose="chartCompose"
                    :host="host"
                    :override-timestamp="overrideTimestamp"
                    @reload-chart="reloadChart" />
     <!-- 内容部分 -->
     <div v-if="host" class="content-container">
       <!-- 监控图表 -->
-      <a-tabs v-model:active-key="activeKey"
+      <a-tabs
+v-model:active-key="activeKey"
               class="main-content"
               lazy-load>
         <!-- 主机概览 -->
         <a-tab-pane :key="TabKeys.OVERVIEW">
-          <host-overview-tab ref="overrideRef"
+          <host-overview-tab
+ref="overrideRef"
                              :host="host"
                              :agent-key="host.agentKey"
                              @set-timestamp="(s: number) => overrideTimestamp = s" />
         </a-tab-pane>
         <!-- 监控图表 -->
         <a-tab-pane :key="TabKeys.CHART">
-          <metrics-chart-tab ref="chartRef"
-                             :agentKey="host.agentKey"
-                             :chartCompose="chartCompose"
-                             :chartRange="chartRange"
-                             :chartWindow="chartWindow" />
+          <metrics-chart-tab
+ref="chartRef"
+                             :agent-key="host.agentKey"
+                             :chart-compose="chartCompose"
+                             :chart-range="chartRange"
+                             :chart-window="chartWindow" />
         </a-tab-pane>
         <!-- 告警列表 -->
         <a-tab-pane :key="TabKeys.ALARM">
-          <alarm-event-tab :agentKey="host.agentKey" />
+          <alarm-event-tab :agent-key="host.agentKey" />
         </a-tab-pane>
       </a-tabs>
     </div>
@@ -41,7 +46,7 @@
 
 <script lang="ts">
   export default {
-    name: 'monitorDetail'
+    name: 'MonitorDetail'
   };
 </script>
 

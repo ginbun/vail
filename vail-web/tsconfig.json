@@ -14,8 +14,7 @@
     },
     "lib": ["es2021", "dom"],
     "skipLibCheck": true,
-    "verbatimModuleSyntax": true,
-    "importsNotUsedAsValues": "error"
+    "verbatimModuleSyntax": true
   },
   "include": ["src/**/*", "src/**/*.vue"],
   "exclude": ["node_modules"]

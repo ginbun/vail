@@ -1,27 +1,31 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- id -->
       <a-form-item field="id" label="id">
-        <a-input-number v-model="formModel.id"
+        <a-input-number
+v-model="formModel.id"
                         placeholder="请输入id"
                         hide-button
                         allow-clear />
       </a-form-item>
       <!-- 策略名称 -->
       <a-form-item field="name" label="策略名称">
-        <a-input v-model="formModel.name"
+        <a-input
+v-model="formModel.name"
                  placeholder="请输入策略名称"
                  allow-clear />
       </a-form-item>
       <!-- 策略描述 -->
       <a-form-item field="description" label="策略描述">
-        <a-input v-model="formModel.description"
+        <a-input
+v-model="formModel.description"
                  placeholder="请输入策略描述"
                  allow-clear />
       </a-form-item>
@@ -41,7 +45,8 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 新增 -->
-          <a-button v-permission="['monitor:alarm-policy:create']"
+          <a-button
+v-permission="['monitor:alarm-policy:create']"
                     type="primary"
                     @click="emits('openAdd')">
             新增
@@ -50,7 +55,8 @@
             </template>
           </a-button>
           <!-- 调整 -->
-          <table-adjust :columns="columns"
+          <table-adjust
+:columns="columns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -58,8 +64,9 @@
       </div>
     </template>
     <!-- table -->
-    <a-table row-key="id"
-             ref="tableRef"
+    <a-table
+ref="tableRef"
+             row-key="id"
              class="table-resize"
              :loading="loading"
              :columns="tableColumns"
@@ -95,32 +102,37 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 修改 -->
-          <a-button v-permission="['monitor:alarm-policy:update']"
+          <a-button
+v-permission="['monitor:alarm-policy:update']"
                     type="text"
                     size="mini"
                     @click="emits('openUpdate', record)">
             修改
           </a-button>
           <!-- 告警规则 -->
-          <a-button v-permission="['monitor:alarm-policy:update']"
+          <a-button
+v-permission="['monitor:alarm-policy:update']"
                     type="text"
                     size="mini"
                     @click="openRules(record)">
             告警规则
           </a-button>
           <!-- 复制策略 -->
-          <a-button v-permission="['monitor:alarm-policy:create']"
+          <a-button
+v-permission="['monitor:alarm-policy:create']"
                     type="text"
                     size="mini"
                     @click="emits('openCopy', record)">
             复制策略
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['monitor:alarm-policy:delete']"
+            <a-button
+v-permission="['monitor:alarm-policy:delete']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -135,7 +147,7 @@
 
 <script lang="ts">
   export default {
-    name: 'alarmPolicyTable'
+    name: 'AlarmPolicyTable'
   };
 </script>
 

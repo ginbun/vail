@@ -1,5 +1,6 @@
 <template>
-  <a-list class="hosts-list-container"
+  <a-list
+class="hosts-list-container"
           size="large"
           max-height="100%"
           :hoverable="true"
@@ -28,7 +29,8 @@
               <!-- 名称文本 -->
               <template v-if="!item.editable">
                 <!-- 文本 -->
-                <a-tooltip position="top"
+                <a-tooltip
+position="top"
                            :mini="true"
                            content-class="terminal-tooltip-content"
                            arrow-class="terminal-tooltip-content"
@@ -43,20 +45,23 @@
                   </span>
                 </a-tooltip>
                 <!-- 修改别名 -->
-                <a-tooltip position="top"
+                <a-tooltip
+position="top"
                            :mini="true"
                            :auto-fix-position="false"
                            content-class="terminal-tooltip-content"
                            arrow-class="terminal-tooltip-content"
                            content="修改别名">
-                  <icon-edit class="host-item-left-name-edit"
+                  <icon-edit
+class="host-item-left-name-edit"
                              @click="clickEditAlias(item)" />
                 </a-tooltip>
               </template>
               <!-- 名称输入框 -->
               <template v-else>
-                <a-input v-model="item.alias"
-                         ref="aliasNameInput"
+                <a-input
+ref="aliasNameInput"
+                         v-model="item.alias"
                          class="host-item-left-name-input"
                          :max-length="32"
                          :disabled="item.loading"
@@ -69,7 +74,8 @@
                     <!-- 加载中 -->
                     <icon-loading v-if="item.loading" />
                     <!-- 保存 -->
-                    <icon-check v-else
+                    <icon-check
+v-else
                                 class="pointer"
                                 title="保存"
                                 @click="saveAlias(item)" />
@@ -81,7 +87,8 @@
           <!-- 中间ip -->
           <div class="flex-center host-item-center">
             <!-- ip -->
-            <a-tooltip position="top"
+            <a-tooltip
+position="top"
                        :mini="true"
                        :auto-fix-position="false"
                        content-class="terminal-tooltip-content"
@@ -97,9 +104,10 @@
             <!-- tags -->
             <div class="host-item-right-tags">
               <template v-if="item.tags?.length">
-                <a-tag v-for="(tag, i) in item.tags"
-                       class="host-item-text"
+                <a-tag
+v-for="(tag, i) in item.tags"
                        :key="tag.id"
+                       class="host-item-text"
                        :style="{
                          maxWidth: `calc(${100 / item.tags.length}% - ${i !== item.tags.length - 1 ? '8px' : '0px'})`,
                          marginRight: `${i !== item.tags.length - 1 ? '8px' : '0'}`,
@@ -114,7 +122,8 @@
               <!-- 打开会话 -->
               <template v-for="type in TerminalSessionTypes">
                 <template v-if="item.types?.includes(type.protocol)">
-                  <a-tooltip position="top"
+                  <a-tooltip
+position="top"
                              :mini="true"
                              :auto-fix-position="false"
                              :content="`打开 ${type.type}`"
@@ -129,7 +138,8 @@
                 </template>
               </template>
               <!-- 主机设置 -->
-              <a-tooltip position="top"
+              <a-tooltip
+position="top"
                          :mini="true"
                          :auto-fix-position="false"
                          content-class="terminal-tooltip-content"
@@ -142,7 +152,8 @@
                 </div>
               </a-tooltip>
               <!-- 收藏 -->
-              <a-tooltip position="top"
+              <a-tooltip
+position="top"
                          :mini="true"
                          :auto-fix-position="false"
                          content-class="terminal-tooltip-content"
@@ -150,7 +161,7 @@
                          content="收藏">
                 <div class="terminal-sidebar-icon-wrapper">
                   <a-button class="terminal-sidebar-icon" @click="toggleFavorite(item, item.id)">
-                    <icon-star-fill class="favorite" v-if="item.favorite" />
+                    <icon-star-fill v-if="item.favorite" class="favorite" />
                     <icon-star v-else />
                   </a-button>
                 </div>
@@ -165,7 +176,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostListView'
+    name: 'HostListView'
   };
 </script>
 

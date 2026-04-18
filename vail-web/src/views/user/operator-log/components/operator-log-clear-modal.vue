@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            title="清理操作日志"
@@ -13,25 +14,29 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
+      <a-form
+:model="formModel"
               label-align="right"
               :auto-label-width="true">
         <!-- 执行时间 -->
         <a-form-item field="startTimeRange" label="执行时间">
-          <a-range-picker v-model="formModel.startTimeRange"
+          <a-range-picker
+v-model="formModel.startTimeRange"
                           :time-picker-props="{ defaultValue: ['00:00:00', '23:59:59'] }"
                           show-time
                           format="YYYY-MM-DD HH:mm:ss" />
         </a-form-item>
         <!-- 操作用户 -->
         <a-form-item field="userId" label="操作用户">
-          <user-selector v-model="formModel.userId"
+          <user-selector
+v-model="formModel.userId"
                          placeholder="请选择操作用户"
                          allow-clear />
         </a-form-item>
         <!-- 操作模块 -->
         <a-form-item field="module" label="操作模块">
-          <a-select v-model="formModel.module"
+          <a-select
+v-model="formModel.module"
                     :options="toOptions(operatorLogModuleKey)"
                     :allow-search="true"
                     :filter-option="labelFilter"
@@ -40,7 +45,8 @@
         </a-form-item>
         <!-- 操作类型 -->
         <a-form-item field="type" label="操作类型">
-          <a-select v-model="formModel.type"
+          <a-select
+v-model="formModel.type"
                     :options="typeOptions"
                     :allow-search="true"
                     :filter-option="labelFilter"
@@ -49,21 +55,24 @@
         </a-form-item>
         <!-- 风险等级 -->
         <a-form-item field="riskLevel" label="风险等级">
-          <a-select v-model="formModel.riskLevel"
+          <a-select
+v-model="formModel.riskLevel"
                     :options="toOptions(operatorRiskLevelKey)"
                     placeholder="请选择风险等级"
                     allow-clear />
         </a-form-item>
         <!-- 执行结果 -->
         <a-form-item field="result" label="执行结果">
-          <a-select v-model="formModel.result"
+          <a-select
+v-model="formModel.result"
                     :options="toOptions(operatorLogResultKey)"
                     placeholder="请选择执行结果"
                     allow-clear />
         </a-form-item>
         <!-- 数量限制 -->
         <a-form-item field="limit" label="数量限制">
-          <a-input-number v-model="formModel.limit"
+          <a-input-number
+v-model="formModel.limit"
                           :min="1"
                           :max="maxClearLimit"
                           :placeholder="`请输入数量限制 最大: ${maxClearLimit}`"
@@ -77,7 +86,7 @@
 
 <script lang="ts">
   export default {
-    name: 'operatorLogClearModal'
+    name: 'OperatorLogClearModal'
   };
 </script>
 

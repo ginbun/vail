@@ -5,7 +5,8 @@
     <div class="host-header">
       <h3 class="usn">执行主机</h3>
       <!-- 操作 -->
-      <a-button v-if="visibleBack"
+      <a-button
+v-if="visibleBack"
                 size="small"
                 @click="emits('back')">
         返回
@@ -14,7 +15,8 @@
     <!-- 主机列表 -->
     <div class="exec-host-items">
       <a-scrollbar>
-        <div v-for="(item, index) in hosts"
+        <div
+v-for="(item, index) in hosts"
              :key="item.id"
              class="exec-host-item"
              :class="[ current === item.id ? 'exec-host-item-selected' : '' ]"
@@ -28,7 +30,8 @@
           <!-- 状态 -->
           <div class="exec-host-item-status">
             <!-- 执行结果 -->
-            <a-tag v-if="item.exitCode || item.exitCode === 0"
+            <a-tag
+v-if="item.exitCode || item.exitCode === 0"
                    class="exit-code-tag"
                    title="exitCode"
                    :color="item.exitCode === 0 ? 'rgb(var(--arcoblue-4))' : 'rgb(var(--orangered-4))'">
@@ -51,7 +54,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execHost'
+    name: 'ExecHost'
   };
 </script>
 

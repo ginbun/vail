@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             class="host-group-drawer"
             width="70%"
             title="主机分组配置"
@@ -12,7 +13,8 @@
             :cancel-button-props="{ disabled: loading }"
             :on-before-ok="saveHost"
             @cancel="handleCancel">
-    <a-spin :loading="loading"
+    <a-spin
+:loading="loading"
             class="host-group-container">
       <div class="host-group-wrapper">
         <!-- 左侧菜单 -->
@@ -25,13 +27,15 @@
             </div>
             <!-- 操作 -->
             <div class="tree-card-handler">
-              <a-button v-permission="['asset:host-group:update']"
+              <a-button
+v-permission="['asset:host-group:update']"
                         class="handler-icon-wrapper icon-button mr4"
                         title="根节点添加"
                         @click="addRootNode">
                 <icon-plus />
               </a-button>
-              <a-button class="handler-icon-wrapper icon-button"
+              <a-button
+class="handler-icon-wrapper icon-button"
                         title="刷新"
                         @click="refreshTree">
                 <icon-refresh />
@@ -39,17 +43,20 @@
             </div>
           </div>
           <!-- 主机分组树 -->
-          <host-group-tree outer-class="tree-card-main"
-                           ref="tree"
+          <host-group-tree
+ref="tree"
+                           outer-class="tree-card-main"
                            :loading="loading"
                            :editable="true"
                            @set-loading="setLoading"
                            @selected-node="selectGroup" />
         </div>
         <!-- 身体部分 -->
-        <a-spin class="simple-card transfer-body"
+        <a-spin
+class="simple-card transfer-body"
                 :loading="hostLoading">
-          <host-transfer v-model="currentGroupHost"
+          <host-transfer
+v-model="currentGroupHost"
                          :group="currentGroup"
                          @loading="setHostLoading" />
         </a-spin>
@@ -60,7 +67,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostGroupDrawer'
+    name: 'HostGroupDrawer'
   };
 </script>
 

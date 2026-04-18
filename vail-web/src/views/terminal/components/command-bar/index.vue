@@ -4,7 +4,8 @@
       <!-- 左侧按钮 -->
       <div class="command-header-left">
         <!-- 发送 -->
-        <a-button size="mini"
+        <a-button
+size="mini"
                   class="mr8"
                   title="直接发送到终端"
                   @click="write(false)">
@@ -14,7 +15,8 @@
           </template>
         </a-button>
         <!-- 执行 -->
-        <a-button size="mini"
+        <a-button
+size="mini"
                   class="mr8"
                   title="拼接 \r\n 后发送到终端"
                   @click="write(true)">
@@ -44,7 +46,8 @@
     <div class="command-body">
       <!-- 命令框 -->
       <div class="command-input">
-        <a-textarea v-model="text"
+        <a-textarea
+v-model="text"
                     placeholder="输入命令, F8 发送"
                     :auto-size="{ minRows: 3, maxRows: 3 }"
                     @keyup="checkCommandKey" />
@@ -55,7 +58,7 @@
 
 <script lang="ts">
   export default {
-    name: 'commandBar'
+    name: 'CommandBar'
   };
 </script>
 

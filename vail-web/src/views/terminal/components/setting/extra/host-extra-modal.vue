@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            title-align="start"
            :title="title"
            :top="180"
@@ -14,40 +15,49 @@
            :cancel-button-props="{ disabled: loading }"
            :on-before-ok="handlerOk"
            @close="handleClose">
-    <a-spin v-if="hostId"
+    <a-spin
+v-if="hostId"
             class="full"
             :loading="loading">
-      <a-tabs v-model:active-key="activeItem"
+      <a-tabs
+v-model:active-key="activeItem"
               position="left"
               type="rounded"
               :lazy-load="true">
         <!-- 标签配置 -->
         <a-tab-pane :key="ExtraSettingItems.LABEL" title="标签配置">
-          <label-extra-form ref="labelForm"
+          <label-extra-form
+ref="labelForm"
                             :host-id="hostId"
                             :item="ExtraSettingItems.LABEL" />
         </a-tab-pane>
         <!-- SSH 配置 -->
-        <a-tab-pane v-if="host?.types.includes(HostType.SSH.value)"
+        <a-tab-pane
+v-if="host?.types.includes(HostType.SSH.value)"
                     :key="ExtraSettingItems.SSH"
                     title="SSH 配置">
-          <ssh-extra-form ref="sshForm"
+          <ssh-extra-form
+ref="sshForm"
                           :host-id="hostId"
                           :item="ExtraSettingItems.SSH" />
         </a-tab-pane>
         <!-- RDP 配置 -->
-        <a-tab-pane v-if="host?.types.includes(HostType.RDP.value)"
+        <a-tab-pane
+v-if="host?.types.includes(HostType.RDP.value)"
                     :key="ExtraSettingItems.RDP"
                     title="RDP 配置">
-          <rdp-extra-form ref="rdpForm"
+          <rdp-extra-form
+ref="rdpForm"
                           :host-id="hostId"
                           :item="ExtraSettingItems.RDP" />
         </a-tab-pane>
         <!-- VNC 配置 -->
-        <a-tab-pane v-if="host?.types.includes(HostType.VNC.value)"
+        <a-tab-pane
+v-if="host?.types.includes(HostType.VNC.value)"
                     :key="ExtraSettingItems.VNC"
                     title="VNC 配置">
-          <vnc-extra-form ref="vncForm"
+          <vnc-extra-form
+ref="vncForm"
                           :host-id="hostId"
                           :item="ExtraSettingItems.VNC" />
         </a-tab-pane>
@@ -58,7 +68,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostExtraModal'
+    name: 'HostExtraModal'
   };
 </script>
 

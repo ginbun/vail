@@ -1,12 +1,14 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
-    <dict-key-table ref="table"
+    <dict-key-table
+ref="table"
                     @open-add="() => modal.openAdd()"
                     @open-update="(e) => modal.openUpdate(e)"
                     @open-view="(v, t) => view.open(v, t)" />
     <!-- 添加修改模态框 -->
-    <dict-key-form-modal ref="modal"
+    <dict-key-form-modal
+ref="modal"
                          @added="() => table.reload()"
                          @updated="() => table.reload()" />
     <!-- json 查看器模态框 -->
@@ -16,7 +18,7 @@
 
 <script lang="ts">
   export default {
-    name: 'dictKey'
+    name: 'DictKey'
   };
 </script>
 

@@ -1,14 +1,16 @@
 <template>
   <div>
     <!-- 分组视图列表 -->
-    <host-group-view v-if="NewConnectionType.GROUP === newConnectionType"
+    <host-group-view
+v-if="NewConnectionType.GROUP === newConnectionType"
                      v-model="selectedGroup"
                      :group-tree="hosts.groupTree"
                      :tree-nodes="treeNodes as any"
                      :host-list="hostList"
                      :filter-value="filterValue" />
     <!-- 列表视图 -->
-    <host-list-view v-else
+    <host-list-view
+v-else
                     :host-list="hostList"
                     :empty-value="emptyMessage" />
     <!-- 主机额外设置模态框 -->
@@ -18,7 +20,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostsView'
+    name: 'HostsView'
   };
 </script>
 

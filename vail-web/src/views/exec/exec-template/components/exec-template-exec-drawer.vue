@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             title="执行命令"
             width="70%"
             :esc-to-close="false"
@@ -11,28 +12,33 @@
             @cancel="handleClose">
     <a-spin class="full drawer-form-small" :loading="loading">
       <!-- 命令表单 -->
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
         <a-row :gutter="16">
           <!-- 执行描述 -->
           <a-col :span="16">
-            <a-form-item field="description"
+            <a-form-item
+field="description"
                          label="执行描述"
                          :hide-asterisk="true">
-              <a-input v-model="formModel.description"
+              <a-input
+v-model="formModel.description"
                        placeholder="请输入执行描述"
                        allow-clear />
             </a-form-item>
           </a-col>
           <!-- 超时时间 -->
           <a-col :span="8">
-            <a-form-item field="timeout"
+            <a-form-item
+field="timeout"
                          label="超时时间"
                          :hide-asterisk="true">
-              <a-input-number v-model="formModel.timeout"
+              <a-input-number
+v-model="formModel.timeout"
                               placeholder="为0则不超时"
                               :min="0"
                               :max="100000"
@@ -45,12 +51,13 @@
           </a-col>
           <!-- 执行主机 -->
           <a-col :span="16">
-            <a-form-item field="hostIdList"
+            <a-form-item
+field="hostIdList"
                          label="执行主机"
                          :hide-asterisk="true">
               <div class="selected-host">
                 <!-- 已选择数量 -->
-                <span class="usn" v-if="formModel.hostIdList?.length">
+                <span v-if="formModel.hostIdList?.length" class="usn">
                   已选择<span class="selected-host-count span-blue">{{ formModel.hostIdList?.length }}</span>台主机
                 </span>
                 <span class="usn pointer span-blue" @click="openSelectHost">
@@ -61,11 +68,13 @@
           </a-col>
           <!-- 脚本执行 -->
           <a-col :span="8">
-            <a-form-item field="scriptExec"
+            <a-form-item
+field="scriptExec"
                          label="脚本执行"
                          :hide-asterisk="true">
               <div class="flex-center">
-                <a-switch v-model="formModel.scriptExec"
+                <a-switch
+v-model="formModel.scriptExec"
                           type="round"
                           :checked-value="EnabledStatus.ENABLED"
                           :unchecked-value="EnabledStatus.DISABLED" />
@@ -79,11 +88,13 @@
           </a-col>
           <!-- 执行命令 -->
           <a-col :span="24">
-            <a-form-item field="command"
+            <a-form-item
+field="command"
                          label="执行命令"
                          :hide-label="true"
                          :help="'使用 @{{ xxx }} 来替换参数, 输入_可以获取全部变量'">
-              <exec-editor v-model="formModel.command"
+              <exec-editor
+v-model="formModel.command"
                            container-class="command-editor"
                            theme="vs-dark"
                            :parameter="parameterSchema" />
@@ -92,25 +103,30 @@
         </a-row>
       </a-form>
       <!-- 命令参数 -->
-      <a-divider v-if="parameterSchema.length"
+      <a-divider
+v-if="parameterSchema.length"
                  orientation="center"
                  style="margin: 12px 0 26px 0;">
         命令参数
       </a-divider>
       <!-- 参数表单 -->
-      <a-form v-if="parameterSchema.length"
-              :model="parameterFormModel"
+      <a-form
+v-if="parameterSchema.length"
               ref="parameterFormRef"
+              :model="parameterFormModel"
               label-align="left"
               :auto-label-width="true">
         <a-row :gutter="16">
-          <a-col v-for="item in parameterSchema"
+          <a-col
+v-for="item in parameterSchema"
                  :key="item.name"
                  :span="12">
-            <a-form-item :field="item.name as string"
+            <a-form-item
+:field="item.name as string"
                          :label="item.name"
                          required>
-              <a-input v-model="parameterFormModel[item.name as string]"
+              <a-input
+v-model="parameterFormModel[item.name as string]"
                        :placeholder="item.desc"
                        allow-clear />
             </a-form-item>
@@ -123,7 +139,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execTemplateExecDrawer'
+    name: 'ExecTemplateExecDrawer'
   };
 </script>
 

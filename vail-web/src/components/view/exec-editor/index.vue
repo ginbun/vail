@@ -1,11 +1,12 @@
 <template>
-  <editor language="shell"
+  <editor
+language="shell"
           :suggestions="false" />
 </template>
 
 <script lang="ts">
   export default {
-    name: 'execEditor'
+    name: 'ExecEditor'
   };
 </script>
 

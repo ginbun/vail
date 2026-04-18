@@ -1,5 +1,6 @@
 <template>
-  <card-list v-model:searchValue="formModel.searchValue"
+  <card-list
+v-model:search-value="formModel.searchValue"
              search-input-placeholder="输入 id / 名称 / 用户名"
              :create-card-position="false"
              :loading="loading"
@@ -18,7 +19,8 @@
     <!-- 左侧操作 -->
     <template #leftHandle>
       <!-- 角色授权 -->
-      <a-button v-permission="['asset:host-identity:grant']"
+      <a-button
+v-permission="['asset:host-identity:grant']"
                 class="card-header-button"
                 @click="router.push({ name: GrantRouteName, query: { key: GrantKey.HOST_IDENTITY_ROLE }})">
         角色授权
@@ -27,7 +29,8 @@
         </template>
       </a-button>
       <!-- 用户授权 -->
-      <a-button v-permission="['asset:host-identity:grant']"
+      <a-button
+v-permission="['asset:host-identity:grant']"
                 class="card-header-button"
                 @click="router.push({ name: GrantRouteName, query: { key: GrantKey.HOST_IDENTITY_USER }})">
         用户授权
@@ -38,36 +41,41 @@
     </template>
     <!-- 过滤条件 -->
     <template #filterContent>
-      <a-form :model="formModel"
+      <a-form
+ref="formRef"
+              :model="formModel"
               class="card-filter-form"
               size="small"
-              ref="formRef"
               label-align="right"
               :auto-label-width="true"
               @keyup.enter="() => fetchCardData()">
         <!-- id -->
         <a-form-item field="id" label="id">
-          <a-input-number v-model="formModel.id"
+          <a-input-number
+v-model="formModel.id"
                           placeholder="请输入id"
                           allow-clear
                           hide-button />
         </a-form-item>
         <!-- 名称 -->
         <a-form-item field="name" label="名称">
-          <a-input v-model="formModel.name"
+          <a-input
+v-model="formModel.name"
                    placeholder="请输入名称"
                    allow-clear />
         </a-form-item>
         <!-- 类型 -->
         <a-form-item field="type" label="类型">
-          <a-select v-model="formModel.type"
+          <a-select
+v-model="formModel.type"
                     placeholder="请选择类型"
                     :options="toOptions(identityTypeKey)"
                     allow-clear />
         </a-form-item>
         <!-- 用户名 -->
         <a-form-item field="username" label="用户名">
-          <a-input v-model="formModel.username"
+          <a-input
+v-model="formModel.username"
                    placeholder="请输入用户名"
                    allow-clear />
         </a-form-item>
@@ -77,7 +85,8 @@
         </a-form-item>
         <!-- 描述 -->
         <a-form-item field="description" label="描述">
-          <a-input v-model="formModel.description"
+          <a-input
+v-model="formModel.description"
                    placeholder="请输入描述"
                    allow-clear />
         </a-form-item>
@@ -104,9 +113,11 @@
       <!-- 有密钥 -->
       <template v-if="record.keyId && record.type === IdentityType.KEY">
         <!-- 可查看详情 -->
-        <a-tooltip v-if="hasAnyPermission(['asset:host-key:detail', 'asset:host-key:update'])"
+        <a-tooltip
+v-if="hasAnyPermission(['asset:host-key:detail', 'asset:host-key:update'])"
                    content="点击查看详情">
-          <a-tag :checked="true"
+          <a-tag
+:checked="true"
                  checkable
                  @click="emits('openKeyView', { id: record.keyId })">
             {{ record.keyName }}
@@ -136,12 +147,14 @@
           <icon-more class="card-extra-icon" />
           <template #content>
             <!-- 修改 -->
-            <a-doption v-permission="['asset:host-identity:update']"
+            <a-doption
+v-permission="['asset:host-identity:update']"
                        @click="emits('openUpdate', record)">
               <span class="more-doption normal">修改</span>
             </a-doption>
             <!-- 删除 -->
-            <a-doption v-permission="['asset:host-identity:delete']"
+            <a-doption
+v-permission="['asset:host-identity:delete']"
                        class="span-red"
                        @click="deleteRow(record.id)">
               <span class="more-doption error">删除</span>
@@ -155,7 +168,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostIdentityCardList'
+    name: 'HostIdentityCardList'
   };
 </script>
 

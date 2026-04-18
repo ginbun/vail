@@ -1,12 +1,14 @@
 <template>
-  <grant-layout :type="type"
+  <grant-layout
+:type="type"
                 :loading="loading"
                 @fetch="fetchAuthorizedData"
                 @grant="doGrant"
                 @select-all="selectAll"
                 @reverse="reverseSelect">
     <!-- 主机身份表格 -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+v-model:selected-keys="selectedKeys"
              row-key="id"
              class="table-resize host-identity-main-table"
              :columns="hostIdentityColumns"
@@ -28,7 +30,7 @@
       <template #keyId="{ record }">
         <!-- 有密钥 -->
         <template v-if="record.keyId && record.type === 'KEY'">
-          <a-tag color="arcoblue" v-if="record.keyId">
+          <a-tag v-if="record.keyId" color="arcoblue">
             {{ hostKeys.find(s => s.id === record.keyId)?.name }}
           </a-tag>
         </template>
@@ -43,7 +45,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostIdentityGrant'
+    name: 'HostIdentityGrant'
   };
 </script>
 

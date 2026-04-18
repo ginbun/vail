@@ -1,4 +1,3 @@
-import { Md5 } from 'ts-md5';
 
 type TargetContext = '_self' | '_parent' | '_blank' | '_top';
 
@@ -31,13 +30,6 @@ export const regexUrl = new RegExp(
 );
 
 /**
- * md5
- */
-export function md5(plain: string): string {
-  return Md5.hashStr(plain);
-}
-
-/**
  * 获取数据颜色
  */
 export function dataColor(str: string, colors: string[], defaultColor = ''): string {
@@ -49,6 +41,41 @@ export function dataColor(str: string, colors: string[], defaultColor = ''): str
     total += str.charCodeAt(i);
   }
   return colors[total % colors.length];
+}
+
+/**
+ * 下载文件
+ */
+export function downloadFile(data: BlobPart, filename: string, type?: string) {
+  const blob = new Blob([data], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * 对象转为查询参数
+ */
+export function stringifyParams(params: any, arrayFormat: 'comma' | 'none' = 'none'): string {
+  const p = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+    if (Array.isArray(value)) {
+      if (arrayFormat === 'comma') {
+        p.append(key, value.join(','));
+      } else {
+        value.forEach(v => p.append(key, String(v)));
+      }
+    } else {
+      p.append(key, String(value));
+    }
+  }
+  return p.toString();
 }
 
 export const YMD_HMS = 'yyyy-MM-dd HH:mm:ss';

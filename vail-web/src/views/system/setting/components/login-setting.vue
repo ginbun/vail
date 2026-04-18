@@ -3,16 +3,19 @@
     <!-- 标题 -->
     <h3 class="setting-header">登录设置</h3>
     <!-- 表单 -->
-    <a-form :model="setting"
-            ref="formRef"
+    <a-form
+ref="formRef"
+            :model="setting"
             class="setting-form"
             label-align="right"
             :auto-label-width="true">
       <!-- 允许多端登录 -->
-      <a-form-item label="允许多端登录"
+      <a-form-item
+label="允许多端登录"
                    :rules="[{required: true, message: '请选择此项'}]"
                    hide-asterisk>
-        <a-switch v-model="setting['login.allow-multi-device']"
+        <a-switch
+v-model="setting['login.allow-multi-device']"
                   type="round"
                   checked-value="true"
                   unchecked-value="false"
@@ -23,10 +26,12 @@
         </template>
       </a-form-item>
       <!-- 允许凭证续签 -->
-      <a-form-item label="允许凭证续签"
+      <a-form-item
+label="允许凭证续签"
                    :rules="[{required: true, message: '请选择此项'}]"
                    hide-asterisk>
-        <a-switch v-model="setting['login.allow-refresh']"
+        <a-switch
+v-model="setting['login.allow-refresh']"
                   type="round"
                   checked-value="true"
                   unchecked-value="false"
@@ -37,10 +42,12 @@
         </template>
       </a-form-item>
       <!-- 登录失败锁定 -->
-      <a-form-item label="登录失败锁定"
+      <a-form-item
+label="登录失败锁定"
                    :rules="[{required: true, message: '请选择此项'}]"
                    hide-asterisk>
-        <a-switch v-model="setting['login.login-failed-lock']"
+        <a-switch
+v-model="setting['login.login-failed-lock']"
                   type="round"
                   checked-value="true"
                   unchecked-value="false"
@@ -51,10 +58,12 @@
         </template>
       </a-form-item>
       <!-- 登录失败发信 -->
-      <a-form-item label="登录失败发信"
+      <a-form-item
+label="登录失败发信"
                    :rules="[{required: true, message: '请选择此项'}]"
                    hide-asterisk>
-        <a-switch v-model="setting['login.login-failed-send']"
+        <a-switch
+v-model="setting['login.login-failed-send']"
                   type="round"
                   checked-value="true"
                   unchecked-value="false"
@@ -65,10 +74,12 @@
         </template>
       </a-form-item>
       <!-- 凭证有效期 -->
-      <a-form-item label="凭证有效期"
+      <a-form-item
+label="凭证有效期"
                    :rules="[{required: true, message: '请输入凭证有效期'}]"
                    hide-asterisk>
-        <a-input-number v-model="setting['login.login-session-time']"
+        <a-input-number
+v-model="setting['login.login-session-time']"
                         class="input-wrapper"
                         :min="1"
                         :max="99999"
@@ -84,10 +95,12 @@
         </template>
       </a-form-item>
       <!-- 凭证续签间隔 -->
-      <a-form-item label="凭证续签间隔"
+      <a-form-item
+label="凭证续签间隔"
                    :rules="[{required: true, message: '请输入凭证续签间隔时间'}]"
                    hide-asterisk>
-        <a-input-number v-model="setting['login.refresh-interval']"
+        <a-input-number
+v-model="setting['login.refresh-interval']"
                         class="input-wrapper"
                         :min="1"
                         :max="99999"
@@ -103,10 +116,12 @@
         </template>
       </a-form-item>
       <!-- 凭证续签最大次数 -->
-      <a-form-item label="凭证续签最大次数"
+      <a-form-item
+label="凭证续签最大次数"
                    :rules="[{required: true, message: '请输入凭证续签最大次数'}]"
                    hide-asterisk>
-        <a-input-number v-model="setting['login.max-refresh-count']"
+        <a-input-number
+v-model="setting['login.max-refresh-count']"
                         class="input-wrapper"
                         :min="0"
                         :max="99999"
@@ -118,10 +133,12 @@
         </template>
       </a-form-item>
       <!-- 登录失败锁定阈值 -->
-      <a-form-item label="登录失败锁定阈值"
+      <a-form-item
+label="登录失败锁定阈值"
                    :rules="[{required: true, message: '请输入登录失败锁定阈值'}]"
                    hide-asterisk>
-        <a-input-number v-model="setting['login.login-failed-lock-threshold']"
+        <a-input-number
+v-model="setting['login.login-failed-lock-threshold']"
                         class="input-wrapper"
                         :min="0"
                         :max="99999"
@@ -133,10 +150,12 @@
         </template>
       </a-form-item>
       <!-- 登录失败锁定时间 -->
-      <a-form-item label="登录失败锁定时间"
+      <a-form-item
+label="登录失败锁定时间"
                    :rules="[{required: true, message: '请输入登录失败锁定时间'}]"
                    hide-asterisk>
-        <a-input-number v-model="setting['login.login-failed-lock-time']"
+        <a-input-number
+v-model="setting['login.login-failed-lock-time']"
                         class="input-wrapper"
                         :min="0"
                         :max="999999"
@@ -152,10 +171,12 @@
         </template>
       </a-form-item>
       <!-- 登录失败发信阈值 -->
-      <a-form-item label="登录失败发信阈值"
+      <a-form-item
+label="登录失败发信阈值"
                    :rules="[{required: true, message: '请输入登录失败发信阈值'}]"
                    hide-asterisk>
-        <a-input-number v-model="setting['login.login-failed-send-threshold']"
+        <a-input-number
+v-model="setting['login.login-failed-send-threshold']"
                         class="input-wrapper"
                         :min="0"
                         :max="99999"
@@ -169,7 +190,8 @@
       <!-- 按钮 -->
       <a-form-item v-permission="['infra:system-setting:update']">
         <!-- 保存 -->
-        <a-button type="primary"
+        <a-button
+type="primary"
                   size="small"
                   @click="save">
           保存
@@ -181,7 +203,7 @@
 
 <script lang="ts">
   export default {
-    name: 'loginSetting'
+    name: 'LoginSetting'
   };
 </script>
 

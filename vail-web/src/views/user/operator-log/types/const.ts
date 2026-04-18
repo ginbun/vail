@@ -1,5 +1,5 @@
 import type { OperatorLogQueryResponse } from '@/api/user/operator-log';
-import { pick } from 'lodash';
+import { pick } from 'lodash-es';
 import { dateFormat } from '@/utils';
 
 // 表名称

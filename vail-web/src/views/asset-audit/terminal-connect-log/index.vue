@@ -1,11 +1,13 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
-    <connect-log-table ref="table"
+    <connect-log-table
+ref="table"
                        @open-clear="(s) => clearModal.open(s)"
                        @open-detail="(s) => detailModal.open(s)" />
     <!-- 清空模态框 -->
-    <connect-log-clear-modal ref="clearModal"
+    <connect-log-clear-modal
+ref="clearModal"
                              @clear="() => table.reload()" />
     <!-- 详情模态框 -->
     <connect-log-detail-drawer ref="detailModal" />
@@ -14,7 +16,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalConnectLog'
+    name: 'TerminalConnectLog'
   };
 </script>
 

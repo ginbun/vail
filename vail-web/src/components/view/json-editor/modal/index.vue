@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            title-align="start"
            :width="width"
            :body-style="{ padding: '16px 8px' }"
@@ -19,7 +20,7 @@
 
 <script lang="ts">
   export default {
-    name: 'jsonEditorModal'
+    name: 'JsonEditorModal'
   };
 </script>
 

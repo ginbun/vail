@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            :title="title"
@@ -13,20 +14,23 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
         <!-- 指标名称 -->
         <a-form-item field="name" label="指标名称">
-          <a-input v-model="formModel.name"
+          <a-input
+v-model="formModel.name"
                    placeholder="请输入指标名称"
                    allow-clear />
         </a-form-item>
         <!-- 数据集 -->
         <a-form-item field="measurement" label="数据集">
-          <a-select v-model="formModel.measurement"
+          <a-select
+v-model="formModel.measurement"
                     :options="toOptions(MeasurementKey)"
                     :disabled="formHandle === 'update'"
                     placeholder="请选择数据集"
@@ -34,28 +38,33 @@
         </a-form-item>
         <!-- 指标项 -->
         <a-form-item field="value" label="指标项">
-          <a-input v-model="formModel.value"
+          <a-input
+v-model="formModel.value"
                    placeholder="请输入指标项"
                    allow-clear />
         </a-form-item>
         <!-- 单位 -->
         <a-form-item field="unit" label="单位">
-          <a-select v-model="formModel.unit"
+          <a-select
+v-model="formModel.unit"
                     :options="toOptions(MetricsUnitKey)"
                     placeholder="请选择单位"
                     allow-clear />
         </a-form-item>
         <!-- 后缀文本 -->
-        <a-form-item v-if="formModel.unit === MetricsUnit.TEXT"
+        <a-form-item
+v-if="formModel.unit === MetricsUnit.TEXT"
                      field="suffix"
                      label="后缀文本">
-          <a-input v-model="formModel.suffix"
+          <a-input
+v-model="formModel.suffix"
                    placeholder="请输入后缀文本"
                    allow-clear />
         </a-form-item>
         <!-- 指标描述 -->
         <a-form-item field="description" label="指标描述">
-          <a-textarea v-model="formModel.description"
+          <a-textarea
+v-model="formModel.description"
                       :auto-size="{ minRows: 3, maxRows: 3 }"
                       placeholder="请输入指标描述"
                       allow-clear />
@@ -67,7 +76,7 @@
 
 <script lang="ts">
   export default {
-    name: 'metricsFormModal'
+    name: 'MetricsFormModal'
   };
 </script>
 

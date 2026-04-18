@@ -1,9 +1,10 @@
 <template>
-  <div class="main-container" v-if="render">
+  <div v-if="render" class="main-container">
     <!-- 查询头 -->
     <a-card class="general-card table-search-card">
       <!-- 查询头组件 -->
-      <operator-log-query-header :model="formModel"
+      <operator-log-query-header
+:model="formModel"
                                  :visible-user="false"
                                  @submit="() => table.reload()" />
     </a-card>
@@ -14,12 +15,13 @@
         <div class="table-left-bar-handle">
           <!-- 标题 -->
           <div class="table-title">
-            操作日志 <span class="user-info" v-if="user">{{ user.nickname }}({{ user.username }})</span>
+            操作日志 <span v-if="user" class="user-info">{{ user.nickname }}({{ user.username }})</span>
           </div>
         </div>
       </template>
       <!-- 表格组件 -->
-      <operator-log-simple-table ref="table"
+      <operator-log-simple-table
+ref="table"
                                  :current="!user"
                                  :base-params="{ userId: user?.id }"
                                  :model="formModel" />
@@ -29,7 +31,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userOperatorLog'
+    name: 'UserOperatorLog'
   };
 </script>
 

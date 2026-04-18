@@ -1,42 +1,48 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
-                  :itemOptions="{ 4: { span: 2 } }"
+                  :item-options="{ 4: { span: 2 } }"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- 操作用户 -->
       <a-form-item field="userId" label="操作用户">
-        <user-selector v-model="formModel.userId"
+        <user-selector
+v-model="formModel.userId"
                        placeholder="请选择用户"
                        allow-clear />
       </a-form-item>
       <!-- 操作主机 -->
       <a-form-item field="hostId" label="操作主机">
-        <host-selector v-model="formModel.hostId"
+        <host-selector
+v-model="formModel.hostId"
                        type="SSH"
                        placeholder="请选择主机"
                        allow-clear />
       </a-form-item>
       <!-- 操作类型 -->
       <a-form-item field="type" label="操作类型">
-        <a-select v-model="formModel.type"
+        <a-select
+v-model="formModel.type"
                   placeholder="请选择类型"
                   :options="toOptions(terminalFileOperatorTypeKey)"
                   allow-clear />
       </a-form-item>
       <!-- 执行结果 -->
       <a-form-item field="result" label="执行结果">
-        <a-select v-model="formModel.result"
+        <a-select
+v-model="formModel.result"
                   placeholder="请选择执行结果"
                   :options="toOptions(operatorResultKey)"
                   allow-clear />
       </a-form-item>
       <!-- 开始时间 -->
       <a-form-item field="startTimeRange" label="开始时间">
-        <a-range-picker v-model="formModel.startTimeRange"
+        <a-range-picker
+v-model="formModel.startTimeRange"
                         :time-picker-props="{ defaultValue: ['00:00:00', '23:59:59'] }"
                         show-time
                         format="YYYY-MM-DD HH:mm:ss" />
@@ -57,11 +63,13 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 删除 -->
-          <a-popconfirm :content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
+          <a-popconfirm
+:content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
                         position="br"
                         type="warning"
                         @ok="deleteSelectedRows">
-            <a-button v-permission="['infra:operator-log:delete', 'terminal:terminal-file-log:management:delete']"
+            <a-button
+v-permission="['infra:operator-log:delete', 'terminal:terminal-file-log:management:delete']"
                       type="primary"
                       status="danger"
                       :disabled="selectedKeys.length === 0">
@@ -72,7 +80,8 @@
             </a-button>
           </a-popconfirm>
           <!-- 调整 -->
-          <table-adjust :columns="columns"
+          <table-adjust
+:columns="columns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -80,9 +89,10 @@
       </div>
     </template>
     <!-- table -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+ref="tableRef"
+             v-model:selected-keys="selectedKeys"
              row-key="id"
-             ref="tableRef"
              class="table-resize"
              :loading="loading"
              :row-selection="rowSelection"
@@ -103,7 +113,8 @@
           {{ record.hostName }}
         </span>
         <br>
-        <span class="table-cell-sub-value text-copy"
+        <span
+class="table-cell-sub-value text-copy"
               :title="record.hostAddress"
               @click="copy(record.hostAddress)">
           {{ record.hostAddress }}
@@ -122,23 +133,25 @@
       <!-- 操作文件 -->
       <template #paths="{ record }">
         <div class="paths-wrapper">
-          <span v-for="path in record.paths.slice(0, record.extra.maxCount)"
+          <span
+v-for="path in record.paths.slice(0, record.extra.maxCount)"
                 class="path-wrapper text-ellipsis text-copy"
                 :title="path"
                 @click="copy(path)">
             {{ path }}
           </span>
           <!-- 移动目标路径 -->
-          <span class="table-cell-sub-value" v-if="TerminalFileOperatorType.SFTP_MOVE === record.type">
+          <span v-if="TerminalFileOperatorType.SFTP_MOVE === record.type" class="table-cell-sub-value">
             移动到 {{ record.extra?.target }}
           </span>
           <!-- 提权信息 -->
-          <span class="table-cell-sub-value" v-if="TerminalFileOperatorType.SFTP_CHMOD === record.type">
+          <span v-if="TerminalFileOperatorType.SFTP_CHMOD === record.type" class="table-cell-sub-value">
             提权 {{ record.extra?.mod }} {{ permission10toString(record.extra?.mod as number) }}
           </span>
         </div>
         <!-- 查看更多-->
-        <div v-if="record.paths.length > record.extra.maxCount"
+        <div
+v-if="record.paths.length > record.extra.maxCount"
              class="paths-wrapper span-blue pointer"
              title="查看更多"
              @click="() => record.extra.maxCount = record.paths.length">
@@ -157,7 +170,8 @@
           {{ record.location }}
         </span>
         <br>
-        <span class="table-cell-sub-value text-copy"
+        <span
+class="table-cell-sub-value text-copy"
               :title="record.address"
               @click="copy(record.address)">
           {{ record.address }}
@@ -167,11 +181,13 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['infra:operator-log:delete', 'terminal:terminal-file-log:management:delete']"
+            <a-button
+v-permission="['infra:operator-log:delete', 'terminal:terminal-file-log:management:delete']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -186,7 +202,7 @@
 
 <script lang="ts">
   export default {
-    name: 'fileLogTable'
+    name: 'FileLogTable'
   };
 </script>
 

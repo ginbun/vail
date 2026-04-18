@@ -1,52 +1,60 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- id -->
       <a-form-item field="id" label="id">
-        <a-input-number v-model="formModel.id"
+        <a-input-number
+v-model="formModel.id"
                         placeholder="请输入id"
                         allow-clear
                         hide-button />
       </a-form-item>
       <!-- 用户名 -->
       <a-form-item field="username" label="用户名">
-        <a-input v-model="formModel.username"
+        <a-input
+v-model="formModel.username"
                  placeholder="请输入用户名"
                  allow-clear />
       </a-form-item>
       <!-- 花名 -->
       <a-form-item field="nickname" label="花名">
-        <a-input v-model="formModel.nickname"
+        <a-input
+v-model="formModel.nickname"
                  placeholder="请输入花名"
                  allow-clear />
       </a-form-item>
       <!-- 用户状态 -->
       <a-form-item field="status" label="用户状态">
-        <a-select v-model="formModel.status"
+        <a-select
+v-model="formModel.status"
                   :options="toOptions(userStatusKey)"
                   placeholder="请选择用户状态"
                   allow-clear />
       </a-form-item>
       <!-- 手机号 -->
       <a-form-item field="mobile" label="手机号">
-        <a-input v-model="formModel.mobile"
+        <a-input
+v-model="formModel.mobile"
                  placeholder="请输入手机号"
                  allow-clear />
       </a-form-item>
       <!-- 邮箱 -->
       <a-form-item field="email" label="邮箱">
-        <a-input v-model="formModel.email"
+        <a-input
+v-model="formModel.email"
                  placeholder="请输入邮箱"
                  allow-clear />
       </a-form-item>
       <!-- 用户描述 -->
       <a-form-item field="description" label="用户描述">
-        <a-input v-model="formModel.description"
+        <a-input
+v-model="formModel.description"
                  placeholder="请输入用户描述"
                  allow-clear />
       </a-form-item>
@@ -66,8 +74,9 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 新增 -->
-          <a-button type="primary"
-                    v-permission="['infra:system-user:create']"
+          <a-button
+v-permission="['infra:system-user:create']"
+                    type="primary"
                     @click="emits('openAdd')">
             新增
             <template #icon>
@@ -75,11 +84,13 @@
             </template>
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm :content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
+          <a-popconfirm
+:content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
                         position="br"
                         type="warning"
                         @ok="deleteSelectedRows">
-            <a-button v-permission="['infra:system-user:delete']"
+            <a-button
+v-permission="['infra:system-user:delete']"
                       type="primary"
                       status="danger"
                       :disabled="selectedKeys.length === 0">
@@ -90,7 +101,8 @@
             </a-button>
           </a-popconfirm>
           <!-- 调整 -->
-          <table-adjust :columns="columns"
+          <table-adjust
+:columns="columns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -98,9 +110,10 @@
       </div>
     </template>
     <!-- table -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+ref="tableRef"
+             v-model:selected-keys="selectedKeys"
              row-key="id"
-             ref="tableRef"
              class="table-resize"
              :loading="loading"
              :columns="tableColumns"
@@ -120,9 +133,10 @@
       <!-- 状态 -->
       <template #status="{ record }">
         <!-- 有修改权限 -->
-        <a-switch v-if="hasPermission('infra:system-user:update-status')"
-                  type="round"
+        <a-switch
+v-if="hasPermission('infra:system-user:update-status')"
                   v-model="record.status"
+                  type="round"
                   :disabled="record.id === userStore.id"
                   :checked-text="getDictValue(userStatusKey, UserStatus.ENABLED)"
                   :unchecked-text="getDictValue(userStatusKey, UserStatus.DISABLED)"
@@ -131,7 +145,8 @@
                   :before-change="(s: any) => updateStatus(record.id, s as number)" />
         <!-- 无修改权限 -->
         <span v-else>
-          <span class="circle" :style="{
+          <span
+class="circle" :style="{
             background: getDictValue(userStatusKey, record.status, 'color')
           }" />
           {{ getDictValue(userStatusKey, record.status) }}
@@ -141,39 +156,45 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 修改 -->
-          <a-button type="text"
+          <a-button
+v-permission="['infra:system-user:update']"
+                    type="text"
                     size="mini"
-                    v-permission="['infra:system-user:update']"
                     @click="emits('openUpdate', record)">
             修改
           </a-button>
           <!-- 详情 -->
-          <a-button type="text"
+          <a-button
+type="text"
                     size="mini"
                     @click="openUserDetail(record.id)">
             详情
           </a-button>
           <!-- 重置密码 -->
-          <a-button type="text"
+          <a-button
+v-permission="['infra:system-user:management:reset-password']"
+                    type="text"
                     size="mini"
                     :disabled="record.id === userStore.id"
-                    v-permission="['infra:system-user:management:reset-password']"
                     @click="emits('openResetPassword', record)">
             重置密码
           </a-button>
           <!-- 分配角色 -->
-          <a-button type="text"
+          <a-button
+v-permission="['infra:system-user:grant-role']"
+                    type="text"
                     size="mini"
-                    v-permission="['infra:system-user:grant-role']"
                     @click="emits('openGrantRole', record)">
             分配角色
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['infra:system-user:delete']"
+            <a-button
+v-permission="['infra:system-user:delete']"
                       type="text"
                       size="mini"
                       status="danger"
@@ -189,7 +210,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userTable'
+    name: 'UserTable'
   };
 </script>
 

@@ -11,23 +11,27 @@
       <!-- 提示 -->
       <a-alert class="mb16">点击保存按钮后需要刷新页面生效 (恢复默认配置后也需要点击保存按钮) (设置时需要避免与浏览器内置快捷键冲突)</a-alert>
       <!-- 非安全环境提示 -->
-      <a-alert v-if="!isSecureEnvironment"
+      <a-alert
+v-if="!isSecureEnvironment"
                type="warning"
                class="mb16">
         当前环境非 HTTPS 环境, 因浏览器安全策略限制, 自定义 '粘贴' 功能无法使用
       </a-alert>
       <a-space class="action-container" size="mini">
         <!-- 是否启用 -->
-        <a-switch v-model="value"
+        <a-switch
+v-model="value"
                   checked-text="启用"
                   unchecked-text="禁用"
                   type="round" />
-        <a-button size="small"
+        <a-button
+size="small"
                   type="text"
                   @click="emits('save')">
           保存
         </a-button>
-        <a-button size="small"
+        <a-button
+size="small"
                   type="text"
                   @click="emits('reset')">
           恢复默认配置
@@ -39,7 +43,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalShortcutActionBlock'
+    name: 'TerminalShortcutActionBlock'
   };
 </script>
 

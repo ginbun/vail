@@ -1,13 +1,15 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 表格 -->
-    <user-table ref="table"
+    <user-table
+ref="table"
                 @open-add="() => modal.openAdd()"
                 @open-update="(e) => modal.openUpdate(e)"
                 @open-reset-password="(e) => resetModal.open(e)"
                 @open-grant-role="(e) => grantRoleModal.open(e)" />
     <!-- 添加修改模态框 -->
-    <user-form-modal ref="modal"
+    <user-form-modal
+ref="modal"
                      @added="() => table.reload()"
                      @updated="() => table.reload()" />
     <!-- 重置密码模态框 -->
@@ -19,7 +21,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userList'
+    name: 'UserList'
   };
 </script>
 

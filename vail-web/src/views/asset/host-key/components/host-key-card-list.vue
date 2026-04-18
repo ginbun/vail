@@ -1,5 +1,6 @@
 <template>
-  <card-list v-model:searchValue="formModel.searchValue"
+  <card-list
+v-model:search-value="formModel.searchValue"
              search-input-placeholder="输入 id / 名称"
              :create-card-position="false"
              :loading="loading"
@@ -18,7 +19,8 @@
     <!-- 左侧操作 -->
     <template #leftHandle>
       <!-- 角色授权 -->
-      <a-button v-permission="['asset:host-key:grant']"
+      <a-button
+v-permission="['asset:host-key:grant']"
                 class="card-header-button"
                 @click="router.push({ name: GrantRouteName, query: { key: GrantKey.HOST_KEY_ROLE }})">
         角色授权
@@ -27,7 +29,8 @@
         </template>
       </a-button>
       <!-- 用户授权 -->
-      <a-button v-permission="['asset:host-key:grant']"
+      <a-button
+v-permission="['asset:host-key:grant']"
                 class="card-header-button"
                 @click="router.push({ name: GrantRouteName, query: { key: GrantKey.HOST_KEY_USER }})">
         用户授权
@@ -54,17 +57,20 @@
           <icon-more class="card-extra-icon" />
           <template #content>
             <!-- 详情 -->
-            <a-doption v-permission="['asset:host-key:detail', 'asset:host-key:update']"
+            <a-doption
+v-permission="['asset:host-key:detail', 'asset:host-key:update']"
                        @click="emits('openView', record)">
               <span class="more-doption normal">详情</span>
             </a-doption>
             <!-- 修改 -->
-            <a-doption v-permission="['asset:host-key:update']"
+            <a-doption
+v-permission="['asset:host-key:update']"
                        @click="emits('openUpdate', record)">
               <span class="more-doption normal">修改</span>
             </a-doption>
             <!-- 删除 -->
-            <a-doption v-permission="['asset:host-key:delete']"
+            <a-doption
+v-permission="['asset:host-key:delete']"
                        class="span-red"
                        @click="deleteRow(record.id)">
               <span class="more-doption error">删除</span>
@@ -78,7 +84,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostKeyCardList'
+    name: 'HostKeyCardList'
   };
 </script>
 

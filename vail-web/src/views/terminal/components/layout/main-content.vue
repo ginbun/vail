@@ -3,10 +3,12 @@
     <!-- 内容部分 -->
     <div class="main-content-wrapper" :style="{ height: `calc(100% - ${mainSubtractHeight})` }">
       <!-- 内容 tabs -->
-      <a-tabs v-if="tabManager.active"
+      <a-tabs
+v-if="tabManager.active"
               v-model:active-key="tabManager.active"
               class="main-tabs">
-        <a-tab-pane v-for="tab in tabManager.items"
+        <a-tab-pane
+v-for="tab in tabManager.items"
                     :key="tab.key"
                     :title="tab.title">
           <!-- 新建连接 -->
@@ -33,7 +35,7 @@
 
 <script lang="ts">
   export default {
-    name: 'mainContent'
+    name: 'MainContent'
   };
 </script>
 

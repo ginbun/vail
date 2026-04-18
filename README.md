@@ -25,6 +25,37 @@ cd vail-rs
 cargo check
 ```
 
+### JWT Ed25519 keypair generation (EdDSA)
+
+`vail-rs` supports JWT signing with `EdDSA` (Ed25519) and `HS256` fallback. To generate an Ed25519 keypair for JWT:
+
+```bash
+./vail-rs/scripts/generate_jwt_ed25519_keypair.sh
+```
+
+By default this writes:
+
+- `vail-rs/.local/jwt/jwt-ed25519-private.pem`
+- `vail-rs/.local/jwt/jwt-ed25519-public.pem`
+
+You can also choose a custom output directory:
+
+```bash
+./vail-rs/scripts/generate_jwt_ed25519_keypair.sh /path/to/output-dir
+```
+
+Wire the generated PEM keys into backend env vars:
+
+```bash
+export VAIL_JWT_ALGORITHM=EdDSA
+export VAIL_JWT_PRIVATE_KEY="$(awk '{printf "%s\\n", $0}' vail-rs/.local/jwt/jwt-ed25519-private.pem)"
+export VAIL_JWT_PUBLIC_KEY="$(awk '{printf "%s\\n", $0}' vail-rs/.local/jwt/jwt-ed25519-public.pem)"
+```
+
+`VAIL_JWT_PRIVATE_KEY` and `VAIL_JWT_PUBLIC_KEY` must contain PEM text (the app converts `\n` to real newlines internally).
+
+> Note: Ed25519 in this section is used for JWT signature (EdDSA), not data encryption.
+
 ### Frontend
 
 ```bash

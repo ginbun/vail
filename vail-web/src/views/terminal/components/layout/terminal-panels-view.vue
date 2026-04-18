@@ -1,7 +1,8 @@
 <template>
   <div class="terminal-panels-container">
     <!-- 终端面板 -->
-    <terminal-panel v-for="(panel, index) in panelManager.panels"
+    <terminal-panel
+v-for="(panel, index) in panelManager.panels"
                     :key="index"
                     :index="index"
                     :panel="panel"
@@ -14,7 +15,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalPanelView'
+    name: 'TerminalPanelView'
   };
 </script>
 

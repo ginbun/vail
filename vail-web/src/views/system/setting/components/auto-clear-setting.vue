@@ -3,16 +3,19 @@
     <!-- 标题 -->
     <h3 class="setting-header">自动清理设置</h3>
     <!-- 表单 -->
-    <a-form :model="setting"
-            ref="formRef"
+    <a-form
+ref="formRef"
+            :model="setting"
             class="setting-form"
             label-align="right"
             :auto-label-width="true">
       <!-- 自动清理执行记录 -->
-      <a-form-item label="自动清理执行记录"
+      <a-form-item
+label="自动清理执行记录"
                    :rules="[{required: true, message: '请选择此项'}]"
                    hide-asterisk>
-        <a-switch v-model="setting['auto-clear.exec-log.enabled']"
+        <a-switch
+v-model="setting['auto-clear.exec-log.enabled']"
                   type="round"
                   checked-value="true"
                   unchecked-value="false"
@@ -23,10 +26,12 @@
         </template>
       </a-form-item>
       <!-- 执行记录保留天数 -->
-      <a-form-item label="执行记录保留天数"
+      <a-form-item
+label="执行记录保留天数"
                    :rules="[{required: true, message: '请输入执行记录保留天数'}]"
                    hide-asterisk>
-        <a-input-number v-model="setting['auto-clear.exec-log.keep-days']"
+        <a-input-number
+v-model="setting['auto-clear.exec-log.keep-days']"
                         class="input-wrapper"
                         :min="0"
                         :max="99999"
@@ -42,10 +47,12 @@
         </template>
       </a-form-item>
       <!-- 自动清理终端记录 -->
-      <a-form-item label="自动清理终端记录"
+      <a-form-item
+label="自动清理终端记录"
                    :rules="[{required: true, message: '请选择此项'}]"
                    hide-asterisk>
-        <a-switch v-model="setting['auto-clear.terminal-log.enabled']"
+        <a-switch
+v-model="setting['auto-clear.terminal-log.enabled']"
                   type="round"
                   checked-value="true"
                   unchecked-value="false"
@@ -56,10 +63,12 @@
         </template>
       </a-form-item>
       <!-- 终端记录保留天数 -->
-      <a-form-item label="终端记录保留天数"
+      <a-form-item
+label="终端记录保留天数"
                    :rules="[{required: true, message: '请输入终端记录保留天数'}]"
                    hide-asterisk>
-        <a-input-number v-model="setting['auto-clear.terminal-log.keep-days']"
+        <a-input-number
+v-model="setting['auto-clear.terminal-log.keep-days']"
                         class="input-wrapper"
                         :min="0"
                         :max="99999"
@@ -77,7 +86,8 @@
       <!-- 按钮 -->
       <a-form-item v-permission="['infra:system-setting:update']">
         <!-- 保存 -->
-        <a-button type="primary"
+        <a-button
+type="primary"
                   size="small"
                   @click="save">
           保存
@@ -89,7 +99,7 @@
 
 <script lang="ts">
   export default {
-    name: 'autoClearSetting',
+    name: 'AutoClearSetting',
   };
 </script>
 

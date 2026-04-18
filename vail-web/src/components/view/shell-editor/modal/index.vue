@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            title-align="start"
            :width="width"
            :body-style="{ padding: '8px' }"
@@ -12,7 +13,8 @@
            :unmount-on-close="true"
            @close="handleClose">
     <div :style="{ width: '100%', 'height': height }">
-      <editor v-model="value"
+      <editor
+v-model="value"
               language="shell"
               :suggestions="true"
               :auto-focus="true"
@@ -24,7 +26,7 @@
 
 <script lang="ts">
   export default {
-    name: 'shellEditorModal'
+    name: 'ShellEditorModal'
   };
 </script>
 

@@ -1,17 +1,19 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
-    <upload-task-table ref="table"
+    <upload-task-table
+ref="table"
                        @open-clear="(e) => clear.open(e)" />
     <!-- 清理模态框 -->
-    <upload-task-clear-modal ref="clear"
+    <upload-task-clear-modal
+ref="clear"
                              @clear="() => table.reload()" />
   </div>
 </template>
 
 <script lang="ts">
   export default {
-    name: 'uploadTask'
+    name: 'UploadTask'
   };
 </script>
 

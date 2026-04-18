@@ -4,7 +4,8 @@
       <div class="tab-bar-box">
         <div class="tab-bar-scroll">
           <div class="tags-wrap">
-            <tab-item v-for="(tag, index) in tagList"
+            <tab-item
+v-for="(tag, index) in tagList"
                       :key="tag.fullPath"
                       :closeable="tagList.length > 1"
                       :index="index"
@@ -23,7 +24,6 @@
   import { getRouteTag, getRouteTitle } from '@/router';
   import { listenerRouteChange, removeRouteListener } from '@/utils/route-listener';
   import { useAppStore, useTabBarStore } from '@/store';
-  import qs from 'query-string';
   import TabItem from './tab-item.vue';
 
   const appStore = useAppStore();
@@ -62,7 +62,7 @@
       } else {
         // 找到 更新信息
         tag.fullPath = route.fullPath;
-        tag.query = qs.parseUrl(route.fullPath).query;
+        tag.query = Object.fromEntries(new URLSearchParams(route.fullPath.split('?')[1] || ''));
         tag.title = getRouteTitle(route);
       }
     } else {

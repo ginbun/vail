@@ -5,14 +5,15 @@
         <p class="card-title-left">快捷操作</p>
       </div>
       <a-row :gutter="[12, 18]" class="pb12">
-        <a-col v-for="{ locale, icon, name, newWindow} in links"
+        <a-col
+v-for="{ locale, icon, name, newWindow} in links"
                :key="locale as string"
                :span="8"
                :title="locale"
                class="wrapper"
                @click="openRoute($event, name, newWindow)">
           <div class="icon">
-            <component v-if="icon" :is="icon" />
+            <component :is="icon" v-if="icon" />
           </div>
           <div class="text usn">
             <span>{{ locale }}</span>

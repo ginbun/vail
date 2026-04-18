@@ -1,6 +1,7 @@
 <template>
   <div>
-    <a-tooltip v-for="(action, index) in actions"
+    <a-tooltip
+v-for="(action, index) in actions"
                :key="index"
                :position="position as any"
                :mini="true"
@@ -8,10 +9,12 @@
                content-class="terminal-tooltip-content"
                :auto-fix-position="false"
                :content="action.content">
-      <div v-if="action.visible !== false"
+      <div
+v-if="action.visible !== false"
            class="terminal-sidebar-icon-wrapper"
            :class="[ wrapperClass ]">
-        <a-button class="terminal-sidebar-icon"
+        <a-button
+class="terminal-sidebar-icon"
                   :class="[
                     iconClass,
                     action.checked === true ? 'checked-item' : '',
@@ -28,7 +31,7 @@
 
 <script lang="ts">
   export default {
-    name: 'iconActions'
+    name: 'IconActions'
   };
 </script>
 

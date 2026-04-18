@@ -3,8 +3,9 @@
     <!-- 标题 -->
     <h3 class="setting-header">加密设置</h3>
     <!-- 表单 -->
-    <a-form :model="setting"
-            ref="formRef"
+    <a-form
+ref="formRef"
+            :model="setting"
             class="setting-form"
             label-align="right"
             :auto-label-width="true">
@@ -13,20 +14,24 @@
         <a-alert>请输入 PKCS8 格式的 RSA Base64 密钥, 用于前后端传输时的数据加密</a-alert>
       </a-form-item>
       <!-- 加密公钥 -->
-      <a-form-item label="加密公钥"
+      <a-form-item
+label="加密公钥"
                    :rules="[{required: true, message: '请输入加密公钥'}]"
                    hide-asterisk>
-        <a-textarea v-model="setting['encrypt.public-key']"
+        <a-textarea
+v-model="setting['encrypt.public-key']"
                     class="text-wrapper"
                     placeholder="RSA 公钥 Base64"
                     :auto-size="{ minRows: 5, maxRows: 5 }"
                     allow-clear />
       </a-form-item>
       <!-- 加密私钥 -->
-      <a-form-item label="加密私钥"
+      <a-form-item
+label="加密私钥"
                    :rules="[{required: true, message: '请输入加密私钥'}]"
                    hide-asterisk>
-        <a-textarea v-model="setting['encrypt.private-key']"
+        <a-textarea
+v-model="setting['encrypt.private-key']"
                     class="text-wrapper"
                     placeholder="RSA 私钥 Base64"
                     :auto-size="{ minRows: 14, maxRows: 14 }"
@@ -36,7 +41,8 @@
       <a-form-item v-permission="['infra:system-setting:update']">
         <a-space>
           <!-- 保存 -->
-          <a-button type="primary"
+          <a-button
+type="primary"
                     size="small"
                     @click="save">
             保存
@@ -53,7 +59,7 @@
 
 <script lang="ts">
   export default {
-    name: 'encryptSetting',
+    name: 'EncryptSetting',
   };
 </script>
 

@@ -1,17 +1,19 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
                   @submit="fetchTableData"
                   @reset="resetForm"
                   @keyup.enter="() => fetchTableData()">
       <!-- 配置项 -->
       <a-form-item field="keyId" label="配置项">
-        <dict-key-selector v-model="formModel.keyId"
-                           @change="changeKey"
+        <dict-key-selector
+v-model="formModel.keyId"
                            allow-create
-                           allow-clear />
+                           allow-clear
+                           @change="changeKey" />
       </a-form-item>
       <!-- 配置描述 -->
       <a-form-item field="label" label="配置描述">
@@ -41,8 +43,9 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 新增 -->
-          <a-button type="primary"
-                    v-permission="['infra:dict-value:create']"
+          <a-button
+v-permission="['infra:dict-value:create']"
+                    type="primary"
                     @click="emits('openAdd')">
             新增
             <template #icon>
@@ -50,11 +53,13 @@
             </template>
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm :content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
+          <a-popconfirm
+:content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
                         position="br"
                         type="warning"
                         @ok="deleteSelectedRows">
-            <a-button v-permission="['infra:dict-value:delete']"
+            <a-button
+v-permission="['infra:dict-value:delete']"
                       type="primary"
                       status="danger"
                       :disabled="selectedKeys.length === 0">
@@ -65,7 +70,8 @@
             </a-button>
           </a-popconfirm>
           <!-- 调整 -->
-          <table-adjust :columns="columns"
+          <table-adjust
+:columns="columns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -73,9 +79,10 @@
       </div>
     </template>
     <!-- table -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+ref="tableRef"
+             v-model:selected-keys="selectedKeys"
              row-key="id"
-             ref="tableRef"
              class="table-resize"
              :loading="loading"
              :columns="tableColumns"
@@ -92,7 +99,8 @@
       </template>
       <!-- 配置值 -->
       <template #value="{ record }">
-        <a-tooltip position="tl"
+        <a-tooltip
+position="tl"
                    :content="record.value"
                    @click="copy(record.value, true)">
           <span class="text-copy">{{ record.value }}</span>
@@ -100,7 +108,8 @@
       </template>
       <!-- 额外参数 -->
       <template #extra="{ record }">
-        <span class="text-copy"
+        <span
+class="text-copy"
               @click="copy(record.extra, true)">
           {{ record.extra }}
         </span>
@@ -109,25 +118,29 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 修改 -->
-          <a-button type="text"
+          <a-button
+v-permission="['infra:dict-value:update']"
+                    type="text"
                     size="mini"
-                    v-permission="['infra:dict-value:update']"
                     @click="emits('openUpdate', record)">
             修改
           </a-button>
           <!-- 历史 -->
-          <a-button type="text"
+          <a-button
+v-permission="['infra:dict-value:update']"
+                    type="text"
                     size="mini"
-                    v-permission="['infra:dict-value:update']"
                     @click="emits('openHistory', record)">
             历史
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['infra:dict-value:delete']"
+            <a-button
+v-permission="['infra:dict-value:delete']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -142,7 +155,7 @@
 
 <script lang="ts">
   export default {
-    name: 'dictValueTable'
+    name: 'DictValueTable'
   };
 </script>
 

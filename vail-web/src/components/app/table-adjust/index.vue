@@ -1,7 +1,8 @@
 <template>
   <a-button-group v-if="columnsHook || queryOrder">
     <!-- 调整列 -->
-    <a-popover v-if="columnsHook && columns"
+    <a-popover
+v-if="columnsHook && columns"
                class="table-adjust-popover"
                position="br"
                trigger="click"
@@ -20,7 +21,8 @@
           <span class="table-adjust-title">
             表格展示列
           </span>
-          <a-button type="text"
+          <a-button
+type="text"
                     size="mini"
                     @click="resetColumns">
             重置
@@ -29,10 +31,12 @@
         <!-- 分隔符 -->
         <a-divider :margin="4" />
         <!-- 列信息 -->
-        <a-checkbox-group v-model="columnsValue"
+        <a-checkbox-group
+v-model="columnsValue"
                           direction="vertical"
                           @change="columnsChanged">
-          <a-checkbox v-for="column in columns"
+          <a-checkbox
+v-for="column in columns"
                       :key="column.dataIndex || column.slotName"
                       :value="column.dataIndex || column.slotName">
             {{ column.title }}
@@ -41,7 +45,8 @@
       </template>
     </a-popover>
     <!-- 调整排序 -->
-    <a-popover v-if="queryOrder"
+    <a-popover
+v-if="queryOrder"
                class="table-adjust-popover"
                position="br"
                trigger="click"
@@ -64,7 +69,8 @@
         <!-- 分隔符 -->
         <a-divider :margin="4" />
         <!-- 列信息 -->
-        <a-radio-group v-model="orderValue"
+        <a-radio-group
+v-model="orderValue"
                        direction="vertical"
                        @change="sortChanged">
           <a-radio :value="ASC">
@@ -81,7 +87,7 @@
 
 <script lang="ts">
   export default {
-    name: 'tableAdjust'
+    name: 'TableAdjust'
   };
 </script>
 

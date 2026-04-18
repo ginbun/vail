@@ -1,11 +1,13 @@
 <template>
   <div class="terminal-right-sidebar">
     <!-- 顶部操作按钮 -->
-    <icon-actions class="top-actions"
+    <icon-actions
+class="top-actions"
                   :actions="topActions"
                   position="left" />
     <!-- 底部操作按钮 -->
-    <icon-actions class="bottom-actions"
+    <icon-actions
+class="bottom-actions"
                   :actions="bottomActions"
                   position="left" />
   </div>
@@ -13,7 +15,7 @@
 
 <script lang="ts">
   export default {
-    name: 'rightSidebar'
+    name: 'RightSidebar'
   };
 </script>
 

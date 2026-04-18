@@ -1,7 +1,8 @@
 <template>
   <div v-if="session.state.connectStatus === TerminalStatus.CONNECTED">
     <!-- 工具栏 -->
-    <a-popover v-model:popup-visible="visible"
+    <a-popover
+v-model:popup-visible="visible"
                :title="undefined"
                trigger="click"
                :content-class="['guacd-action-bar-popover', direction]"
@@ -14,17 +15,20 @@
       <!-- 工具内容 -->
       <template #content>
         <!-- 按钮 -->
-        <a-space class="action-bar-actions"
+        <a-space
+class="action-bar-actions"
                  :direction="direction === ActionBarPosition.RIGHT ? 'vertical' : 'horizontal'"
                  :size="16">
           <div v-for="action in actions" :key="action.item">
-            <a-tooltip :mini="true"
+            <a-tooltip
+:mini="true"
                        :auto-fix-position="false"
                        :position="direction === ActionBarPosition.RIGHT ? 'left' : 'bottom'"
                        content-class="terminal-tooltip-content"
                        :show-arrow="false"
                        :content="action.content">
-              <a-button class="action-bar-button"
+              <a-button
+class="action-bar-button"
                         :disabled="!action.enabled()"
                         :type="action.active ? 'primary' : 'secondary'"
                         @click="toggleAction(action.item)">
@@ -41,13 +45,15 @@
         </div>
         <!-- 显示设置 -->
         <div v-else-if="current === GuacdActionItemKeys.DISPLAY" class="action-bar-content">
-          <display-action ref="display"
+          <display-action
+ref="display"
                           :session="session"
                           @close="close" />
         </div>
         <!-- 组合键 -->
         <div v-else-if="current === GuacdActionItemKeys.COMBINATION_KEY" class="action-bar-content">
-          <combination-key-action :session="session"
+          <combination-key-action
+:session="session"
                                   @close="close" />
         </div>
         <!-- 触发键 -->
@@ -56,7 +62,8 @@
         </div>
         <!-- 剪切板 -->
         <div v-else-if="current === GuacdActionItemKeys.CLIPBOARD" class="action-bar-content">
-          <clipboard-action ref="clipboard"
+          <clipboard-action
+ref="clipboard"
                             :session="session"
                             @close="close" />
         </div>
@@ -69,7 +76,7 @@
 
 <script lang="ts">
   export default {
-    name: 'vncActionBar'
+    name: 'VncActionBar'
   };
 </script>
 

@@ -1,7 +1,8 @@
 <template>
-  <a-table v-model:selected-keys="selectedKeys"
+  <a-table
+ref="tableRef"
+           v-model:selected-keys="selectedKeys"
            row-key="path"
-           ref="tableRef"
            class="sftp-table"
            :columns="sftpColumns"
            :row-selection="rowSelection"
@@ -17,8 +18,9 @@
       <div class="name-filter">
         <a-space direction="vertical">
           <!-- 过滤输入框 -->
-          <a-input size="small"
-                   :ref="setAutoFocus"
+          <a-input
+:ref="setAutoFocus"
+                   size="small"
                    :model-value="filterValue[0]"
                    @input="(value: string) => setFilterValue([value])"
                    @press-enter="handleFilterConfirm" />
@@ -38,7 +40,8 @@
           <component :is="formatFileType(record.attr).icon" />
         </span>
         <!-- 文件名称 -->
-        <span :class="[ record.isDir ? 'pointer' : 'text-copy']"
+        <span
+:class="[ record.isDir ? 'pointer' : 'text-copy']"
               @click="clickFilename(record)">
           {{ record.name }}
         </span>
@@ -55,20 +58,23 @@
       <!-- 操作 -->
       <a-space v-else>
         <!-- 复制路径 -->
-        <a-tooltip position="top"
+        <a-tooltip
+position="top"
                    :mini="true"
                    :overlay-inverse="true"
                    :auto-fix-position="false"
                    content-class="terminal-tooltip-content"
                    arrow-class="terminal-tooltip-content"
                    content="复制路径">
-          <a-button class="icon-button row-action-icon"
+          <a-button
+class="icon-button row-action-icon"
                     @click="copy(record.path, true)">
             <icon-copy />
           </a-button>
         </a-tooltip>
         <!-- 编辑内容 -->
-        <a-tooltip v-if="record.canPreview"
+        <a-tooltip
+v-if="record.canPreview"
                    position="top"
                    :mini="true"
                    :overlay-inverse="true"
@@ -76,56 +82,65 @@
                    content-class="terminal-tooltip-content"
                    arrow-class="terminal-tooltip-content"
                    content="编辑内容">
-          <a-button class="icon-button row-action-icon"
+          <a-button
+class="icon-button row-action-icon"
                     :disabled="editorLoading"
                     @click="editFile(record)">
             <icon-edit />
           </a-button>
         </a-tooltip>
         <!-- 删除 -->
-        <a-tooltip position="top"
+        <a-tooltip
+position="top"
                    :mini="true"
                    :auto-fix-position="false"
                    content-class="terminal-tooltip-content"
                    arrow-class="terminal-tooltip-content"
                    content="删除">
-          <a-button class="icon-button row-action-icon"
+          <a-button
+class="icon-button row-action-icon"
                     @click="deleteFile(record.path)">
             <icon-delete />
           </a-button>
         </a-tooltip>
         <!-- 下载 -->
-        <a-tooltip position="top"
+        <a-tooltip
+position="top"
                    :mini="true"
                    :auto-fix-position="false"
                    content-class="terminal-tooltip-content"
                    arrow-class="terminal-tooltip-content"
                    content="下载">
-          <a-button class="icon-button row-action-icon"
+          <a-button
+class="icon-button row-action-icon"
                     @click="downloadFile(record.path)">
             <icon-download />
           </a-button>
         </a-tooltip>
         <!-- 移动 -->
-        <a-tooltip position="top"
+        <a-tooltip
+position="top"
                    :mini="true"
                    :auto-fix-position="false"
                    content-class="terminal-tooltip-content"
                    arrow-class="terminal-tooltip-content"
                    content="移动">
-          <a-button class="icon-button row-action-icon"
+          <a-button
+class="icon-button row-action-icon"
                     @click="moveFile(record.path)">
             <icon-paste />
           </a-button>
         </a-tooltip>
         <!-- 提权 -->
-        <a-tooltip position="top"
+        <a-tooltip
+position="top"
                    :mini="true"
                    :auto-fix-position="false"
                    content-class="terminal-tooltip-content"
                    arrow-class="terminal-tooltip-content"
                    content="提权">
-          <a-button class="icon-button row-action-icon"
+          <a-button
+class="icon-button row-action-icon"
                     @click="chmodFile(record.path, record.permission)">
             <icon-user-group />
           </a-button>
@@ -137,7 +152,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sftpTable'
+    name: 'SftpTable'
   };
 </script>
 

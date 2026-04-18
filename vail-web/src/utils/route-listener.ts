@@ -1,15 +1,14 @@
 import type { RouteLocationNormalized } from 'vue-router';
-import type { Handler } from 'mitt';
-import mitt from 'mitt';
 
-const emitter = mitt();
+type Handler = (route: RouteLocationNormalized) => void;
+const handlers: Set<Handler> = new Set();
 
 const key = Symbol('ROUTE_CHANGE');
 
 let latestRoute: RouteLocationNormalized;
 
 export function setRouteEmitter(to: RouteLocationNormalized) {
-  emitter.emit(key, to);
+  handlers.forEach(handler => handler(to));
   latestRoute = to;
 }
 
@@ -17,10 +16,10 @@ export function setRouteEmitter(to: RouteLocationNormalized) {
  * 添加路由跳转监听器
  */
 export function listenerRouteChange(
-  handler: (route: RouteLocationNormalized) => void,
+  handler: Handler,
   immediate = true
 ) {
-  emitter.on(key, handler as Handler);
+  handlers.add(handler);
   if (immediate && latestRoute) {
     handler(latestRoute);
   }
@@ -30,5 +29,5 @@ export function listenerRouteChange(
  * 移除路由跳转监听器
  */
 export function removeRouteListener() {
-  emitter.off(key);
+  handlers.clear();
 }

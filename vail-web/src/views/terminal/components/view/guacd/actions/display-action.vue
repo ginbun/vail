@@ -2,7 +2,8 @@
   <!-- 分辨率 -->
   <a-space>
     <span class="display-size-label">分辨率</span>
-    <a-select v-model="displaySize"
+    <a-select
+v-model="displaySize"
               class="display-size-input"
               placeholder="请选择分辨率"
               :options="toOptions(screenResolutionKey)"
@@ -10,12 +11,14 @@
   </a-space>
   <!-- 按钮 -->
   <a-space class="action-bar-content-footer">
-    <a-button type="primary"
+    <a-button
+type="primary"
               size="small"
               @click="fitOnce">
       临时自适应
     </a-button>
-    <a-button type="primary"
+    <a-button
+type="primary"
               size="small"
               @click="setDisplaySize">
       设置
@@ -25,7 +28,7 @@
 
 <script lang="ts">
   export default {
-    name: 'displayAction'
+    name: 'DisplayAction'
   };
 </script>
 

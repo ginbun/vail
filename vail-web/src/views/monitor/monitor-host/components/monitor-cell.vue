@@ -2,7 +2,8 @@
   <div v-if="record.agentInstallStatus === AgentInstallStatus.INSTALLED">
     <!-- 数据列 -->
     <template v-if="dataCell">
-      <div v-if="!record.metricsData?.noData"
+      <div
+v-if="!record.metricsData?.noData"
            class="metrics-wrapper"
            :class="dataClass">
         <slot name="default" />
@@ -20,7 +21,7 @@
 
 <script lang="ts">
   export default {
-    name: 'monitorCell'
+    name: 'MonitorCell'
   };
 </script>
 

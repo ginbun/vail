@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            :title="touch ? '创建文件' : '创建文件夹'"
@@ -7,15 +8,18 @@
            :mask-closable="false"
            :unmount-on-close="true"
            :on-before-ok="handlerOk">
-    <a-form :model="formModel"
-            ref="formRef"
+    <a-form
+ref="formRef"
+            :model="formModel"
             label-align="right"
             :auto-label-width="true">
       <!-- 路径 -->
-      <a-form-item field="path"
+      <a-form-item
+field="path"
                    :label="`${touch ? '文件' : '文件夹'}路径`"
                    :rules="[{ required: true, message: `请输入${touch ? '文件' : '文件夹'}路径` }]">
-        <a-textarea ref="pathRef"
+        <a-textarea
+ref="pathRef"
                     v-model="formModel.path"
                     :placeholder="`请输入${touch ? '文件' : '文件夹'}路径`"
                     :auto-size="{ minRows: 3, maxRows: 3 }" />
@@ -26,7 +30,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sftpCreateModal'
+    name: 'SftpCreateModal'
   };
 </script>
 

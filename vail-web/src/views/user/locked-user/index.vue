@@ -21,8 +21,9 @@
         </div>
       </template>
       <!-- table -->
-      <a-table row-key="id"
-               ref="tableRef"
+      <a-table
+ref="tableRef"
+               row-key="id"
                class="table-resize"
                :loading="loading"
                :columns="columns"
@@ -38,7 +39,8 @@
             {{ record.username }}
           </span>
             <!-- 当前会话 -->
-            <a-tag v-if="record.current"
+            <a-tag
+v-if="record.current"
                    size="small"
                    class="ml8"
                    color="green">
@@ -59,11 +61,13 @@
         <template #handle="{ record }">
           <div class="table-handle-wrapper">
             <!-- 删除 -->
-            <a-popconfirm content="确定要解锁当前用户吗?"
+            <a-popconfirm
+content="确定要解锁当前用户吗?"
                           position="left"
                           type="warning"
                           @ok="unlockUser(record)">
-              <a-button v-if="!record.current"
+              <a-button
+v-if="!record.current"
                         v-permission="['infra:system-user:management:unlock']"
                         type="text"
                         size="mini"
@@ -80,7 +84,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userLockedUser'
+    name: 'UserLockedUser'
   };
 </script>
 

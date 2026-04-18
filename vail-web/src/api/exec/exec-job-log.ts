@@ -8,7 +8,7 @@ import type {
   ExecLogStatusResponse,
 } from '../exec/exec-log';
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 /**
  * 分页查询计划任务日志
@@ -47,7 +47,7 @@ export function getExecJobLogStatus(idList: Array<number>) {
     promptBizErrorMessage: false,
     promptRequestErrorMessage: false,
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }
@@ -66,7 +66,7 @@ export function batchDeleteExecJobLog(idList: Array<number>) {
   return axios.delete('/exec/exec-job-log/batch-delete', {
     params: { idList },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

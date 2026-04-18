@@ -5,7 +5,8 @@
     <div class="ssh-header-left">
       <!-- 主机地址 -->
       <span class="address-wrapper">
-          <span class="text-copy"
+          <span
+class="text-copy"
                 :title="session?.info?.address"
                 @click="copy(session?.info?.address as string, true)">
             {{ session?.info?.address }}
@@ -15,13 +16,15 @@
     <!-- 右侧操作 -->
     <div class="ssh-header-right">
       <!-- 操作按钮 -->
-      <icon-actions class="ssh-header-right-action-bar"
+      <icon-actions
+class="ssh-header-right-action-bar"
                     wrapper-class="ssh-header-icon-wrapper"
                     icon-class="ssh-header-icon"
                     :actions="rightActions"
                     position="bottom" />
       <!-- 连接状态 -->
-      <a-badge v-if="preference.sshActionBarSetting.connectStatus !== false"
+      <a-badge
+v-if="preference.sshActionBarSetting.connectStatus !== false"
                class="status-bridge"
                :status="getDictValue(connectStatusKey, session ? session.state.connectStatus : TerminalStatus.CONNECTING, 'status')"
                :text="getDictValue(connectStatusKey, session ? session.state.connectStatus : TerminalStatus.CONNECTING)" />
@@ -31,7 +34,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sshHeader'
+    name: 'SshHeader'
   };
 </script>
 

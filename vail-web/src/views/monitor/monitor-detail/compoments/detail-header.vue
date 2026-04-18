@@ -4,14 +4,16 @@
     <div class="header-left">
       <!-- tab切换 -->
       <div class="tab-container">
-        <a-tabs v-model:active-key="activeKey"
+        <a-tabs
+v-model:active-key="activeKey"
                 type="rounded"
                 :hide-content="true">
           <a-tab-pane :key="TabKeys.OVERVIEW" title="主机概览" />
           <a-tab-pane :key="TabKeys.CHART" title="监控图表" />
           <a-tab-pane :key="TabKeys.ALARM" title="告警事件" />
         </a-tabs>
-        <a-divider direction="vertical"
+        <a-divider
+direction="vertical"
                    style="height: 22px; margin: 0 16px 0 8px;"
                    :size="2" />
       </div>
@@ -20,7 +22,8 @@
         <!-- 标题 -->
         <div class="title">{{ host.name }}</div>
         <!-- 地址 -->
-        <a-tag class="text-copy"
+        <a-tag
+class="text-copy"
                color="arcoblue"
                @click="copy(host.address, true)">
           {{ host.address }}
@@ -45,23 +48,27 @@
       <!-- 告警事件标签 -->
       <div v-if="activeKey === TabKeys.OVERVIEW" class="handle-wrapper">
         <!-- 单协议连接 -->
-        <a-tag v-if="host.types?.length === 1"
+        <a-tag
+v-if="host.types?.length === 1"
                v-permission="['terminal:terminal:access']"
                class="pointer"
                @click="openNewRoute({ name: 'terminal', query: { connect: host.id, type: host.types[0] } })">
           连接终端
         </a-tag>
         <!-- 多协议连接 -->
-        <a-popover v-if="(host.types?.length || 0) > 1"
+        <a-popover
+v-if="(host.types?.length || 0) > 1"
                    :title="undefined"
                    :content-style="{ padding: '8px' }">
-          <a-tag v-permission="['terminal:terminal:access']"
+          <a-tag
+v-permission="['terminal:terminal:access']"
                  class="pointer">
             连接终端
           </a-tag>
           <template #content>
             <a-space>
-              <a-button v-for="type in host.types"
+              <a-button
+v-for="type in host.types"
                         :key="type"
                         size="mini"
                         @click="openNewRoute({ name: 'terminal', query: { connect: host.id, type }})">
@@ -76,7 +83,8 @@
       <!-- 监控图表操作 -->
       <div v-else-if="activeKey === TabKeys.CHART" class="handle-wrapper">
         <!-- 表格时间区间 -->
-        <a-select v-model="chartRange"
+        <a-select
+v-model="chartRange"
                   style="width: 138px;"
                   :options="toOptions(ChartRangeKey)">
           <template #prefix>
@@ -84,7 +92,8 @@
           </template>
         </a-select>
         <!-- 表格窗口 -->
-        <a-select v-model="chartWindow"
+        <a-select
+v-model="chartWindow"
                   style="width: 138px;"
                   :options="chartWindowOptions">
           <template #prefix>
@@ -92,7 +101,8 @@
           </template>
         </a-select>
         <!-- 刷新 -->
-        <a-button class="fs16"
+        <a-button
+class="fs16"
                   title="刷新"
                   @click="reloadChart">
           <template #icon>
@@ -100,7 +110,8 @@
           </template>
         </a-button>
         <!-- 切换视图 -->
-        <a-button class="fs16"
+        <a-button
+class="fs16"
                   title="切换视图"
                   @click="chartCompose = !chartCompose">
           <template #icon>
@@ -115,7 +126,7 @@
 
 <script lang="ts">
   export default {
-    name: 'detail-header'
+    name: 'DetailHeader'
   };
 </script>
 

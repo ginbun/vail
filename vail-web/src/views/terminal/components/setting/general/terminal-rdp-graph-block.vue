@@ -13,7 +13,8 @@
       <a-row class="mb16" align="stretch" :gutter="16">
         <!-- 显示分辨率 -->
         <block-setting-item label="显示分辨率" desc="若选择为自适应, 则会根据窗口大小自动调整">
-          <a-select v-model="formModel.displaySize"
+          <a-select
+v-model="formModel.displaySize"
                     style="width: 168px;"
                     size="small"
                     :options="toOptions(screenResolutionKey)"
@@ -21,7 +22,8 @@
         </block-setting-item>
         <!-- 颜色深度 -->
         <block-setting-item label="颜色深度" desc="显示的颜色深度, 越高显示效果越好">
-          <a-select v-model="formModel.colorDepth"
+          <a-select
+v-model="formModel.colorDepth"
                     style="width: 168px;"
                     size="small"
                     :options="toOptions(graphColorDepthKey)" />
@@ -89,7 +91,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalRdpGraphBlock'
+    name: 'TerminalRdpGraphBlock'
   };
 </script>
 

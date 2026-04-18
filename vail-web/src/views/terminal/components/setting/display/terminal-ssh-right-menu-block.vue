@@ -9,7 +9,8 @@
     <!-- 提示 -->
     <a-alert class="mb16">修改后会立刻保存, 重新打开终端后生效</a-alert>
     <!-- 非安全环境提示 -->
-    <a-alert v-if="!isSecureEnvironment"
+    <a-alert
+v-if="!isSecureEnvironment"
              type="warning"
              class="mb16">
       当前环境非 HTTPS 环境, 因浏览器安全策略限制, 自定义 '粘贴' 功能无法使用
@@ -22,10 +23,11 @@
         <!-- 功能项列表 -->
         <div class="actions-wrapper">
           <a-row :gutter="[8, 8]">
-            <a-col :span="12"
-                   class="action-item-wrapper"
-                   v-for="(action, index) in SshActionBarItems"
-                   :key="index">
+            <a-col
+v-for="(action, index) in SshActionBarItems"
+                   :key="index"
+                   :span="12"
+                   class="action-item-wrapper">
               <div class="action-item" @click="toggleAction(action.item)">
                 <!-- 图标 -->
                 <div class="action-icon">
@@ -46,12 +48,14 @@
         <div ref="popupContainer" />
       </div>
       <!-- 预览下拉菜单 -->
-      <a-dropdown v-if="popupContainer"
+      <a-dropdown
+v-if="popupContainer"
                   :popup-visible="true"
                   :popup-container="popupContainer"
                   :popup-max-height="false">
-        <template #content v-if="rightActions.length">
-          <a-doption v-for="(action, index) in rightActions"
+        <template v-if="rightActions.length" #content>
+          <a-doption
+v-for="(action, index) in rightActions"
                      :key="index">
             <div class="preview-action">
               <!-- 图标 -->
@@ -68,7 +72,7 @@
           </a-doption>
         </template>
         <!-- 空数据 -->
-        <template #content v-else>
+        <template v-else #content>
           <a-doption>
             点击左侧功能添加
           </a-doption>
@@ -80,7 +84,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalSshRightMenuBlock'
+    name: 'TerminalSshRightMenuBlock'
   };
 </script>
 

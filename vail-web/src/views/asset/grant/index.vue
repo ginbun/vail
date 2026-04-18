@@ -1,13 +1,15 @@
 <template>
-  <div class="layout-container view-container" v-if="render">
-    <a-tabs v-model:active-key="activeKey"
+  <div v-if="render" class="layout-container view-container">
+    <a-tabs
+v-model:active-key="activeKey"
             class="tabs-container simple-card"
             size="large"
             :justify="true"
             :lazy-load="true">
-      <a-tab-pane v-for="tab in GrantTabs"
-                  v-permission="tab.permission"
-                  :key="tab.key">
+      <a-tab-pane
+v-for="tab in GrantTabs"
+                  :key="tab.key"
+                  v-permission="tab.permission">
         <template #title>
           <component :is="tab.icon" />
           {{ tab.title }}
@@ -20,7 +22,7 @@
 
 <script lang="ts">
   export default {
-    name: 'assetGrant'
+    name: 'AssetGrant'
   };
 </script>
 

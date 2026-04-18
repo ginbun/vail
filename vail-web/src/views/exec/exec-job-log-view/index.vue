@@ -1,7 +1,8 @@
 <template>
   <div class="container">
     <div class="wrapper">
-      <exec-log-panel ref="log"
+      <exec-log-panel
+ref="log"
                       type="JOB"
                       :visible-back="false" />
     </div>
@@ -10,7 +11,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execJobLogView'
+    name: 'ExecJobLogView'
   };
 </script>
 

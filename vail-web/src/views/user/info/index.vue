@@ -1,6 +1,7 @@
 <template>
-  <div class="tabs-container" v-if="render">
-    <a-tabs v-model:active-key="activeTab"
+  <div v-if="render" class="tabs-container">
+    <a-tabs
+v-model:active-key="activeTab"
             type="rounded"
             size="medium"
             position="left"
@@ -8,31 +9,35 @@
             :destroy-on-hide="true"
             @tab-click="(k) => clickTab(k as string)">
       <!-- 个人信息 -->
-      <a-tab-pane key="mineInfo"
-                  v-if="!user || hasPermission('infra:system-user:update')"
+      <a-tab-pane
+v-if="!user || hasPermission('infra:system-user:update')"
+                  key="mineInfo"
                   :title="user ? '用户信息' : '个人信息'">
         <user-base-info :user="user" />
       </a-tab-pane>
       <!-- 登录日志 -->
-      <a-tab-pane key="loginHistory"
-                  v-if="!user || hasPermission('infra:system-user:login-history')"
+      <a-tab-pane
+v-if="!user || hasPermission('infra:system-user:login-history')"
+                  key="loginHistory"
                   title="登录日志">
         <login-history :user="user" />
       </a-tab-pane>
       <!-- 登录设备 -->
-      <a-tab-pane key="userSession"
-                  v-if="!user || hasPermission('infra:system-user:query-session')"
+      <a-tab-pane
+v-if="!user || hasPermission('infra:system-user:query-session')"
+                  key="userSession"
                   title="登录设备">
         <user-session :user="user" />
       </a-tab-pane>
       <!-- 操作日志 -->
-      <a-tab-pane key="operatorLog"
-                  v-if="!user || hasPermission('infra:operator-log:query')"
+      <a-tab-pane
+v-if="!user || hasPermission('infra:operator-log:query')"
+                  key="operatorLog"
                   title="操作日志">
         <user-operator-log :user="user" />
       </a-tab-pane>
       <!-- 返回 -->
-      <a-tab-pane key="back" v-if="userId">
+      <a-tab-pane v-if="userId" key="back">
         <template #title>
           <icon-left style="font-size: 16px; padding-top: 2px;" />
           返回
@@ -44,7 +49,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userInfo'
+    name: 'UserInfo'
   };
 </script>
 

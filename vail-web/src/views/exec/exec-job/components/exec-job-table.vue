@@ -1,39 +1,45 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- 任务名称 -->
       <a-form-item field="name" label="任务名称">
-        <a-input v-model="formModel.name"
+        <a-input
+v-model="formModel.name"
                  placeholder="请输入任务名称"
                  allow-clear />
       </a-form-item>
       <!-- 执行命令 -->
       <a-form-item field="command" label="执行命令">
-        <a-input v-model="formModel.command"
+        <a-input
+v-model="formModel.command"
                  placeholder="请输入执行命令"
                  allow-clear />
       </a-form-item>
       <!-- 执行用户 -->
       <a-form-item field="execUserId" label="执行用户">
-        <user-selector v-model="formModel.execUserId"
+        <user-selector
+v-model="formModel.execUserId"
                        placeholder="请选择执行用户"
                        allow-clear />
       </a-form-item>
       <!-- id -->
       <a-form-item field="id" label="id">
-        <a-input-number v-model="formModel.id"
+        <a-input-number
+v-model="formModel.id"
                         placeholder="请输入id"
                         allow-clear
                         hide-button />
       </a-form-item>
       <!-- 任务状态 -->
       <a-form-item field="status" label="任务状态">
-        <a-select v-model="formModel.status"
+        <a-select
+v-model="formModel.status"
                   :options="toOptions(execJobStatusKey)"
                   placeholder="请选择状态"
                   allow-clear />
@@ -54,7 +60,8 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 新增 -->
-          <a-button v-permission="['exec:exec-job:create']"
+          <a-button
+v-permission="['exec:exec-job:create']"
                     type="primary"
                     @click="emits('openAdd')">
             新增
@@ -63,11 +70,13 @@
             </template>
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm :content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
+          <a-popconfirm
+:content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
                         position="br"
                         type="warning"
                         @ok="deleteSelectedRows">
-            <a-button v-permission="['exec:exec-job:delete']"
+            <a-button
+v-permission="['exec:exec-job:delete']"
                       type="primary"
                       status="danger"
                       :disabled="selectedKeys.length === 0">
@@ -78,7 +87,8 @@
             </a-button>
           </a-popconfirm>
           <!-- 调整 -->
-          <table-adjust :columns="columns"
+          <table-adjust
+:columns="columns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -86,9 +96,10 @@
       </div>
     </template>
     <!-- table -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+ref="tableRef"
+             v-model:selected-keys="selectedKeys"
              row-key="id"
-             ref="tableRef"
              class="table-resize"
              :loading="loading"
              :columns="tableColumns"
@@ -101,12 +112,14 @@
              @page-size-change="(size: number) => fetchTableData(1, size)">
       <!-- cron -->
       <template #expression="{ record }">
-        <span class="copy-left"
+        <span
+class="copy-left"
               title="复制"
               @click="copy(record.expression, true)">
           <icon-copy />
         </span>
-        <span class="text-copy span-blue"
+        <span
+class="text-copy span-blue"
               title="查看下次执行时间"
               @click="emits('testCron', record.expression)">
           {{ record.expression }}
@@ -114,7 +127,8 @@
       </template>
       <!-- 命令 -->
       <template #command="{ record }">
-        <span class="copy-left"
+        <span
+class="copy-left"
               title="复制"
               @click="copy(record.command, true)">
           <icon-copy />
@@ -124,7 +138,8 @@
       <!-- 任务状态 -->
       <template #status="{ record }">
         <!-- 状态开关 可编辑 -->
-        <a-switch v-if="hasPermission('exec:exec-job:update-status')"
+        <a-switch
+v-if="hasPermission('exec:exec-job:update-status')"
                   type="round"
                   :default-checked="record.status === ExecJobStatus.ENABLED"
                   :checked-text="getDictValue(execJobStatusKey, ExecJobStatus.ENABLED)"
@@ -139,7 +154,7 @@
       </template>
       <!-- 最近执行 -->
       <template #recentLog="{ record }">
-        <div class="flex-center" v-if="record.recentLogId && record.recentLogStatus">
+        <div v-if="record.recentLogId && record.recentLogStatus" class="flex-center">
           <!-- 执行时间 -->
           <span class="mr8">
             {{ dateFormat(new Date(record.recentLogTime), 'MM-dd HH:mm:ss') }}
@@ -156,28 +171,33 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 详情 -->
-          <a-button type="text"
+          <a-button
+type="text"
                     size="mini"
                     @click="emits('openDetail', record.id)">
             详情
           </a-button>
           <!-- 手动触发 -->
-          <a-popconfirm content="确认要手动触发吗?"
+          <a-popconfirm
+content="确认要手动触发吗?"
                         position="left"
                         type="warning"
                         @ok="triggerJob(record.id)">
-            <a-button v-permission="['exec:exec-job:trigger']"
+            <a-button
+v-permission="['exec:exec-job:trigger']"
                       type="text"
                       size="mini">
               手动触发
             </a-button>
           </a-popconfirm>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['exec:exec-job:delete']"
+            <a-button
+v-permission="['exec:exec-job:delete']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -191,12 +211,14 @@
             </a-button>
             <template #content>
               <!-- 修改任务 -->
-              <a-doption v-permission="['exec:exec-job:update']"
+              <a-doption
+v-permission="['exec:exec-job:update']"
                          @click="emits('openUpdate', record.id)">
                 <span class="more-doption normal">修改任务</span>
               </a-doption>
               <!-- 修改执行用户 -->
-              <a-doption v-permission="['exec:exec-job:update-exec-user']"
+              <a-doption
+v-permission="['exec:exec-job:update-exec-user']"
                          @click="emits('updateExecUser', record)">
                 <span class="more-doption normal">修改执行用户</span>
               </a-doption>
@@ -210,7 +232,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execJobTable'
+    name: 'ExecJobTable'
   };
 </script>
 

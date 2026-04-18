@@ -1,13 +1,15 @@
 <template>
-  <grant-layout :type="type"
+  <grant-layout
+:type="type"
                 :loading="loading"
                 @fetch="fetchAuthorizedData"
                 @grant="doGrant"
                 @select-all="selectAll"
                 @reverse="reverseSelect">
     <!-- 主机分组 -->
-    <host-group-tree v-model:checked-keys="checkedGroups"
-                     ref="tree"
+    <host-group-tree
+ref="tree"
+                     v-model:checked-keys="checkedGroups"
                      outer-class="group-main-tree"
                      :checkable="true"
                      :editable="false"
@@ -17,7 +19,8 @@
                      @on-selected="clickGroup" />
     <a-divider direction="vertical" />
     <!-- 主机表格 -->
-    <a-table row-key="id"
+    <a-table
+row-key="id"
              class="group-main-hosts table-resize"
              :sticky-header="true"
              :loading="loading"
@@ -32,10 +35,12 @@
       </template>
       <!-- 主机协议 -->
       <template #protocols="{ record }">
-        <a-space v-if="record.types?.length"
+        <a-space
+v-if="record.types?.length"
                  style="margin-bottom: -8px;"
                  wrap>
-          <a-tag v-for="type in record.types"
+          <a-tag
+v-for="type in record.types"
                  :key="type"
                  :color="getDictValue(hostTypeKey, type, 'color')">
             {{ getDictValue(hostTypeKey, type) }}
@@ -48,7 +53,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostGroupGrant'
+    name: 'HostGroupGrant'
   };
 </script>
 

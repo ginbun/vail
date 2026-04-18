@@ -6,7 +6,6 @@ import router from './router';
 import store from './store';
 import i18n from './locale';
 import directive from './directive';
-import './mock';
 // 样式通过 arco-plugin 插件导入 详见目录文件 config/plugin/arcoStyleImport.ts
 import '@/assets/style/global.less';
 import '@/assets/style/layout.less';

@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-small"
            title-align="start"
            title="cron 生成器"
@@ -15,7 +16,8 @@
     <!-- 页脚-->
     <template #footer>
       <a-button size="small" @click="handlerClose">关闭</a-button>
-      <a-button size="small"
+      <a-button
+size="small"
                 type="primary"
                 @click="handlerOk">
         确定
@@ -26,7 +28,7 @@
 
 <script lang="ts">
   export default {
-    name: 'cronGeneratorModal'
+    name: 'CronGeneratorModal'
   };
 </script>
 

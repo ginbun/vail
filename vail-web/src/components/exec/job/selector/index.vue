@@ -1,5 +1,6 @@
 <template>
-  <a-select v-model:model-value="value as any"
+  <a-select
+v-model:model-value="value as any"
             :options="optionData"
             :allow-search="true"
             :loading="loading"
@@ -11,7 +12,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execJobSelector'
+    name: 'ExecJobSelector'
   };
 </script>
 

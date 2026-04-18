@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            :title="title"
@@ -13,8 +14,9 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
@@ -24,7 +26,8 @@
         </a-form-item>
         <!-- 配置值类型 -->
         <a-form-item field="valueType" label="配置值类型">
-          <a-select v-model="formModel.valueType"
+          <a-select
+v-model="formModel.valueType"
                     :options="toOptions(dictValueTypeKey)"
                     placeholder="请选择配置值类型" />
         </a-form-item>
@@ -34,25 +37,29 @@
         </a-form-item>
         <a-divider orientation="center" style="margin: 12px 0 26px 0;">额外参数定义</a-divider>
         <!-- 额外参数 -->
-        <a-form-item v-for="(schema, index) in extraSchemaArr"
+        <a-form-item
+v-for="(schema, index) in extraSchemaArr"
                      :key="index"
                      :field="`extra${index + 1}`"
                      :label="`额外参数 ${index + 1}`">
           <a-input-group style="width: 100%;">
             <!-- 参数类型 -->
-            <a-select v-model="schema.type"
+            <a-select
+v-model="schema.type"
                       :options="toOptions(dictValueTypeKey)"
                       placeholder="类型"
                       :style="{ width: '35%' }" />
             <!-- 参数值 -->
-            <a-input v-model="schema.name"
+            <a-input
+v-model="schema.name"
                      placeholder="参数名称"
                      :style="{ width: '65%' }" />
           </a-input-group>
           <!-- 操作按钮 -->
           <div class="extra-action">
             <!-- 删除 -->
-            <a-button class="minus-icon-wrapper icon-button"
+            <a-button
+class="minus-icon-wrapper icon-button"
                       title="移除参数"
                       @click="removeExtraParam(index)">
               <icon-minus />
@@ -62,19 +69,21 @@
         <!-- 参数操作 -->
         <a-space class="param-addition">
           <!-- 快捷定义 -->
-          <a-tag v-for="definedExtraKey in definedExtraKeys"
+          <a-tag
+v-for="definedExtraKey in definedExtraKeys"
                  color="arcoblue"
                  :title="`添加参数 ${definedExtraKey.name}`"
-                 @click="addExtraParam(definedExtraKey.name, definedExtraKey.type)"
                  checkable
-                 checked>
+                 checked
+                 @click="addExtraParam(definedExtraKey.name, definedExtraKey.type)">
             {{ definedExtraKey.name }}
           </a-tag>
           <!-- 添加参数 -->
-          <a-button title="添加参数"
+          <a-button
+title="添加参数"
                     style="width: 140px;"
-                    @click="addExtraParam(undefined,undefined)"
-                    long>
+                    long
+                    @click="addExtraParam(undefined,undefined)">
             <icon-plus />
           </a-button>
         </a-space>
@@ -85,7 +94,7 @@
 
 <script lang="ts">
   export default {
-    name: 'dictKeyFormModal'
+    name: 'DictKeyFormModal'
   };
 </script>
 

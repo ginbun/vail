@@ -1,12 +1,14 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
-    <alarm-policy-table ref="table"
+    <alarm-policy-table
+ref="table"
                         @open-add="() => modal.openAdd()"
                         @open-update="(e: any) => modal.openUpdate(e)"
                         @open-copy="(e: any) => modal.openCopy(e)" />
     <!-- 添加修改模态框 -->
-    <alarm-policy-form-modal ref="modal"
+    <alarm-policy-form-modal
+ref="modal"
                              @added="reload"
                              @updated="reload" />
   </div>
@@ -14,7 +16,7 @@
 
 <script lang="ts">
   export default {
-    name: 'alarmPolicy'
+    name: 'AlarmPolicy'
   };
 </script>
 

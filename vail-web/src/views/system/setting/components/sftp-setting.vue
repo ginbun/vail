@@ -3,16 +3,19 @@
     <!-- 标题 -->
     <h3 class="setting-header">SFTP 设置</h3>
     <!-- 表单 -->
-    <a-form :model="setting"
-            ref="formRef"
+    <a-form
+ref="formRef"
+            :model="setting"
             class="setting-form"
             label-align="right"
             :auto-label-width="true">
       <!-- 重复文件备份 -->
-      <a-form-item label="重复文件备份"
+      <a-form-item
+label="重复文件备份"
                    :rules="[{required: true, message: '请选择此项'}]"
                    hide-asterisk>
-        <a-switch v-model="setting['sftp.upload-present-backup']"
+        <a-switch
+v-model="setting['sftp.upload-present-backup']"
                   type="round"
                   checked-value="true"
                   unchecked-value="false"
@@ -23,10 +26,12 @@
         </template>
       </a-form-item>
       <!-- 备份文件名称 -->
-      <a-form-item label="备份文件名称"
+      <a-form-item
+label="备份文件名称"
                    :rules="[{required: true, message: '请输入备份文件名称'}]"
                    hide-asterisk>
-        <a-input v-model="setting['sftp.upload-backup-file-name']"
+        <a-input
+v-model="setting['sftp.upload-backup-file-name']"
                  class="input-wrapper"
                  placeholder="请输入备份文件名称模板"
                  allow-clear />
@@ -35,10 +40,12 @@
         </template>
       </a-form-item>
       <!-- 文件预览大小 -->
-      <a-form-item label="文件预览大小"
+      <a-form-item
+label="文件预览大小"
                    :rules="[{required: true, message: '请输入文件预览大小'}]"
                    hide-asterisk>
-        <a-input-number v-model="setting['sftp.preview-size']"
+        <a-input-number
+v-model="setting['sftp.preview-size']"
                         class="input-wrapper"
                         :min="0"
                         :max="200"
@@ -56,7 +63,8 @@
       <!-- 按钮 -->
       <a-form-item v-permission="['infra:system-setting:update']">
         <!-- 保存 -->
-        <a-button type="primary"
+        <a-button
+type="primary"
                   size="small"
                   @click="save">
           保存
@@ -68,7 +76,7 @@
 
 <script lang="ts">
   export default {
-    name: 'sftpSetting',
+    name: 'SftpSetting',
   };
 </script>
 

@@ -5,7 +5,8 @@
     <div v-if="!messageList.length && fetchLoading">
       <!-- 加载中 -->
       <a-skeleton class="skeleton-wrapper" :animation="true">
-        <a-skeleton-line :rows="3"
+        <a-skeleton-line
+:rows="3"
                          :line-height="96"
                          :line-spacing="8" />
       </a-skeleton>
@@ -20,7 +21,8 @@
     <div v-else class="message-list-wrapper">
       <a-scrollbar style="overflow-y: auto; height: 100%;">
         <!-- 消息列表-->
-        <div v-for="message in messageList"
+        <div
+v-for="message in messageList"
              class="message-item"
              :class="[ message.status === MessageStatus.READ ? 'message-item-read' : 'message-item-unread' ]"
              @click="emits('click', message)">
@@ -41,7 +43,8 @@
             <!-- 操作 -->
             <div class="message-item-title-actions">
               <!-- 删除 -->
-              <a-button size="mini"
+              <a-button
+size="mini"
                         type="text"
                         status="danger"
                         @click.stop="emits('delete', message)">
@@ -50,24 +53,27 @@
             </div>
           </div>
           <!-- 内容 -->
-          <div v-html="message.contentHtml" class="message-item-content" />
+          <div class="message-item-content" v-html="message.contentHtml" />
           <!-- 时间 -->
           <div class="message-item-time">
             {{ dateFormat(new Date(message.createTime)) }}
           </div>
         </div>
         <!-- 加载中 -->
-        <a-skeleton v-if="fetchLoading"
+        <a-skeleton
+v-if="fetchLoading"
                     class="skeleton-wrapper"
                     :animation="true">
-          <a-skeleton-line :rows="3"
+          <a-skeleton-line
+:rows="3"
                            :line-height="96"
                            :line-spacing="8" />
         </a-skeleton>
         <!-- 加载更多 -->
         <div v-if="hasMore" class="load-more-wrapper">
-          <a-button size="small"
-                    :fetchLoading="fetchLoading"
+          <a-button
+size="small"
+                    :fetch-loading="fetchLoading"
                     @click="() => emits('load')">
             加载更多
           </a-button>
@@ -79,7 +85,7 @@
 
 <script lang="ts">
   export default {
-    name: 'messageBoxList'
+    name: 'MessageBoxList'
   };
 </script>
 

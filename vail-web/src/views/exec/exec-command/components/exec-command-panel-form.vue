@@ -11,7 +11,8 @@
     </div>
     <!-- 命令表单 -->
     <slot name="form" />
-    <a-divider v-if="schemaCount"
+    <a-divider
+v-if="schemaCount"
                orientation="center"
                style="margin: 12px 0 26px 0;">
       命令参数
@@ -23,7 +24,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execCommandPanelForm'
+    name: 'ExecCommandPanelForm'
   };
 </script>
 

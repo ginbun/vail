@@ -1,7 +1,8 @@
 <template>
   <div class="charts-container">
-    <a-grid :cols="chartCols" :colGap="16" :rowGap="16">
-      <a-grid-item v-for="(item, index) of chartItems"
+    <a-grid :cols="chartCols" :col-gap="16" :row-gap="16">
+      <a-grid-item
+v-for="(item, index) of chartItems"
                    :span="item.option?.span || 1"
                    :style="{ height: (chartCompose ? '400px': '270px') }">
         <metrics-chart v-bind="item" :ref="(el: any) => setRef(index, el)" />
@@ -12,7 +13,7 @@
 
 <script lang="ts">
   export default {
-    name: 'metricsChartTab'
+    name: 'MetricsChartTab'
   };
 </script>
 

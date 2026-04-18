@@ -1,6 +1,6 @@
 import type { ClearRequest, DataGrid, OrderDirection, Pagination } from '@/types/global';
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 /**
  * 操作日志查询参数
@@ -61,7 +61,7 @@ export function deleteOperatorLog(idList: Array<number>) {
   return axios.delete('/infra/operator-log/delete', {
     params: { idList },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

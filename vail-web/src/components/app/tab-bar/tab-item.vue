@@ -1,14 +1,17 @@
 <template>
-  <a-dropdown trigger="contextMenu"
+  <a-dropdown
+trigger="contextMenu"
               :popup-max-height="false"
               @select="actionSelect">
-    <span class="arco-tag arco-tag-size-medium arco-tag-checked"
+    <span
+class="arco-tag arco-tag-size-medium arco-tag-checked"
           :class="{ 'link-activated': itemData?.fullPath === route.fullPath }"
           @click="goto(itemData as TagProps)">
       <span class="tag-link">
         {{ itemData.title }}
       </span>
-      <span v-if="closeable"
+      <span
+v-if="closeable"
             class="arco-icon-hover arco-tag-icon-hover arco-icon-hover-size-medium arco-tag-close-btn"
             @click.stop="tagClose(itemData as TagProps, index)">
         <icon-close />

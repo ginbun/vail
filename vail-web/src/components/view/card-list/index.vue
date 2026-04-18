@@ -18,49 +18,57 @@
     <!-- 身体部分 -->
     <a-spin class="card-list-layout-body" :loading="loading as boolean">
       <!-- 卡片列表 -->
-      <a-row v-if="list?.length !== 0"
+      <a-row
+v-if="list?.length !== 0"
              :gutter="cardLayoutGutter as any"
              align="stretch">
         <!-- 添加卡片 -->
-        <a-col v-permission="addPermission"
-               v-if="createCardPosition === 'head'"
+        <a-col
+v-if="createCardPosition === 'head'"
+               v-permission="addPermission"
                v-bind="cardLayoutCols">
           <create-card v-bind="props" @click="emits('add')" />
         </a-col>
         <!-- 数据卡片 -->
-        <a-col v-for="(item, index) in list"
+        <a-col
+v-for="(item, index) in list"
                :key="item[rowKey]"
                v-bind="cardLayoutCols"
                :class="{ 'disabled-col': item.disabled === true }">
           <!-- 右键菜单 -->
-          <a-dropdown trigger="contextMenu"
+          <a-dropdown
+trigger="contextMenu"
                       :disabled="!$slots.contextMenu"
-                      alignPoint>
+                      align-point>
             <!-- 卡片 -->
-            <card-item v-bind="props"
+            <card-item
+v-bind="props"
                        :index="index"
                        :item="item"
                        @emitter="dispatchEmitter">
               <!-- 自定义插槽 -->
               <template v-for="slot in Object.keys($slots)" :key="slot" #[slot]>
-                <slot :name="slot"
+                <slot
+:name="slot"
                       :record="item"
                       :index="index"
-                      :rowKey="item[rowKey]" />
+                      :row-key="item[rowKey]" />
               </template>
             </card-item>
             <!-- 右键菜单 -->
             <template v-if="$slots.contextMenu" #content>
-              <slot name="contextMenu"
+              <slot
+name="contextMenu"
                     :record="item"
                     :index="index"
-                    :rowKey="item[rowKey]" />
+                    :row-key="item[rowKey]" />
             </template>
           </a-dropdown>
         </a-col>
         <!-- 添加卡片 -->
-        <a-col v-permission="addPermission"
-               v-if="createCardPosition === 'tail'"
+        <a-col
+v-if="createCardPosition === 'tail'"
+               v-permission="addPermission"
                v-bind="cardLayoutCols">
           <create-card v-bind="props" @click="emits('add')" />
         </a-col>
@@ -77,7 +85,7 @@
 
 <script lang="ts">
   export default {
-    name: 'cardList'
+    name: 'CardList'
   };
 </script>
 

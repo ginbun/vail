@@ -1,6 +1,7 @@
 <template>
   <a-spin class="main-container" :loading="loading">
-    <a-descriptions title="关于"
+    <a-descriptions
+title="关于"
                     class="detail-container"
                     size="large"
                     :align="{ label: 'right', value: 'left' }"
@@ -11,7 +12,8 @@
         <!-- 前端版本 -->
         <span>{{ 'v' + webVersion }}</span>
         <!-- 不一致提示 -->
-        <b v-if="app.version && webVersion !== app.version"
+        <b
+v-if="app.version && webVersion !== app.version"
            class="span-red ml8">当前前端版本与后端版本不一致, 请使用 Ctrl + F5 强制刷新页面</b>
       </a-descriptions-item>
       <!-- 当前后端版本 -->
@@ -23,7 +25,8 @@
         <!-- 最新版本 -->
         <span>{{ repo.tagName || '-' }}</span>
         <!-- 升级提示 -->
-        <b v-if="app.version && repo.tagName && ('v' + app.version) !== repo.tagName"
+        <b
+v-if="app.version && repo.tagName && ('v' + app.version) !== repo.tagName"
            class="span-green ml8">新版本已发布, 请及时升级版本</b>
       </a-descriptions-item>
       <!-- 最近更新时间 -->
@@ -32,7 +35,8 @@
       </a-descriptions-item>
       <!-- 最新更新日志 -->
       <a-descriptions-item label="最新更新日志">
-        <a-textarea v-model="repo.body"
+        <a-textarea
+v-model="repo.body"
                     :auto-size="{ minRows: 3, maxRows: 16 }"
                     readonly>
         </a-textarea>
@@ -43,7 +47,7 @@
 
 <script lang="ts">
   export default {
-    name: 'aboutSetting',
+    name: 'AboutSetting',
   };
 </script>
 

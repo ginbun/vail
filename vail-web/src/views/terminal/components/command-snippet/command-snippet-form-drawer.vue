@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             width="40%"
             :title="title"
             :mask-closable="false"
@@ -9,14 +10,16 @@
             :on-before-ok="handlerOk"
             @cancel="handleClose">
     <a-spin class="full form-container" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="commandSnippetFormRules">
         <!-- 名称 -->
         <a-form-item field="name" label="名称">
-          <a-input v-model="formModel.name"
+          <a-input
+v-model="formModel.name"
                    placeholder="请输入名称"
                    allow-clear />
         </a-form-item>
@@ -25,10 +28,12 @@
           <command-snippet-group-selector v-model="formModel.groupId" />
         </a-form-item>
         <!-- 代码片段 -->
-        <a-form-item field="command"
+        <a-form-item
+field="command"
                      label="代码片段"
                      :hide-label="true">
-          <editor v-model="formModel.command"
+          <editor
+v-model="formModel.command"
                   container-class="command-editor"
                   language="shell"
                   theme="vs-dark"
@@ -42,7 +47,7 @@
 
 <script lang="ts">
   export default {
-    name: 'commandSnippetFormDrawer'
+    name: 'CommandSnippetFormDrawer'
   };
 </script>
 

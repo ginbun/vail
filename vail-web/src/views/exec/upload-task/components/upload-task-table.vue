@@ -1,47 +1,54 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
-                  :itemOptions="{ 5: { span: 2 } }"
+                  :item-options="{ 5: { span: 2 } }"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- id -->
       <a-form-item field="id" label="id">
-        <a-input-number v-model="formModel.id"
+        <a-input-number
+v-model="formModel.id"
                         placeholder="请输入id"
                         allow-clear
                         hide-button />
       </a-form-item>
       <!-- 上传用户 -->
       <a-form-item field="userId" label="上传用户">
-        <user-selector v-model="formModel.userId"
+        <user-selector
+v-model="formModel.userId"
                        placeholder="请选择上传用户"
                        allow-clear />
       </a-form-item>
       <!-- 远程路径 -->
       <a-form-item field="remotePath" label="远程路径">
-        <a-input v-model="formModel.remotePath"
+        <a-input
+v-model="formModel.remotePath"
                  placeholder="请输入远程路径"
                  allow-clear />
       </a-form-item>
       <!-- 上传描述 -->
       <a-form-item field="description" label="上传描述">
-        <a-input v-model="formModel.description"
+        <a-input
+v-model="formModel.description"
                  placeholder="请输入上传描述"
                  allow-clear />
       </a-form-item>
       <!-- 上传状态 -->
       <a-form-item field="status" label="上传状态">
-        <a-select v-model="formModel.status"
+        <a-select
+v-model="formModel.status"
                   :options="toOptions(uploadTaskStatusKey)"
                   placeholder="请选择状态"
                   allow-clear />
       </a-form-item>
       <!-- 上传时间 -->
       <a-form-item field="createTimeRange" label="上传时间">
-        <a-range-picker v-model="formModel.createTimeRange"
+        <a-range-picker
+v-model="formModel.createTimeRange"
                         :time-picker-props="{ defaultValue: ['00:00:00', '23:59:59'] }"
                         show-time
                         format="YYYY-MM-DD HH:mm:ss" />
@@ -62,7 +69,8 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 上传 -->
-          <a-button v-permission="['exec:upload-task:upload']"
+          <a-button
+v-permission="['exec:upload-task:upload']"
                     type="primary"
                     @click="router.push({ name: 'batchUpload' })">
             上传
@@ -71,7 +79,8 @@
             </template>
           </a-button>
           <!-- 清理 -->
-          <a-button v-permission="['exec:upload-task:management:clear']"
+          <a-button
+v-permission="['exec:upload-task:management:clear']"
                     status="danger"
                     @click="openClear">
             清理
@@ -80,11 +89,13 @@
             </template>
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm :content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
+          <a-popconfirm
+:content="`确认删除选中的 ${selectedKeys.length} 条记录吗?`"
                         position="br"
                         type="warning"
                         @ok="deleteSelectedRows">
-            <a-button v-permission="['exec:upload-task:delete']"
+            <a-button
+v-permission="['exec:upload-task:delete']"
                       type="primary"
                       status="danger"
                       :disabled="selectedKeys.length === 0">
@@ -95,7 +106,8 @@
             </a-button>
           </a-popconfirm>
           <!-- 调整 -->
-          <table-adjust :columns="columns"
+          <table-adjust
+:columns="columns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -103,9 +115,10 @@
       </div>
     </template>
     <!-- table -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+ref="tableRef"
+             v-model:selected-keys="selectedKeys"
              row-key="id"
-             ref="tableRef"
              class="table-resize"
              :loading="loading"
              :columns="tableColumns"
@@ -144,30 +157,35 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 详情 -->
-          <a-button v-permission="['exec:upload-task:query']"
+          <a-button
+v-permission="['exec:upload-task:query']"
                     type="text"
                     size="mini"
                     @click="router.push({ name: 'batchUpload', query: { id: record.id } })">
             详情
           </a-button>
           <!-- 取消 -->
-          <a-popconfirm v-if="record.status === UploadTaskStatus.WAITING || record.status === UploadTaskStatus.UPLOADING"
+          <a-popconfirm
+v-if="record.status === UploadTaskStatus.WAITING || record.status === UploadTaskStatus.UPLOADING"
                         content="确定要取消上传吗?"
                         position="left"
                         type="warning"
                         @ok="doCancel(record)">
-            <a-button v-permission="['exec:upload-task:upload']"
+            <a-button
+v-permission="['exec:upload-task:upload']"
                       type="text"
                       size="mini">
               取消
             </a-button>
           </a-popconfirm>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['exec:upload-task:delete']"
+            <a-button
+v-permission="['exec:upload-task:delete']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -182,7 +200,7 @@
 
 <script lang="ts">
   export default {
-    name: 'uploadTaskTable'
+    name: 'UploadTaskTable'
   };
 </script>
 

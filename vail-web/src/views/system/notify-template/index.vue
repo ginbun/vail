@@ -1,12 +1,14 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 列表-表格 -->
-    <notify-template-table ref="table"
+    <notify-template-table
+ref="table"
                            @open-add="() => drawer.openAdd()"
                            @open-copy="(e: any) => drawer.openCopy(e)"
                            @open-update="(e: any) => drawer.openUpdate(e)" />
     <!-- 添加修改抽屉 -->
-    <notify-template-form-drawer ref="drawer"
+    <notify-template-form-drawer
+ref="drawer"
                                  @added="reload"
                                  @updated="reload" />
   </div>
@@ -14,7 +16,7 @@
 
 <script lang="ts">
   export default {
-    name: 'notifyTemplate'
+    name: 'NotifyTemplate'
   };
 </script>
 

@@ -1236,6 +1236,10 @@ fn normalize_pagination(page: Option<i64>, limit: Option<i64>) -> (i64, i64, i64
     (page, limit, offset)
 }
 
+fn verify_orion_password(raw_password: &str, password_hash: &str) -> bool {
+    bcrypt::verify(raw_password, password_hash).unwrap_or(false)
+}
+
 fn map_host_row(host: OrionHostAggregate) -> OrionHostResponse {
     let status = host.status_label().to_string();
     OrionHostResponse {
@@ -1284,8 +1288,7 @@ async fn orion_login(
     .await?
     .ok_or_else(|| AppError::Auth("User not found".to_string()))?;
 
-    let password_ok = bcrypt::verify(&payload.password, &user.2).unwrap_or(false)
-        || (user.1 == "admin" && payload.password == "0f2797f2182804d0cc7f0b85d254c146");
+    let password_ok = verify_orion_password(&payload.password, &user.2);
 
     if !password_ok {
         sqlx::query(
@@ -1307,7 +1310,7 @@ async fn orion_login(
         user.0,
         &user.1,
         &session_id,
-        &state.config.jwt.secret,
+        &state.config.jwt,
         state.config.jwt.expiration,
     );
 
@@ -1337,7 +1340,7 @@ async fn orion_user_aggregate(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let user = sqlx::query_as::<_, (i64, String, Option<String>, Option<String>)>(
         "SELECT id, username, nickname, avatar FROM sys_user WHERE id = $1 AND deleted = 0",
@@ -1419,7 +1422,7 @@ async fn orion_tips_tipped(
     headers: HeaderMap,
     Query(query): Query<OrionKeyQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let key = query
         .key
         .map(|k| k.trim().to_string())
@@ -1439,7 +1442,7 @@ async fn orion_tips_get(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     Ok(OrionResponse::ok(get_tipped_keys(&state, user_id).await))
 }
 
@@ -1447,7 +1450,7 @@ async fn orion_user_menu(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let rows = sqlx::query_as::<
         _,
@@ -2073,7 +2076,7 @@ async fn orion_host_extra_get(
     headers: HeaderMap,
     Query(query): Query<OrionHostExtraQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let host_id = parse_required_id(query.host_id, "hostId")?;
     let item = query
         .item
@@ -2104,7 +2107,7 @@ async fn orion_host_extra_update(
     headers: HeaderMap,
     Json(payload): Json<OrionHostExtraUpdateRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let host_id = parse_required_id(payload.host_id, "hostId")?;
     let item = payload
         .item
@@ -2569,7 +2572,7 @@ async fn orion_host_key_create(
     headers: HeaderMap,
     Json(payload): Json<OrionHostKeyUpsertRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let name = sanitize_search(payload.name)
         .ok_or_else(|| AppError::BadRequest("name is required".to_string()))?;
@@ -2613,7 +2616,7 @@ async fn orion_host_key_update(
     headers: HeaderMap,
     Json(payload): Json<OrionHostKeyUpsertRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(payload.id, "id")?;
 
     let name = sanitize_search(payload.name);
@@ -2676,7 +2679,7 @@ async fn orion_host_key_get(
     headers: HeaderMap,
     Query(query): Query<OrionIdQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(query.id, "id")?;
 
     let row = asset_service::get_host_key(&state.db, id).await?;
@@ -2687,7 +2690,7 @@ async fn orion_host_key_list(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let list = asset_service::list_host_keys(&state.db)
         .await?
@@ -2703,7 +2706,7 @@ async fn orion_host_key_query(
     headers: HeaderMap,
     Json(payload): Json<OrionHostKeyQueryRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let (page, limit, offset) = normalize_pagination(payload.page, payload.limit);
     let (total, rows) = asset_service::query_host_keys(
         &state.db,
@@ -2733,7 +2736,7 @@ async fn orion_host_key_delete(
     headers: HeaderMap,
     Query(query): Query<OrionIdQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(query.id, "id")?;
 
     asset_service::delete_host_key(&state.db, id).await?;
@@ -2746,7 +2749,7 @@ async fn orion_host_key_batch_delete(
     headers: HeaderMap,
     Query(query): Query<OrionDeleteIdsQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id_list = sanitize_search(query.id_list)
         .ok_or_else(|| AppError::BadRequest("idList is required".to_string()))?;
 
@@ -2765,7 +2768,7 @@ async fn orion_host_identity_create(
     headers: HeaderMap,
     Json(payload): Json<OrionHostIdentityUpsertRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let name = sanitize_search(payload.name)
         .ok_or_else(|| AppError::BadRequest("name is required".to_string()))?;
     let identity_type = payload
@@ -2810,7 +2813,7 @@ async fn orion_host_identity_update(
     headers: HeaderMap,
     Json(payload): Json<OrionHostIdentityUpsertRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(payload.id, "id")?;
 
     let identity_type = payload
@@ -2866,7 +2869,7 @@ async fn orion_host_identity_get(
     headers: HeaderMap,
     Query(query): Query<OrionIdQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(query.id, "id")?;
 
     let item = asset_service::get_host_identity(&state.db, id).await?;
@@ -2877,7 +2880,7 @@ async fn orion_host_identity_list(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let items = asset_service::list_host_identities(&state.db)
         .await?
         .into_iter()
@@ -2891,7 +2894,7 @@ async fn orion_host_identity_query(
     headers: HeaderMap,
     Json(payload): Json<OrionHostIdentityQueryRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let (page, limit, offset) = normalize_pagination(payload.page, payload.limit);
 
     let (total, rows) = asset_service::query_host_identities(
@@ -2926,7 +2929,7 @@ async fn orion_host_identity_delete(
     headers: HeaderMap,
     Query(query): Query<OrionIdQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(query.id, "id")?;
     asset_service::delete_host_identity(&state.db, id).await?;
     Ok(OrionResponse::ok(true))
@@ -2937,7 +2940,7 @@ async fn orion_host_identity_batch_delete(
     headers: HeaderMap,
     Query(query): Query<OrionDeleteIdsQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id_list = sanitize_search(query.id_list)
         .ok_or_else(|| AppError::BadRequest("idList is required".to_string()))?;
     let ids = id_list
@@ -2953,7 +2956,7 @@ async fn orion_data_grant_host_group(
     headers: HeaderMap,
     Json(payload): Json<OrionAssetDataGrantRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let scope = asset_service::resolve_grant_scope(payload.user_id, payload.role_id)?;
     asset_service::replace_asset_grants(
         &state.db,
@@ -2970,7 +2973,7 @@ async fn orion_data_grant_get_host_group(
     headers: HeaderMap,
     Query(query): Query<OrionAssetAuthorizedDataQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let scope = asset_service::resolve_grant_scope(query.user_id, query.role_id)?;
     let list = asset_service::list_asset_grants(&state.db, scope, "host-group").await?;
     Ok(OrionResponse::ok(list))
@@ -2981,7 +2984,7 @@ async fn orion_data_grant_host_key(
     headers: HeaderMap,
     Json(payload): Json<OrionAssetDataGrantRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let scope = asset_service::resolve_grant_scope(payload.user_id, payload.role_id)?;
     asset_service::replace_asset_grants(
         &state.db,
@@ -2998,7 +3001,7 @@ async fn orion_data_grant_get_host_key(
     headers: HeaderMap,
     Query(query): Query<OrionAssetAuthorizedDataQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let scope = asset_service::resolve_grant_scope(query.user_id, query.role_id)?;
     let list = asset_service::list_asset_grants(&state.db, scope, "host-key").await?;
     Ok(OrionResponse::ok(list))
@@ -3009,7 +3012,7 @@ async fn orion_data_grant_host_identity(
     headers: HeaderMap,
     Json(payload): Json<OrionAssetDataGrantRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let scope = asset_service::resolve_grant_scope(payload.user_id, payload.role_id)?;
     asset_service::replace_asset_grants(
         &state.db,
@@ -3026,7 +3029,7 @@ async fn orion_data_grant_get_host_identity(
     headers: HeaderMap,
     Query(query): Query<OrionAssetAuthorizedDataQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let scope = asset_service::resolve_grant_scope(query.user_id, query.role_id)?;
     let list = asset_service::list_asset_grants(&state.db, scope, "host-identity").await?;
     Ok(OrionResponse::ok(list))
@@ -3039,7 +3042,7 @@ async fn orion_authorized_data_current_host(
     headers: HeaderMap,
     Query(_query): Query<OrionHostListQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     // Get user's authorized host groups (both direct user grants and role-based grants)
     let authorized_group_ids = sqlx::query_scalar::<_, i64>(
@@ -3159,7 +3162,7 @@ async fn orion_authorized_data_current_host_key(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     // Get authorized key IDs (both direct user grants and role-based grants)
     let authorized_key_ids = sqlx::query_scalar::<_, i64>(
@@ -3215,7 +3218,7 @@ async fn orion_authorized_data_current_host_identity(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     // Get authorized identity IDs (both direct user grants and role-based grants)
     let authorized_identity_ids = sqlx::query_scalar::<_, i64>(
@@ -3377,7 +3380,7 @@ async fn orion_exec_dispatch(
     Query(query): Query<OrionCompatQuery>,
     body: Option<Json<serde_json::Value>>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let payload = body_json(body);
 
     if module_name == "exec-command" {
@@ -3914,7 +3917,7 @@ async fn orion_terminal_connect_log_query(
     Query(query): Query<OrionCompatQuery>,
     body: Option<Json<serde_json::Value>>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _ = guard::current_user_id(&headers, &state.config.jwt)?;
     let payload = body_json(body);
     Ok(orion_ok(
         query_terminal_module(
@@ -3933,7 +3936,7 @@ async fn orion_terminal_connect_log_count(
     Query(query): Query<OrionCompatQuery>,
     body: Option<Json<serde_json::Value>>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _ = guard::current_user_id(&headers, &state.config.jwt)?;
     let payload = body_json(body);
     Ok(orion_ok(
         count_terminal_module(
@@ -3951,7 +3954,7 @@ async fn orion_terminal_connect_log_delete(
     headers: HeaderMap,
     Query(query): Query<OrionCompatQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _ = guard::current_user_id(&headers, &state.config.jwt)?;
     Ok(orion_ok(
         delete_terminal_module(&state, OrionCompatModule::TerminalConnectLog, &query).await?,
     ))
@@ -3961,7 +3964,7 @@ async fn orion_terminal_connect_log_clear(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _ = guard::current_user_id(&headers, &state.config.jwt)?;
     Ok(orion_ok(
         clear_terminal_module(&state, OrionCompatModule::TerminalConnectLog).await?,
     ))
@@ -3972,7 +3975,7 @@ async fn orion_terminal_connect_log_sessions(
     headers: HeaderMap,
     body: Option<Json<serde_json::Value>>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _ = guard::current_user_id(&headers, &state.config.jwt)?;
     let payload = body_json(body);
     let rows =
         compat_service::list_records(&state.db, OrionCompatModule::TerminalConnectLog).await?;
@@ -3984,7 +3987,7 @@ async fn orion_terminal_connect_log_latest(
     headers: HeaderMap,
     body: Option<Json<serde_json::Value>>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _ = guard::current_user_id(&headers, &state.config.jwt)?;
     let payload = body_json(body);
     let limit = payload
         .get("limit")
@@ -4007,7 +4010,7 @@ async fn orion_terminal_connect_log_force_offline(
     Query(query): Query<OrionCompatQuery>,
     body: Option<Json<serde_json::Value>>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let payload = body_json(body);
     let id = query
         .id
@@ -4032,7 +4035,7 @@ async fn orion_terminal_file_log_query(
     Query(query): Query<OrionCompatQuery>,
     body: Option<Json<serde_json::Value>>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _ = guard::current_user_id(&headers, &state.config.jwt)?;
     let payload = body_json(body);
     Ok(orion_ok(
         query_terminal_module(&state, OrionCompatModule::TerminalFileLog, &payload, &query).await?,
@@ -4045,7 +4048,7 @@ async fn orion_terminal_file_log_count(
     Query(query): Query<OrionCompatQuery>,
     body: Option<Json<serde_json::Value>>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _ = guard::current_user_id(&headers, &state.config.jwt)?;
     let payload = body_json(body);
     Ok(orion_ok(
         count_terminal_module(&state, OrionCompatModule::TerminalFileLog, &payload, &query).await?,
@@ -4057,7 +4060,7 @@ async fn orion_terminal_file_log_delete(
     headers: HeaderMap,
     Query(query): Query<OrionCompatQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _ = guard::current_user_id(&headers, &state.config.jwt)?;
     Ok(orion_ok(
         delete_terminal_module(&state, OrionCompatModule::TerminalFileLog, &query).await?,
     ))
@@ -4071,7 +4074,7 @@ async fn orion_terminal_dispatch(
     Query(query): Query<OrionCompatQuery>,
     body: Option<Json<serde_json::Value>>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let module = OrionCompatModule::from_terminal(&module_name)
         .ok_or_else(|| AppError::NotFound("unsupported terminal module".to_string()))?;
     let payload = body_json(body);
@@ -4327,7 +4330,7 @@ async fn orion_infra_dispatch(
     Query(query): Query<OrionCompatQuery>,
     body: Option<Json<serde_json::Value>>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     if module_name == "expression" && action == "cron-next" && method == Method::GET {
         let expr = query.expression.unwrap_or_default();
         let valid = !expr.trim().is_empty();
@@ -4575,7 +4578,7 @@ async fn orion_compat_fallback(
     method: Method,
     path: axum::extract::Path<String>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let path = path.0;
     tracing::warn!(method = %method, path = %path, "handled by Orion compatibility fallback");
 
@@ -4976,7 +4979,7 @@ async fn current_user_tuple(
     state: &AppState,
     headers: &HeaderMap,
 ) -> AppResult<(i64, String, String, String, String)> {
-    let user_id = guard::current_user_id(headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(headers, &state.config.jwt)?;
     let user = sqlx::query_as::<_, (i64, String, Option<String>, Option<String>, Option<String>)>(
         "SELECT id, username, nickname, avatar, email FROM sys_user WHERE id = $1 AND deleted = 0",
     )
@@ -5046,7 +5049,7 @@ async fn orion_mine_update_user(
     headers: HeaderMap,
     Json(payload): Json<OrionMineUpdateUserRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     sqlx::query(
         "UPDATE sys_user SET nickname = COALESCE($1, nickname), avatar = COALESCE($2, avatar), phone = COALESCE($3, phone), email = COALESCE($4, email), update_time = NOW() WHERE id = $5 AND deleted = 0",
     )
@@ -5650,7 +5653,7 @@ async fn orion_system_message_list(
     headers: HeaderMap,
     Json(payload): Json<OrionSystemMessageQueryRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let (_page, limit, offset) = normalize_pagination(payload.page, payload.limit);
     let effective_offset = if payload.max_id.is_some() { 0 } else { offset };
     let classify = sanitize_search(payload.classify);
@@ -5719,7 +5722,7 @@ async fn orion_system_message_count(
     headers: HeaderMap,
     Query(query): Query<OrionSystemMessageCountQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let query_unread = query.query_unread.unwrap_or(false);
 
     let rows = sqlx::query_as::<_, (String, i64)>(
@@ -5742,7 +5745,7 @@ async fn orion_system_message_has_unread(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let has_unread = sqlx::query_scalar::<_, bool>(
         "SELECT EXISTS(
             SELECT 1 FROM sys_system_message
@@ -5760,7 +5763,7 @@ async fn orion_system_message_read(
     headers: HeaderMap,
     Query(query): Query<OrionIdQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(query.id, "id")?;
     sqlx::query(
         "UPDATE sys_system_message
@@ -5781,7 +5784,7 @@ async fn orion_system_message_read_all(
     headers: HeaderMap,
     Query(query): Query<OrionSystemMessageReadAllQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let classify = sanitize_search(query.classify);
     sqlx::query(
         "UPDATE sys_system_message
@@ -5802,7 +5805,7 @@ async fn orion_system_message_delete(
     headers: HeaderMap,
     Query(query): Query<OrionIdQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(query.id, "id")?;
     sqlx::query(
         "DELETE FROM sys_system_message WHERE id = $1 AND (user_id IS NULL OR user_id = $2)",
@@ -5819,7 +5822,7 @@ async fn orion_system_message_clear(
     headers: HeaderMap,
     Query(query): Query<OrionSystemMessageReadAllQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let classify = sanitize_search(query.classify);
     sqlx::query(
         "DELETE FROM sys_system_message
@@ -5838,7 +5841,7 @@ async fn orion_infra_statistics_get_workplace(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let user = sqlx::query_as::<_, (String, Option<String>, Option<i64>)>(
         "SELECT username, nickname,
@@ -5954,7 +5957,7 @@ async fn orion_exec_statistics_get_workplace(
     headers: HeaderMap,
     State(state): State<AppState>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let data = OrionExecWorkplaceStatisticsResponse {
         exec_job_count: 0,
@@ -5974,7 +5977,7 @@ async fn orion_terminal_statistics_get_workplace(
     headers: HeaderMap,
     State(state): State<AppState>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let rows =
         compat_service::list_records(&state.db, OrionCompatModule::TerminalConnectLog).await?;
@@ -6067,7 +6070,7 @@ async fn orion_mine_login_history(
     headers: HeaderMap,
     Query(query): Query<OrionCountQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let limit = query.count.unwrap_or(10).clamp(1, 100);
     let rows = sqlx::query_as::<_, (i64, Option<String>, Option<String>, Option<String>, i16, Option<String>, i64)>(
         "SELECT id, ip, location, user_agent, result, error_message, EXTRACT(EPOCH FROM create_time)::bigint * 1000
@@ -6102,7 +6105,7 @@ async fn orion_mine_user_session(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let rows = sqlx::query_as::<_, (i64, String, Option<String>, i64)>(
         "SELECT id, session_id::text, NULLIF(revoked_at::text, ''), EXTRACT(EPOCH FROM created_at)::bigint * 1000
          FROM auth_refresh_token
@@ -6138,7 +6141,7 @@ async fn orion_mine_offline_session(
     headers: HeaderMap,
     Json(payload): Json<OrionSessionOfflineRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let _ = payload.user_id;
     sqlx::query(
         "UPDATE auth_refresh_token SET revoked_at = NOW() WHERE user_id = $1 AND EXTRACT(EPOCH FROM created_at)::bigint * 1000 = $2 AND revoked_at IS NULL",
@@ -6289,7 +6292,7 @@ async fn orion_mine_query_operator_log(
     headers: HeaderMap,
     Json(payload): Json<OrionOperatorLogQueryRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     Ok(OrionResponse::ok(
         query_operator_logs(&state, Some(user_id), &payload).await?,
     ))
@@ -6300,7 +6303,7 @@ async fn orion_mine_update_password(
     headers: HeaderMap,
     Json(payload): Json<OrionMineUpdatePasswordRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let old_hash = sqlx::query_scalar::<_, String>(
         "SELECT password FROM sys_user WHERE id = $1 AND deleted = 0",
     )
@@ -7317,7 +7320,7 @@ async fn orion_terminal_access(
     headers: HeaderMap,
     Json(payload): Json<OrionTerminalAccessRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let host_id = parse_required_id(payload.host_id, "hostId")?;
     let token = format!(
         "term:{}:{}:{}:{}",
@@ -7333,7 +7336,7 @@ async fn orion_terminal_transfer(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     Ok(OrionResponse::ok(format!(
         "transfer:{}:{}",
         user_id,
@@ -7372,6 +7375,13 @@ mod tests {
 
         assert_eq!(map_host_row(enabled).status, "ENABLED");
         assert_eq!(map_host_row(disabled).status, "DISABLED");
+    }
+
+    #[test]
+    fn verify_orion_password_does_not_allow_legacy_md5_fallback() {
+        let bcrypt_hash = bcrypt::hash("actual-password", 4).expect("hash");
+        let ok = verify_orion_password("0f2797f2182804d0cc7f0b85d254c146", &bcrypt_hash);
+        assert!(!ok);
     }
 
     #[test]

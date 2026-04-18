@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            :title="title"
@@ -13,13 +14,15 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
         <!-- 配置项 -->
-        <a-form-item v-if="visible"
+        <a-form-item
+v-if="visible"
                      field="keyId"
                      label="配置项">
           <dict-key-selector v-model="formModel.keyId" @change="changeKey" />
@@ -34,42 +37,49 @@
         </a-form-item>
         <!-- 排序 -->
         <a-form-item field="sort" label="排序">
-          <a-input-number v-model="formModel.sort"
+          <a-input-number
+v-model="formModel.sort"
                           placeholder="请输入排序"
                           hide-button />
         </a-form-item>
         <!-- 额外配置 -->
-        <a-form-item v-for="{ name, type } in keyExtraSchemas"
+        <a-form-item
+v-for="{ name, type } in keyExtraSchemas"
                      :key="name"
                      :field="name as string"
                      :label="name">
           <!-- 字符串 -->
-          <a-input v-if="ValueType.STRING === type"
+          <a-input
+v-if="ValueType.STRING === type"
                    v-model="extraValue[name]"
                    :placeholder="`请输入 ${name}`"
                    allow-clear />
           <!-- 数字 -->
-          <a-input-number v-else-if="ValueType.INTEGER === type || ValueType.DECIMAL === type"
+          <a-input-number
+v-else-if="ValueType.INTEGER === type || ValueType.DECIMAL === type"
                           v-model="extraValue[name]"
                           :placeholder="`请输入 ${name}`"
                           :precision="ValueType.INTEGER === type ? 0 : 4"
                           allow-clear
                           hide-button />
           <!-- 布尔值 -->
-          <a-switch v-else-if="ValueType.BOOLEAN === type"
-                    type="round"
+          <a-switch
+v-else-if="ValueType.BOOLEAN === type"
                     v-model="extraValue[name]"
+                    type="round"
                     checked-text="TRUE"
                     unchecked-text="FALSE" />
           <!-- 颜色 -->
           <template v-else-if="ValueType.COLOR === type">
-            <a-input v-model="extraValue[name]"
+            <a-input
+v-model="extraValue[name]"
                      class="item-color-input"
                      :placeholder="`请输入 ${name}`"
                      allow-clear
                      hide-button />
             <div class="item-color-block-wrapper">
-              <span class="item-color-block" :style="{
+              <span
+class="item-color-block" :style="{
                 background: extraValue[name] === '#' ? undefined : (extraValue[name] || undefined)
               }" />
             </div>
@@ -82,7 +92,7 @@
 
 <script lang="ts">
   export default {
-    name: 'dictValueFormModal'
+    name: 'DictValueFormModal'
   };
 </script>
 

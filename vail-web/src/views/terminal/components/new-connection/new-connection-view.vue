@@ -6,13 +6,15 @@
       <!-- 操作栏 -->
       <div class="terminal-setting-block header-actions">
         <!-- 视图类型 -->
-        <a-radio-group v-model="newConnectionType"
+        <a-radio-group
+v-model="newConnectionType"
                        type="button"
                        class="usn"
                        :options="toRadioOptions(newConnectionTypeKey)"
                        @change="(s) => updateTerminalPreference(TerminalPreferenceItem.NEW_CONNECTION_TYPE, s as string, true)" />
         <!-- 过滤 -->
-        <a-auto-complete v-model="filterValue"
+        <a-auto-complete
+v-model="filterValue"
                          class="host-filter"
                          placeholder="别名/名称/编码/IP @标签"
                          :allow-clear="true"
@@ -49,7 +51,8 @@
             Oops! 无授权主机 请联系管理员授权后重试!
           </a-empty>
           <!-- 主机列表 -->
-          <hosts-view v-else
+          <hosts-view
+v-else
                       class="host-view-container"
                       :hosts="hosts"
                       :filter-value="filterValue"
@@ -62,7 +65,7 @@
 
 <script lang="ts">
   export default {
-    name: 'newConnectionView'
+    name: 'NewConnectionView'
   };
 </script>
 

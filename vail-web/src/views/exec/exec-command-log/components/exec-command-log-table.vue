@@ -1,47 +1,54 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
-                  :itemOptions="{ 5: { span: 2 } }"
+                  :item-options="{ 5: { span: 2 } }"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- 执行描述 -->
       <a-form-item field="description" label="执行描述">
-        <a-input v-model="formModel.description"
+        <a-input
+v-model="formModel.description"
                  placeholder="请输入执行描述"
                  allow-clear />
       </a-form-item>
       <!-- 执行状态 -->
       <a-form-item field="status" label="执行状态">
-        <a-select v-model="formModel.status"
+        <a-select
+v-model="formModel.status"
                   :options="toOptions(execStatusKey)"
                   placeholder="请选择执行状态"
                   allow-clear />
       </a-form-item>
       <!-- 执行用户 -->
       <a-form-item field="userId" label="执行用户">
-        <user-selector v-model="formModel.userId"
+        <user-selector
+v-model="formModel.userId"
                        placeholder="请选择执行用户"
                        allow-clear />
       </a-form-item>
       <!-- 执行命令 -->
       <a-form-item field="command" label="执行命令">
-        <a-input v-model="formModel.command"
+        <a-input
+v-model="formModel.command"
                  placeholder="请输入执行命令"
                  allow-clear />
       </a-form-item>
       <!-- id -->
       <a-form-item field="id" label="id">
-        <a-input-number v-model="formModel.id"
+        <a-input-number
+v-model="formModel.id"
                         placeholder="请输入id"
                         allow-clear
                         hide-button />
       </a-form-item>
       <!-- 执行时间 -->
       <a-form-item field="startTimeRange" label="执行时间">
-        <a-range-picker v-model="formModel.startTimeRange"
+        <a-range-picker
+v-model="formModel.startTimeRange"
                         :time-picker-props="{ defaultValue: ['00:00:00', '23:59:59'] }"
                         show-time
                         format="YYYY-MM-DD HH:mm:ss" />
@@ -62,7 +69,8 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 执行命令 -->
-          <a-button v-permission="['exec:exec-command:exec']"
+          <a-button
+v-permission="['exec:exec-command:exec']"
                     type="primary"
                     @click="router.push({ name: 'execCommand' })">
             执行命令
@@ -71,7 +79,8 @@
             </template>
           </a-button>
           <!-- 清理 -->
-          <a-button v-permission="['exec:exec-command-log:management:clear']"
+          <a-button
+v-permission="['exec:exec-command-log:management:clear']"
                     status="danger"
                     @click="openClear">
             清理
@@ -80,11 +89,13 @@
             </template>
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm :content="`确认删除选中的 ${selectedKeys.length} 条记录吗? 删除后会中断执行!`"
+          <a-popconfirm
+:content="`确认删除选中的 ${selectedKeys.length} 条记录吗? 删除后会中断执行!`"
                         position="br"
                         type="warning"
                         @ok="deleteSelectedRows">
-            <a-button v-permission="['exec:exec-command-log:delete']"
+            <a-button
+v-permission="['exec:exec-command-log:delete']"
                       type="primary"
                       status="danger"
                       :disabled="selectedKeys.length === 0">
@@ -95,7 +106,8 @@
             </a-button>
           </a-popconfirm>
           <!-- 调整 -->
-          <table-adjust :columns="logColumns"
+          <table-adjust
+:columns="logColumns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -103,9 +115,10 @@
       </div>
     </template>
     <!-- table -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+ref="tableRef"
+             v-model:selected-keys="selectedKeys"
              row-key="id"
-             ref="tableRef"
              class="table-resize"
              :loading="loading"
              :columns="tableColumns"
@@ -120,7 +133,8 @@
              @expand="loadExecHost">
       <!-- 展开表格 -->
       <template #expand-row="{ record }">
-        <exec-command-host-log-table :row="record"
+        <exec-command-host-log-table
+:row="record"
                                      @view-command="(s: any) => emits('viewCommand', s)"
                                      @view-params="(s: any) => emits('viewParams', s)"
                                      @refresh-host="refreshExecHost" />
@@ -151,24 +165,28 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 重新执行 -->
-          <a-popconfirm content="确定要重新执行吗?"
+          <a-popconfirm
+content="确定要重新执行吗?"
                         position="left"
                         type="warning"
                         @ok="doReExecCommand(record)">
-            <a-button v-permission="['exec:exec-command:exec']"
+            <a-button
+v-permission="['exec:exec-command:exec']"
                       type="text"
                       size="mini">
               重新执行
             </a-button>
           </a-popconfirm>
           <!-- 命令 -->
-          <a-button type="text"
+          <a-button
+type="text"
                     size="mini"
                     @click="emits('viewCommand', record.command)">
             命令
           </a-button>
           <!-- 日志 -->
-          <a-button v-permission="['exec:exec-command-log:query', 'exec:exec-command:exec']"
+          <a-button
+v-permission="['exec:exec-command-log:query', 'exec:exec-command:exec']"
                     type="text"
                     size="mini"
                     title="ctrl + 左键新页面打开"
@@ -176,11 +194,13 @@
             日志
           </a-button>
           <!-- 中断 -->
-          <a-popconfirm content="确定要中断执行吗?"
+          <a-popconfirm
+content="确定要中断执行吗?"
                         position="left"
                         type="warning"
                         @ok="doInterruptExecCommand(record)">
-            <a-button v-permission="['exec:exec-command-log:interrupt']"
+            <a-button
+v-permission="['exec:exec-command-log:interrupt']"
                       type="text"
                       size="mini"
                       status="danger"
@@ -189,11 +209,13 @@
             </a-button>
           </a-popconfirm>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗, 删除后会中断执行?"
+          <a-popconfirm
+content="确认删除这条记录吗, 删除后会中断执行?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['exec:exec-command-log:delete']"
+            <a-button
+v-permission="['exec:exec-command-log:delete']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -208,7 +230,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execCommandLogTable'
+    name: 'ExecCommandLogTable'
   };
 </script>
 

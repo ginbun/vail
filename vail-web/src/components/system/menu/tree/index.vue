@@ -1,9 +1,10 @@
 <template>
-  <a-menu class="full"
-          :mode="topMenu ? 'horizontal' : 'vertical'"
-          v-model:collapsed="collapsed"
+  <a-menu
+v-model:collapsed="collapsed"
           v-model:open-keys="openKeys"
           v-model:selected-keys="selectedKey"
+          class="full"
+          :mode="topMenu ? 'horizontal' : 'vertical'"
           :show-collapse-button="appStore.device !== 'mobile'"
           :auto-open="false"
           :auto-open-selected="true"
@@ -11,12 +12,13 @@
           @collapse="setCollapse">
     <template v-for="menu in menuTree">
       <!-- 一级菜单 -->
-      <a-menu-item v-if="!menu.children?.length"
+      <a-menu-item
+v-if="!menu.children?.length"
                    :key="menu.name"
                    @click="(e: any) => goto(e, menu)">
         <!-- 图标 -->
         <template #icon>
-          <component v-if="menu.meta?.icon" :is="menu.meta?.icon" />
+          <component :is="menu.meta?.icon" v-if="menu.meta?.icon" />
         </template>
         <!-- 名称 -->
         {{ menu.meta?.locale || '' }}
@@ -25,18 +27,19 @@
       <a-sub-menu v-else :key="menu.name">
         <!-- 图标 -->
         <template #icon>
-          <component v-if="menu.meta?.icon" :is="menu.meta?.icon" />
+          <component :is="menu.meta?.icon" v-if="menu.meta?.icon" />
         </template>
         <!-- 名称 -->
         <template #title>
           {{ menu.meta?.locale || '' }}
         </template>
         <!-- 子菜单 -->
-        <a-menu-item v-for="child in menu.children"
+        <a-menu-item
+v-for="child in menu.children"
                      :key="child.name"
                      @click="(e: any) => goto(e, child)">
           <!-- 图标 -->
-          <template #icon v-if="child.meta?.icon">
+          <template v-if="child.meta?.icon" #icon>
             <component :is="child.meta?.icon" />
           </template>
           <!-- 名称 -->
@@ -49,7 +52,7 @@
 
 <script lang="ts">
   export default {
-    name: 'systemMenuTree'
+    name: 'SystemMenuTree'
   };
 </script>
 

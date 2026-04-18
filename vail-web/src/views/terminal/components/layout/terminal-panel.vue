@@ -1,7 +1,8 @@
 <template>
   <div class="terminal-panel-container">
     <!-- 终端 tab -->
-    <a-tabs v-model:active-key="panel.active"
+    <a-tabs
+v-model:active-key="panel.active"
             :editable="true"
             :auto-switch="false"
             :show-add-button="true"
@@ -12,7 +13,8 @@
       <template #extra>
         <a-space class="panel-extra">
           <!-- 关闭 -->
-          <span class="extra-icon"
+          <span
+class="extra-icon"
                 title="关闭面板"
                 @click.stop.prevent="close">
             <icon-close />
@@ -23,7 +25,8 @@
       <a-tab-pane v-for="item in panel.items" :key="item.key">
         <!-- 标题 -->
         <template #title>
-          <span class="tab-title-wrapper usn"
+          <span
+class="tab-title-wrapper usn"
                 :style="{
                   '--color': getDictValue(tabColorKey, item.color, 'color', 'transparent'),
                   '--bg': panel.active === item.key ? getDictValue(tabColorKey, item.color, 'bg', 'transparent') : 'transparent',
@@ -36,19 +39,23 @@
           </span>
         </template>
         <!-- ssh -->
-        <ssh-view v-if="item.type === TerminalSessionTypes.SSH.type"
+        <ssh-view
+v-if="item.type === TerminalSessionTypes.SSH.type"
                   class="session-container"
                   :item="item" />
         <!-- sftp -->
-        <sftp-view v-else-if="item.type === TerminalSessionTypes.SFTP.type"
+        <sftp-view
+v-else-if="item.type === TerminalSessionTypes.SFTP.type"
                    class="session-container"
                    :item="item" />
         <!-- rdp -->
-        <rdp-view v-else-if="item.type === TerminalSessionTypes.RDP.type"
+        <rdp-view
+v-else-if="item.type === TerminalSessionTypes.RDP.type"
                   class="session-container"
                   :item="item" />
         <!-- vnc -->
-        <vnc-view v-else-if="item.type === TerminalSessionTypes.VNC.type"
+        <vnc-view
+v-else-if="item.type === TerminalSessionTypes.VNC.type"
                   class="session-container"
                   :item="item" />
       </a-tab-pane>
@@ -58,7 +65,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalPanel'
+    name: 'TerminalPanel'
   };
 </script>
 

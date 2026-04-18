@@ -3,7 +3,8 @@
     <!-- 页面 -->
     <a-layout-content>
       <!-- 水印 -->
-      <a-watermark :grayscale="true"
+      <a-watermark
+:grayscale="true"
                    :alpha=".6"
                    :z-index="9999"
                    style="width: 100%; height: 100%;"
@@ -16,7 +17,7 @@
 
 <script lang="ts">
   export default {
-    name: 'fullLayout'
+    name: 'FullLayout'
   };
 </script>
 

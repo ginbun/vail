@@ -1,5 +1,6 @@
 <template>
-  <a-select v-model:model-value="modelValue"
+  <a-select
+v-model:model-value="modelValue"
             :options="optionData"
             :allow-search="true"
             :loading="loading"
@@ -9,7 +10,7 @@
 
 <script lang="ts">
   export default {
-    name: 'monitorMetricsSelector'
+    name: 'MonitorMetricsSelector'
   };
 </script>
 

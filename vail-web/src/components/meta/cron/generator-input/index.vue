@@ -4,31 +4,31 @@
       <!-- 设置表单 -->
       <a-tabs v-model:active-key="activeKey" size="small">
         <!-- 秒 -->
-        <a-tab-pane title="秒" key="second" v-if="!hideSecond">
+        <a-tab-pane v-if="!hideSecond" key="second" title="秒">
           <second-form v-model="second" :disabled="disabled" />
         </a-tab-pane>
         <!-- 分 -->
-        <a-tab-pane title="分" key="minute">
+        <a-tab-pane key="minute" title="分">
           <minute-form v-model="minute" :disabled="disabled" />
         </a-tab-pane>
         <!-- 时 -->
-        <a-tab-pane title="时" key="hour">
+        <a-tab-pane key="hour" title="时">
           <hour-form v-model="hour" :disabled="disabled" />
         </a-tab-pane>
         <!-- 日 -->
-        <a-tab-pane title="日" key="day">
+        <a-tab-pane key="day" title="日">
           <day-form v-model="day" :week="week" :disabled="disabled" />
         </a-tab-pane>
         <!-- 月 -->
-        <a-tab-pane title="月" key="month">
+        <a-tab-pane key="month" title="月">
           <month-form v-model="month" :disabled="disabled" />
         </a-tab-pane>
         <!-- 周 -->
-        <a-tab-pane title="周" key="week">
+        <a-tab-pane key="week" title="周">
           <week-form v-model="week" :day="day" :disabled="disabled" />
         </a-tab-pane>
         <!-- 年 -->
-        <a-tab-pane title="年" key="year" v-if="!hideYear && !hideSecond">
+        <a-tab-pane v-if="!hideYear && !hideSecond" key="year" title="年">
           <year-form v-model="year" :disabled="disabled" />
         </a-tab-pane>
       </a-tabs>
@@ -95,14 +95,16 @@
             </a-col>
             <!-- 表达式 -->
             <a-col :span="16">
-              <a-input v-model="inputValues.cron"
+              <a-input
+v-model="inputValues.cron"
                        :placeholder="placeholder"
                        @change="onInputCronChange">
                 <template #prepend>
                   <span class="allow-click">表达式</span>
                 </template>
                 <template #append>
-                  <span class="allow-click span-blue"
+                  <span
+class="allow-click span-blue"
                         title="点击复制"
                         @click="copy(inputValues.cron, true)">
                     <icon-copy />
@@ -124,7 +126,7 @@
 
 <script lang="ts">
   export default {
-    name: 'cronGeneratorInput'
+    name: 'CronGeneratorInput'
   };
 </script>
 

@@ -1,7 +1,7 @@
 import type { DataGrid, OrderDirection, Pagination } from '@/types/global';
 import type { TableData } from '@arco-design/web-vue';
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 /**
  * 执行模板创建请求
@@ -104,7 +104,7 @@ export function batchDeleteExecTemplate(idList: Array<number>) {
   return axios.delete('/exec/exec-template/batch-delete', {
     params: { idList },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

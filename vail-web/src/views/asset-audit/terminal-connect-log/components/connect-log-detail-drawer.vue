@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             title="终端连接日志详情"
             :width="442"
             :mask-closable="false"
@@ -7,7 +8,8 @@
             ok-text="关闭"
             :hide-cancel="true"
             @cancel="handleClose">
-    <a-descriptions class="detail-container"
+    <a-descriptions
+class="detail-container"
                     size="large"
                     :label-style="{ display: 'flex', width: '90px' }"
                     :column="1">
@@ -23,7 +25,8 @@
       <a-descriptions-item label="连接主机">
         <span>({{ record.hostId }}) {{ record.hostName }}</span>
         <br>
-        <span class="host-address text-copy"
+        <span
+class="host-address text-copy"
               :title="record.hostAddress"
               @click="copy(record.hostAddress)">
           {{ record.hostAddress }}
@@ -45,7 +48,8 @@
       <a-descriptions-item label="留痕地址">
         <span>{{ record.extra?.location }}</span>
         <br>
-        <span class="connect-address text-copy"
+        <span
+class="connect-address text-copy"
               :title="record.extra?.address"
               @click="copy(record.extra?.address)">
           {{ record.extra?.address }}
@@ -87,7 +91,7 @@
 
 <script lang="ts">
   export default {
-    name: 'connectLogDetailDrawer'
+    name: 'ConnectLogDetailDrawer'
   };
 </script>
 

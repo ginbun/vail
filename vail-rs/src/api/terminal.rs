@@ -261,7 +261,7 @@ async fn terminal_sftp_get_content(
     headers: HeaderMap,
     Query(query): Query<TerminalSftpContentQuery>,
 ) -> AppResult<impl IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let token = query
         .token
         .ok_or_else(|| AppError::BadRequest("token is required".to_string()))?;
@@ -276,7 +276,7 @@ async fn terminal_sftp_set_content(
     headers: HeaderMap,
     mut multipart: Multipart,
 ) -> AppResult<impl IntoResponse> {
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let mut token: Option<String> = None;
     let mut content: Option<Vec<u8>> = None;
 
@@ -324,7 +324,7 @@ async fn terminal_sftp_download(
     let transfer_token = query
         .transfer_token
         .ok_or_else(|| AppError::BadRequest("transferToken is required".to_string()))?;
-    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let ctx = consume_download_token(&transfer_token, user_id)?;
     let data = match sftp_read_file_bytes(&state, ctx.host_id, &ctx.path).await {
         Ok(bytes) => {

@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            :title="title"
@@ -13,47 +14,55 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
         <!-- 用户名 -->
         <a-form-item field="username" label="用户名">
-          <a-input v-model="formModel.username"
+          <a-input
+v-model="formModel.username"
                    :disabled="!isAddHandle"
                    placeholder="请输入用户名"
                    allow-clear />
         </a-form-item>
         <!-- 花名 -->
         <a-form-item field="nickname" label="花名">
-          <a-input v-model="formModel.nickname"
+          <a-input
+v-model="formModel.nickname"
                    placeholder="请输入花名"
                    allow-clear />
         </a-form-item>
         <!-- 密码 -->
-        <a-form-item v-if="isAddHandle"
+        <a-form-item
+v-if="isAddHandle"
                      field="password"
                      label="密码">
-          <a-input-password v-model="formModel.password"
+          <a-input-password
+v-model="formModel.password"
                             placeholder="请输入密码"
                             allow-clear />
         </a-form-item>
         <!-- 手机号 -->
         <a-form-item field="mobile" label="手机号">
-          <a-input v-model="formModel.mobile"
+          <a-input
+v-model="formModel.mobile"
                    placeholder="请输入手机号"
                    allow-clear />
         </a-form-item>
         <!-- 邮箱 -->
         <a-form-item field="email" label="邮箱">
-          <a-input v-model="formModel.email"
+          <a-input
+v-model="formModel.email"
                    placeholder="请输入邮箱"
                    allow-clear />
         </a-form-item>
         <!-- 用户描述 -->
         <a-form-item field="description" label="用户描述">
-          <a-textarea v-model="formModel.description"
+          <a-textarea
+v-model="formModel.description"
                       placeholder="请输入用户描述"
                       allow-clear />
         </a-form-item>
@@ -64,7 +73,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userFormModal'
+    name: 'UserFormModal'
   };
 </script>
 
@@ -76,7 +85,6 @@
   import formRules from '../types/form.rules';
   import { createUser, updateUser } from '@/api/user/user';
   import { Message } from '@arco-design/web-vue';
-  import { md5 } from '@/utils';
 
   const { visible, setVisible } = useVisible();
   const { loading, setLoading } = useLoading();
@@ -135,7 +143,7 @@
       }
       if (isAddHandle.value) {
         // 新增
-        await createUser({ ...formModel.value, password: md5(formModel.value.password as string) });
+        await createUser(formModel.value);
         Message.success('创建成功');
         emits('added');
       } else {

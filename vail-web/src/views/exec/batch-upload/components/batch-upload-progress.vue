@@ -30,14 +30,16 @@
               </template>
             </div>
             <!-- 进度 -->
-            <a-tooltip position="left"
+            <a-tooltip
+position="left"
                        :content="(
                          file.status === UploadTaskFileStatus.FAILED
                          ? (file.errorMessage || '')
                          : (file.fileSize ? ((file.current || 0) / file.fileSize * 100).toFixed(2) + '%' : '0%')
                        )"
                        mini>
-              <a-progress type="circle"
+              <a-progress
+type="circle"
                           size="mini"
                           :status="getDictValue(fileStatusKey, file.status, 'status') as any"
                           :percent="file.fileSize ? (file.current || 0) / file.fileSize : 0" />
@@ -51,7 +53,7 @@
 
 <script lang="ts">
   export default {
-    name: 'batchUploadProgress'
+    name: 'BatchUploadProgress'
   };
 </script>
 

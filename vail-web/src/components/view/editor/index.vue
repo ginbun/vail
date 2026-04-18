@@ -1,5 +1,6 @@
 <template>
-  <div ref="editorContainer"
+  <div
+ref="editorContainer"
        class="editor-wrapper"
        :class="[ !!containerClass ? containerClass : '' ]"
        :style="{ ...containerStyle }" />
@@ -7,7 +8,7 @@
 
 <script lang="ts">
   export default {
-    name: 'editor'
+    name: 'Editor'
   };
 </script>
 

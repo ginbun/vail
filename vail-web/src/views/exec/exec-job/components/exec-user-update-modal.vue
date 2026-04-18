@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            title="修改执行用户"
@@ -14,12 +15,14 @@
     <a-spin class="full" :loading="loading">
       <!-- 提示 -->
       <a-alert class="mb16">修改后将使用此用户的权限以及主机配置执行此任务</a-alert>
-      <a-form :model="formModel"
+      <a-form
+:model="formModel"
               label-align="right"
               :auto-label-width="true">
         <!-- 执行用户 -->
         <a-form-item field="userId" label="执行用户">
-          <user-selector v-model="formModel.userId"
+          <user-selector
+v-model="formModel.userId"
                          placeholder="请选择执行用户"
                          allow-clear />
         </a-form-item>
@@ -30,7 +33,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execUserUpdateModal'
+    name: 'ExecUserUpdateModal'
   };
 </script>
 

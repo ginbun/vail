@@ -4,7 +4,8 @@
       <div class="card-title">
         <p class="card-title-left">系统操作数量 (7日)</p>
         <!-- 跳转 -->
-        <span class="pointer span-blue"
+        <span
+class="pointer span-blue"
               title="详情"
               @click="router.push({ name: 'userInfo', query: { tab: 'operatorLog' } })">
           详情
@@ -20,7 +21,7 @@
 
 <script lang="ts">
   export default {
-    name: 'operator-log-chart'
+    name: 'OperatorLogChart'
   };
 </script>
 

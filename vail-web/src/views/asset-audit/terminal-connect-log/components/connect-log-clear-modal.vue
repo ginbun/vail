@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            title="清理终端连接日志"
@@ -13,51 +14,59 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
+      <a-form
+:model="formModel"
               label-align="right"
               :auto-label-width="true">
         <!-- 开始时间 -->
         <a-form-item field="startTimeRange" label="开始时间">
-          <a-range-picker v-model="formModel.startTimeRange"
+          <a-range-picker
+v-model="formModel.startTimeRange"
                           :time-picker-props="{ defaultValue: ['00:00:00', '23:59:59'] }"
                           show-time
                           format="YYYY-MM-DD HH:mm:ss" />
         </a-form-item>
         <!-- 连接用户 -->
         <a-form-item field="userId" label="连接用户">
-          <user-selector v-model="formModel.userId"
+          <user-selector
+v-model="formModel.userId"
                          placeholder="请选择用户"
                          allow-clear />
         </a-form-item>
         <!-- 连接主机 -->
         <a-form-item field="hostId" label="连接主机">
-          <host-selector v-model="formModel.hostId"
+          <host-selector
+v-model="formModel.hostId"
                          placeholder="请选择主机"
                          allow-clear />
         </a-form-item>
         <!-- 主机地址 -->
         <a-form-item field="hostAddress" label="主机地址">
-          <a-input v-model="formModel.hostAddress"
+          <a-input
+v-model="formModel.hostAddress"
                    placeholder="请输入主机地址"
                    allow-clear />
         </a-form-item>
         <!-- 连接状态 -->
         <a-form-item field="status" label="连接状态">
-          <a-select v-model="formModel.status"
+          <a-select
+v-model="formModel.status"
                     placeholder="请选择状态"
                     :options="toOptions(connectStatusKey)"
                     allow-clear />
         </a-form-item>
         <!-- 连接类型 -->
         <a-form-item field="type" label="连接类型">
-          <a-select v-model="formModel.type"
+          <a-select
+v-model="formModel.type"
                     placeholder="请选择类型"
                     :options="toOptions(connectTypeKey)"
                     allow-clear />
         </a-form-item>
         <!-- 数量限制 -->
         <a-form-item field="limit" label="数量限制">
-          <a-input-number v-model="formModel.limit"
+          <a-input-number
+v-model="formModel.limit"
                           :min="1"
                           :max="maxClearLimit"
                           :placeholder="`请输入数量限制 最大: ${maxClearLimit}`"
@@ -71,7 +80,7 @@
 
 <script lang="ts">
   export default {
-    name: 'connectLogClearModal'
+    name: 'ConnectLogClearModal'
   };
 </script>
 

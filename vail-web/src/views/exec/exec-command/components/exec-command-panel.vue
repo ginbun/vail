@@ -2,14 +2,16 @@
   <!-- 命令执行 -->
   <a-spin class="exec-container" :loading="loading">
     <!-- 执行参数 -->
-    <exec-command-panel-form class="exec-form-container"
+    <exec-command-panel-form
+class="exec-form-container"
                              :schema-count="parameterSchema.length"
                              @exec="execCommand"
                              @reset="resetForm">
       <!-- 命令表单 -->
       <template #form>
-        <a-form :model="formModel"
-                ref="formRef"
+        <a-form
+ref="formRef"
+                :model="formModel"
                 class="form-wrapper"
                 label-align="right"
                 :auto-label-width="true"
@@ -20,7 +22,7 @@
               <a-form-item field="hostIdList" label="执行主机">
                 <div class="selected-host">
                   <!-- 已选择数量 -->
-                  <span class="usn" v-if="formModel.hostIdList?.length">
+                  <span v-if="formModel.hostIdList?.length" class="usn">
                     已选择<span class="selected-host-count span-blue">{{ formModel.hostIdList?.length }}</span>台主机
                   </span>
                   <span class="usn pointer span-blue" @click="openSelectHost">
@@ -32,17 +34,20 @@
             <!-- 执行描述 -->
             <a-col :span="24">
               <a-form-item field="description" label="执行描述">
-                <a-input v-model="formModel.description"
+                <a-input
+v-model="formModel.description"
                          placeholder="请输入执行描述"
                          allow-clear />
               </a-form-item>
             </a-col>
             <!-- 超时时间 -->
             <a-col :span="14">
-              <a-form-item field="timeout"
+              <a-form-item
+field="timeout"
                            label="超时时间"
                            :hide-asterisk="true">
-                <a-input-number v-model="formModel.timeout"
+                <a-input-number
+v-model="formModel.timeout"
                                 placeholder="为0则不超时"
                                 :min="0"
                                 :max="100000"
@@ -55,11 +60,13 @@
             </a-col>
             <!-- 脚本执行 -->
             <a-col :span="10">
-              <a-form-item field="scriptExec"
+              <a-form-item
+field="scriptExec"
                            label="脚本执行"
                            :hide-asterisk="true">
                 <div class="flex-center">
-                  <a-switch v-model="formModel.scriptExec"
+                  <a-switch
+v-model="formModel.scriptExec"
                             type="round"
                             :checked-value="EnabledStatus.ENABLED"
                             :unchecked-value="EnabledStatus.DISABLED" />
@@ -76,15 +83,18 @@
       </template>
       <!-- 参数表单 -->
       <template #params>
-        <a-form :model="parameterFormModel"
-                ref="parameterFormRef"
+        <a-form
+ref="parameterFormRef"
+                :model="parameterFormModel"
                 label-align="right">
-          <a-form-item v-for="item in parameterSchema"
+          <a-form-item
+v-for="item in parameterSchema"
                        :key="item.name"
                        :field="item.name as string"
                        :label="item.name"
                        required>
-            <a-input v-model="parameterFormModel[item.name as string]"
+            <a-input
+v-model="parameterFormModel[item.name as string]"
                      :placeholder="item.desc"
                      allow-clear />
           </a-form-item>
@@ -92,21 +102,26 @@
       </template>
     </exec-command-panel-form>
     <!-- 执行命令 -->
-    <exec-command-panel-editor class="exec-command-container"
+    <exec-command-panel-editor
+class="exec-command-container"
                                @open-template="() => templateModal.open()">
-      <exec-editor v-model="formModel.command"
+      <exec-editor
+v-model="formModel.command"
                    theme="vs-dark"
                    :parameter="parameterSchema" />
     </exec-command-panel-editor>
     <!-- 执行历史 -->
-    <exec-command-panel-history class="exec-history-container"
-                                ref="historyRef"
+    <exec-command-panel-history
+ref="historyRef"
+                                class="exec-history-container"
                                 @selected="setWithExecLog" />
     <!-- 命令模板模态框 -->
-    <exec-template-modal ref="templateModal"
+    <exec-template-modal
+ref="templateModal"
                          @selected="setWithTemplate" />
     <!-- 主机模态框 -->
-    <authorized-host-modal ref="hostModal"
+    <authorized-host-modal
+ref="hostModal"
                            type="SSH"
                            @selected="setSelectedHost" />
   </a-spin>
@@ -114,7 +129,7 @@
 
 <script lang="ts">
   export default {
-    name: 'execPanel'
+    name: 'ExecPanel'
   };
 </script>
 

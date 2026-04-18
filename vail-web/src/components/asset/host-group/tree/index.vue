@@ -1,12 +1,13 @@
 <template>
   <a-scrollbar>
     <!-- 分组树 -->
-    <a-tree v-if="treeData.length"
-            v-model:checked-keys="checkedKeys"
+    <a-tree
+v-if="treeData.length"
             ref="tree"
+            v-model:checked-keys="checkedKeys"
             class="tree-container block-tree"
             :class="[ editable ? 'editable-tree' : '' ]"
-            :blockNode="true"
+            :block-node="true"
             :data="treeData"
             :draggable="editable"
             :checkable="checkable"
@@ -17,9 +18,10 @@
       <template #title="node">
         <!-- 修改名称输入框 -->
         <template v-if="node.editable">
-          <a-input size="mini"
-                   ref="renameInput"
+          <a-input
+ref="renameInput"
                    v-model="node.title"
+                   size="mini"
                    style="width: 138px;"
                    placeholder="名称"
                    :max-length="32"
@@ -31,7 +33,8 @@
               <!-- 加载中 -->
               <icon-loading v-if="node.loading" />
               <!-- 保存 -->
-              <icon-check v-else
+              <icon-check
+v-else
                           class="pointer"
                           title="保存"
                           @click="saveNode(node)" />
@@ -39,7 +42,8 @@
           </a-input>
         </template>
         <!-- 名称 -->
-        <span v-else
+        <span
+v-else
               class="node-title-wrapper"
               @click="() => emits('selectedNode', node)">
           {{ node.title }}
@@ -49,25 +53,29 @@
       <template #drag-icon="{ node }">
         <a-space v-if="!node.editable">
           <!-- 重命名 -->
-          <span v-permission="['asset:host-group:update']"
+          <span
+v-permission="['asset:host-group:update']"
                 class="tree-icon"
                 title="重命名"
                 @click="rename(node.title, node.key)">
             <icon-edit />
           </span>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteNode(node.key)">
-            <span v-permission="['asset:host-group:update']"
+            <span
+v-permission="['asset:host-group:update']"
                   class="tree-icon"
                   title="删除">
               <icon-delete />
             </span>
           </a-popconfirm>
           <!-- 新增 -->
-          <span v-permission="['asset:host-group:update']"
+          <span
+v-permission="['asset:host-group:update']"
                 class="tree-icon"
                 title="新增"
                 @click="addChildren(node)">
@@ -86,7 +94,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostGroupTree'
+    name: 'HostGroupTree'
   };
 </script>
 

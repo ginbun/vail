@@ -1,7 +1,7 @@
 import type { RouteRecordNormalized, RouteRecordRaw } from 'vue-router';
 import { computed } from 'vue';
 import { useMenuStore } from '@/store';
-import { cloneDeep } from 'lodash';
+import { cloneDeep } from 'lodash-es';
 
 export default function useMenuTree() {
   const menuStore = useMenuStore();

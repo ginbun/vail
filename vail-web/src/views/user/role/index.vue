@@ -1,12 +1,14 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 表格 -->
-    <role-table ref="table"
+    <role-table
+ref="table"
                 @open-add="() => modal.openAdd()"
                 @open-update="(e) => modal.openUpdate(e)"
                 @open-grant="(e) => grantModal.open(e)" />
     <!-- 添加修改模态框 -->
-    <role-form-modal ref="modal"
+    <role-form-modal
+ref="modal"
                      @added="() => table.reload()"
                      @updated="() => table.reload()" />
     <!-- 分配角色菜单模态框 -->
@@ -16,7 +18,7 @@
 
 <script lang="ts">
   export default {
-    name: 'userRole'
+    name: 'UserRole'
   };
 </script>
 

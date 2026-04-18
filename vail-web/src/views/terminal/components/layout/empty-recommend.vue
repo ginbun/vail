@@ -3,8 +3,9 @@
     <div class="terminal-setting-wrapper">
       <!-- 组合容器 -->
       <div class="combined-container">
-        <div class="combined-handler" v-for="(handler, index) in combinedHandlers"
-             :key="index">
+        <div
+v-for="(handler, index) in combinedHandlers" :key="index"
+             class="combined-handler">
           <!-- 左侧固定 -->
           <div class="combined-handler-left">
             <!-- 图标 -->
@@ -19,14 +20,16 @@
           <!-- 操作 -->
           <div class="combined-handler-actions">
             <!-- 跳转页面 -->
-            <a-tooltip v-if="!handler.host"
+            <a-tooltip
+v-if="!handler.host"
                        position="top"
                        :mini="true"
                        :auto-fix-position="false"
                        content-class="terminal-tooltip-content"
                        arrow-class="terminal-tooltip-content"
                        content="跳转页面">
-              <a-button class="combined-handler-action icon-button"
+              <a-button
+class="combined-handler-action icon-button"
                         @click="openTab(handler)">
                 <icon-right />
               </a-button>
@@ -34,7 +37,8 @@
             <!-- 打开会话 -->
             <template v-for="type in TerminalSessionTypes">
               <template v-if="handler.host?.types?.includes(type.protocol)">
-                <a-tooltip position="top"
+                <a-tooltip
+position="top"
                            :mini="true"
                            :auto-fix-position="false"
                            :content="`打开 ${type.type}`"
@@ -55,7 +59,7 @@
 
 <script lang="ts">
   export default {
-    name: 'emptyRecommend'
+    name: 'EmptyRecommend'
   };
 </script>
 

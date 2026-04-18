@@ -1,7 +1,7 @@
 import type { DataGrid, OrderDirection, Pagination } from '@/types/global';
 import type { TableData } from '@arco-design/web-vue';
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 /**
  * 主机身份创建请求
@@ -102,7 +102,7 @@ export function batchDeleteHostIdentity(idList: Array<number>) {
   return axios.delete('/asset/host-identity/batch-delete', {
     params: { idList },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

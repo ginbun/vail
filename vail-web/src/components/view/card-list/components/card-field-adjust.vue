@@ -1,6 +1,7 @@
 <template>
   <!-- 调整字段 -->
-  <a-popover class="table-adjust-popover"
+  <a-popover
+class="table-adjust-popover"
              position="br"
              trigger="click"
              :content-style="{ padding: 0 }"
@@ -16,7 +17,8 @@
         <span class="table-adjust-title">
           卡片展示字段
         </span>
-        <a-button type="text"
+        <a-button
+type="text"
                   size="mini"
                   @click="resetFields">
           重置
@@ -25,10 +27,12 @@
       <!-- 分隔符 -->
       <a-divider :margin="4" />
       <!-- 列信息 -->
-      <a-checkbox-group v-model="fieldsValue"
+      <a-checkbox-group
+v-model="fieldsValue"
                         direction="vertical"
                         @change="fieldsChanged">
-        <a-checkbox v-for="field in fieldsHook.originFields"
+        <a-checkbox
+v-for="field in fieldsHook.originFields"
                     :key="field.dataIndex || field.slotName"
                     :value="field.dataIndex || field.slotName">
           {{ field.label }}
@@ -40,7 +44,7 @@
 
 <script lang="ts">
   export default {
-    name: 'cardFieldAdjust'
+    name: 'CardFieldAdjust'
   };
 </script>
 

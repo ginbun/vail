@@ -1,7 +1,8 @@
 <template>
   <div class="transfer-container">
     <!-- 传输框 -->
-    <a-transfer v-model="value"
+    <a-transfer
+v-model="value"
                 :data="data"
                 :source-input-search-props="{ placeholder: '请输入主机名称/编码/IP' }"
                 :target-input-search-props="{ placeholder: '请输入主机名称/编码/IP' }"
@@ -12,7 +13,8 @@
       <template #source-title="{ countTotal, countSelected, checked, indeterminate, onSelectAllChange }">
         <!-- 左侧标题 -->
         <div class="source-title-container">
-          <a-checkbox style="margin-right: 8px;"
+          <a-checkbox
+style="margin-right: 8px;"
                       :model-value="checked"
                       :indeterminate="indeterminate"
                       @change="onSelectAllChange" />
@@ -25,16 +27,18 @@
       <template #target-title="{ countTotal, countSelected, onClear }">
         <div class="target-title-container">
           <span>已选择 <span class="span-blue">{{ countTotal }}</span> 个</span>
-          <span class="pointer"
-                @click="onClear"
-                title="清空">
+          <span
+class="pointer"
+                title="清空"
+                @click="onClear">
             <icon-delete />
           </span>
         </div>
       </template>
       <!-- 内容 -->
       <template #item="{ label }">
-        <a-tooltip position="top"
+        <a-tooltip
+position="top"
                    :mini="true"
                    :content="label">
           <span v-html="renderLabel(label)" />
@@ -46,7 +50,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostTransfer'
+    name: 'HostTransfer'
   };
 </script>
 

@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            title="处理告警"
@@ -13,21 +14,24 @@
            :on-before-ok="handleOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form ref="formRef"
+      <a-form
+ref="formRef"
               :model="formModel"
               label-align="right"
               :rules="handleRules"
               :auto-label-width="true">
         <!-- 处理状态 -->
         <a-form-item field="handleStatus" label="处理状态">
-          <a-select v-model="formModel.handleStatus"
+          <a-select
+v-model="formModel.handleStatus"
                     :options="toOptions(HandleStatusKey)"
                     placeholder="请选择处理状态"
                     allow-clear />
         </a-form-item>
         <!-- 处理时间 -->
         <a-form-item field="handleTime" label="处理时间">
-          <a-date-picker v-model="formModel.handleTime"
+          <a-date-picker
+v-model="formModel.handleTime"
                          style="width: 100%"
                          placeholder="请选择处理时间"
                          show-time
@@ -35,7 +39,8 @@
         </a-form-item>
         <!-- 处理备注 -->
         <a-form-item field="handleRemark" label="处理备注">
-          <a-textarea v-model="formModel.handleRemark"
+          <a-textarea
+v-model="formModel.handleRemark"
                       :auto-size="{ minRows: 4, maxRows: 4 }"
                       placeholder="请输入处理备注"
                       allow-clear />
@@ -47,7 +52,7 @@
 
 <script lang="ts">
   export default {
-    name: 'alarmEventHandleModal'
+    name: 'AlarmEventHandleModal'
   };
 </script>
 

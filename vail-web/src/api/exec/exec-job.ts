@@ -2,7 +2,7 @@ import type { DataGrid, OrderDirection, Pagination } from '@/types/global';
 import type { TableData } from '@arco-design/web-vue';
 import type { HostQueryResponse } from '@/api/asset/host';
 import axios from 'axios';
-import qs from 'query-string';
+import { stringifyParams } from '@/utils';
 
 /**
  * 计划任务创建请求
@@ -147,7 +147,7 @@ export function batchDeleteExecJob(idList: Array<number>) {
   return axios.delete('/exec/exec-job/batch-delete', {
     params: { idList },
     paramsSerializer: params => {
-      return qs.stringify(params, { arrayFormat: 'comma' });
+      return stringifyParams(params, 'comma');
     }
   });
 }

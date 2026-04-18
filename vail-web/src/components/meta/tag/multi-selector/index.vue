@@ -1,13 +1,14 @@
 <template>
-  <a-select v-model:model-value="value"
+  <a-select
+v-model:model-value="value"
             :placeholder="placeholder"
             :options="optionData"
             :loading="loading"
             :limit="limit as number"
             :allow-create="allowCreate"
-            @exceed-limit="() => { emits('onLimited', limit, `最多选择${limit}个tag`) }"
             multiple
-            allow-clear>
+            allow-clear
+            @exceed-limit="() => { emits('onLimited', limit, `最多选择${limit}个tag`) }">
     <!-- 选项 -->
     <template #option="{ data: { label } }">
       <a-tag :color="dataColor(label, tagColor)">
@@ -19,7 +20,7 @@
 
 <script lang="ts">
   export default {
-    name: 'tagMultiSelector'
+    name: 'TagMultiSelector'
   };
 </script>
 

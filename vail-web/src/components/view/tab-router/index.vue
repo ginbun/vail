@@ -1,13 +1,16 @@
 <template>
   <div class="tabs-container">
-    <template v-for="item in items"
+    <template
+v-for="item in items"
               :key="item.key">
-      <span v-permission="item.permission || []"
+      <span
+v-permission="item.permission || []"
             :title="item.text"
             :class="['tab-item', item.key === modelValue ? 'tab-item-active' : '']"
             @click="changeTab(item)">
-        <component v-if="item.icon"
-                   :is="item.icon" />
+        <component
+:is="item.icon"
+                   v-if="item.icon" />
         {{ item.text }}
       </span>
     </template>
@@ -16,7 +19,7 @@
 
 <script lang="ts">
   export default {
-    name: 'tabRouter'
+    name: 'TabRouter'
   };
 </script>
 

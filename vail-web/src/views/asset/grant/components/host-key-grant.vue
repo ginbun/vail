@@ -1,12 +1,14 @@
 <template>
-  <grant-layout :type="type"
+  <grant-layout
+:type="type"
                 :loading="loading"
                 @fetch="fetchAuthorizedData"
                 @grant="doGrant"
                 @select-all="selectAll"
                 @reverse="reverseSelect">
     <!-- 主机密钥表格 -->
-    <a-table v-model:selected-keys="selectedKeys"
+    <a-table
+v-model:selected-keys="selectedKeys"
              row-key="id"
              class="table-resize host-key-main-table"
              :columns="hostKeyColumns"
@@ -23,7 +25,7 @@
 
 <script lang="ts">
   export default {
-    name: 'hostKeyGrant'
+    name: 'HostKeyGrant'
   };
 </script>
 

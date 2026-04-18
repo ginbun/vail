@@ -2,13 +2,15 @@
   <div class="block">
     <h5 class="title">{{ title }}</h5>
     <template v-for="option in options" :key="option.name">
-      <div class="option-wrapper"
-           v-permission="option.permission || []"
+      <div
+v-permission="option.permission || []"
+           class="option-wrapper"
            :style="{ 'margin': option.margin || '' }">
         <!-- 偏好项 -->
         <span>{{ option.name }}</span>
         <!-- 偏好值 -->
-        <form-wrapper :name="option.key"
+        <form-wrapper
+:name="option.key"
                       :type="option.type as string"
                       :default-value="option.defaultVal"
                       :options="option.options"

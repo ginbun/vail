@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            title="修改密码"
@@ -13,24 +14,28 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :rules="rules">
         <!-- 原始密码 -->
-        <a-form-item field="beforePassword"
+        <a-form-item
+field="beforePassword"
                      label="原始密码"
                      hide-label>
           <a-input-password v-model="formModel.beforePassword" placeholder="请输入原始密码" />
         </a-form-item>
         <!-- 新密码 -->
-        <a-form-item field="password"
+        <a-form-item
+field="password"
                      label="新密码"
                      hide-label>
           <a-input-password v-model="formModel.password" placeholder="请输入新密码" />
         </a-form-item>
         <!-- 确认密码 -->
-        <a-form-item field="checkPassword"
+        <a-form-item
+field="checkPassword"
                      label="确认密码"
                      hide-label>
           <a-input-password v-model="formModel.checkPassword" placeholder="请再次输入新密码" />
@@ -42,7 +47,7 @@
 
 <script lang="ts">
   export default {
-    name: 'updatePasswordModal'
+    name: 'UpdatePasswordModal'
   };
 </script>
 
@@ -50,7 +55,6 @@
   import type { FieldRule } from '@arco-design/web-vue';
   import type { UserUpdatePasswordRequest } from '@/api/user/mine';
   import { ref } from 'vue';
-  import { md5 } from '@/utils';
   import useLoading from '@/hooks/loading';
   import useVisible from '@/hooks/visible';
   import { Message } from '@arco-design/web-vue';
@@ -120,8 +124,8 @@
       }
       // 修改
       await updateCurrentUserPassword({
-        beforePassword: md5(formModel.value.beforePassword as string),
-        password: md5(formModel.value.password as string)
+        beforePassword: formModel.value.beforePassword,
+        password: formModel.value.password
       });
       Message.success('修改成功');
       // 清空

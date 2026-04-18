@@ -1,7 +1,8 @@
 <template>
-  <a-textarea class="action-bar-clipboard"
+  <a-textarea
+:ref="setAutoFocus"
               v-model="clipboardData"
-              :ref="setAutoFocus"
+              class="action-bar-clipboard"
               placeholder="远程剪切板"
               allow-clear />
   <!-- 按钮 -->
@@ -9,14 +10,16 @@
     <a-button size="small" @click="clearClipboardData">
       清空
     </a-button>
-    <a-button type="primary"
+    <a-button
+type="primary"
               size="small"
               title="仅将文本发送到远程剪切板"
               :disabled="!clipboardData"
               @click="sendClipboardData(false)">
       发送
     </a-button>
-    <a-button type="primary"
+    <a-button
+type="primary"
               size="small"
               title="将文本发送到远程剪切板并执行粘贴操作"
               :disabled="!clipboardData"
@@ -28,7 +31,7 @@
 
 <script lang="ts">
   export default {
-    name: 'clipboardAction'
+    name: 'ClipboardAction'
   };
 </script>
 

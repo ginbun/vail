@@ -1,5 +1,6 @@
 <template>
-  <a-drawer v-model:visible="visible"
+  <a-drawer
+v-model:visible="visible"
             :width="388"
             :title="title"
             :mask-closable="false"
@@ -9,21 +10,24 @@
             :on-before-ok="handleOk"
             @cancel="handleClose">
     <a-spin class="full form-container" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="bookmarkFormRules">
         <!-- 类型 -->
         <a-form-item field="type" label="类型" hide-asterisk>
-          <a-radio-group v-model="formModel.type"
+          <a-radio-group
+v-model="formModel.type"
                          type="button"
                          class="full-radio-group usn"
                          :options="toRadioOptions(pathBookmarkTypeKey)" />
         </a-form-item>
         <!-- 名称 -->
         <a-form-item field="name" label="名称">
-          <a-input v-model="formModel.name"
+          <a-input
+v-model="formModel.name"
                    placeholder="请输入名称"
                    allow-clear />
         </a-form-item>
@@ -33,7 +37,8 @@
         </a-form-item>
         <!-- 文件路径 -->
         <a-form-item field="path" label="路径">
-          <a-textarea v-model="formModel.path"
+          <a-textarea
+v-model="formModel.path"
                       placeholder="文件路径"
                       :auto-size="{ minRows: 8, maxRows: 8 }"
                       allow-clear />
@@ -45,7 +50,7 @@
 
 <script lang="ts">
   export default {
-    name: 'pathBookmarkFormDrawer'
+    name: 'PathBookmarkFormDrawer'
   };
 </script>
 

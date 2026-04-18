@@ -1,5 +1,6 @@
 <template>
-  <a-select v-model:model-value="modelValue"
+  <a-select
+v-model:model-value="modelValue"
             :options="optionData"
             :allow-search="true"
             :multiple="multiple"
@@ -10,7 +11,7 @@
 
 <script lang="ts">
   export default {
-    name: 'notifyTemplateSelector'
+    name: 'NotifyTemplateSelector'
   };
 </script>
 

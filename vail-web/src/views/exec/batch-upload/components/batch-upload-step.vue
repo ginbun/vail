@@ -1,6 +1,7 @@
 <template>
   <div class="container">
-    <a-steps :current="status.step"
+    <a-steps
+:current="status.step"
              :status="status.status as any"
              direction="vertical">
       <!-- 创建任务 -->
@@ -8,7 +9,7 @@
       <!-- 上传文件 -->
       <a-step>
         上传文件
-        <template #icon v-if="status.step === 2">
+        <template v-if="status.step === 2" #icon>
           <icon-loading />
         </template>
         <template #description>
@@ -21,7 +22,7 @@
       <!-- 分发文件 -->
       <a-step>
         分发文件
-        <template #icon v-if="status.step === 3">
+        <template v-if="status.step === 3" #icon>
           <icon-loading />
         </template>
         <template #description>
@@ -39,7 +40,7 @@
 
 <script lang="ts">
   export default {
-    name: 'batchUploadStep'
+    name: 'BatchUploadStep'
   };
 </script>
 

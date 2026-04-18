@@ -1,15 +1,18 @@
 <template>
   <div v-if="render" class="full">
     <!-- 消息分类 -->
-    <a-spin class="message-classify-container"
+    <a-spin
+class="message-classify-container"
             :hide-icon="true"
             :loading="fetchLoading">
-      <a-tabs v-model:active-key="currentClassify"
+      <a-tabs
+v-model:active-key="currentClassify"
               type="rounded"
               :hide-content="true"
               @change="loadClassifyMessage">
         <!-- 消息列表 -->
-        <a-tab-pane v-for="item in toOptions(messageClassifyKey)"
+        <a-tab-pane
+v-for="item in toOptions(messageClassifyKey)"
                     :key="item.value as string">
           <!-- 标题 -->
           <template #title>
@@ -21,7 +24,8 @@
         <template #extra>
           <a-space>
             <!-- 状态 -->
-            <a-switch v-model="queryUnread"
+            <a-switch
+v-model="queryUnread"
                       style="margin-right: 4px;"
                       type="round"
                       checked-text="未读"
@@ -46,7 +50,8 @@
       </a-tabs>
     </a-spin>
     <!-- 消息列表 -->
-    <list :fetch-loading="fetchLoading"
+    <list
+:fetch-loading="fetchLoading"
           :message-loading="messageLoading"
           :has-more="hasMore"
           :message-list="messageList"
@@ -58,7 +63,7 @@
 
 <script lang="ts">
   export default {
-    name: 'messageBox'
+    name: 'MessageBox'
   };
 </script>
 

@@ -1,5 +1,6 @@
 <template>
-  <a-modal v-model:visible="visible"
+  <a-modal
+v-model:visible="visible"
            modal-class="modal-form-large"
            title-align="start"
            :title="title"
@@ -13,27 +14,31 @@
            :on-before-ok="handlerOk"
            @close="handleClose">
     <a-spin class="full" :loading="loading">
-      <a-form :model="formModel"
-              ref="formRef"
+      <a-form
+ref="formRef"
+              :model="formModel"
               label-align="right"
               :auto-label-width="true"
               :rules="formRules">
         <!-- 角色名称 -->
         <a-form-item field="name" label="角色名称">
-          <a-input v-model="formModel.name"
+          <a-input
+v-model="formModel.name"
                    placeholder="请输入角色名称"
                    allow-clear />
         </a-form-item>
         <!-- 角色编码 -->
         <a-form-item field="code" label="角色编码">
-          <a-input v-model="formModel.code"
+          <a-input
+v-model="formModel.code"
                    :disabled="!isAddHandle"
                    placeholder="请输入角色编码"
                    allow-clear />
         </a-form-item>
         <!-- 角色描述 -->
         <a-form-item field="description" label="角色描述">
-          <a-textarea v-model="formModel.description"
+          <a-textarea
+v-model="formModel.description"
                       placeholder="请输入角色描述"
                       allow-clear />
         </a-form-item>
@@ -44,7 +49,7 @@
 
 <script lang="ts">
   export default {
-    name: 'roleFormModal'
+    name: 'RoleFormModal'
   };
 </script>
 

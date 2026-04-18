@@ -1,6 +1,7 @@
 <template>
   <a-space>
-    <a-tag v-for="item in GuacdKeyboardItems"
+    <a-tag
+v-for="item in GuacdKeyboardItems"
            :key="item.name"
            :default-checked="session.displayHandler.keyboardDownKeys.includes(item.key)"
            checkable
@@ -13,7 +14,7 @@
 
 <script lang="ts">
   export default {
-    name: 'triggerKeyAction'
+    name: 'TriggerKeyAction'
   };
 </script>
 

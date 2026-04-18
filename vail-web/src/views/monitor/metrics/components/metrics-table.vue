@@ -1,33 +1,38 @@
 <template>
   <!-- 搜索 -->
   <a-card class="general-card table-search-card">
-    <query-header :model="formModel"
+    <query-header
+:model="formModel"
                   label-align="left"
                   @submit="fetchTableData"
                   @reset="fetchTableData"
                   @keyup.enter="() => fetchTableData()">
       <!-- 指标名称 -->
       <a-form-item field="name" label="指标名称">
-        <a-input v-model="formModel.name"
+        <a-input
+v-model="formModel.name"
                  placeholder="请输入指标名称"
                  allow-clear />
       </a-form-item>
       <!-- 数据集 -->
       <a-form-item field="measurement" label="数据集">
-        <a-select v-model="formModel.measurement"
+        <a-select
+v-model="formModel.measurement"
                   :options="toOptions(MeasurementKey)"
                   placeholder="请选择数据集"
                   allow-clear />
       </a-form-item>
       <!-- 指标项 -->
       <a-form-item field="value" label="指标项">
-        <a-input v-model="formModel.value"
+        <a-input
+v-model="formModel.value"
                  placeholder="请输入指标项"
                  allow-clear />
       </a-form-item>
       <!-- 指标描述 -->
       <a-form-item field="description" label="指标描述">
-        <a-input v-model="formModel.description"
+        <a-input
+v-model="formModel.description"
                  placeholder="请输入指标描述"
                  allow-clear />
       </a-form-item>
@@ -47,7 +52,8 @@
       <div class="table-right-bar-handle">
         <a-space>
           <!-- 新增 -->
-          <a-button v-permission="['monitor:monitor-metrics:create']"
+          <a-button
+v-permission="['monitor:monitor-metrics:create']"
                     type="primary"
                     @click="emits('openAdd')">
             新增
@@ -56,7 +62,8 @@
             </template>
           </a-button>
           <!-- 调整 -->
-          <table-adjust :columns="columns"
+          <table-adjust
+:columns="columns"
                         :columns-hook="columnsHook"
                         :query-order="queryOrder"
                         @query="fetchTableData" />
@@ -64,8 +71,9 @@
       </div>
     </template>
     <!-- table -->
-    <a-table row-key="id"
-             ref="tableRef"
+    <a-table
+ref="tableRef"
+             row-key="id"
              class="table-resize"
              :loading="loading"
              :columns="tableColumns"
@@ -105,18 +113,21 @@
       <template #handle="{ record }">
         <div class="table-handle-wrapper">
           <!-- 修改 -->
-          <a-button v-permission="['monitor:monitor-metrics:update']"
+          <a-button
+v-permission="['monitor:monitor-metrics:update']"
                     type="text"
                     size="mini"
                     @click="emits('openUpdate', record)">
             修改
           </a-button>
           <!-- 删除 -->
-          <a-popconfirm content="确认删除这条记录吗?"
+          <a-popconfirm
+content="确认删除这条记录吗?"
                         position="left"
                         type="warning"
                         @ok="deleteRow(record)">
-            <a-button v-permission="['monitor:monitor-metrics:delete']"
+            <a-button
+v-permission="['monitor:monitor-metrics:delete']"
                       type="text"
                       size="mini"
                       status="danger">
@@ -131,7 +142,7 @@
 
 <script lang="ts">
   export default {
-    name: 'metricsTable'
+    name: 'MetricsTable'
   };
 </script>
 

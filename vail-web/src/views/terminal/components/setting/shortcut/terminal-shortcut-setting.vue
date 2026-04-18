@@ -4,37 +4,44 @@
       <!-- 主标题 -->
       <h2 class="terminal-setting-title">快捷键设置</h2>
       <!-- 加载中 -->
-      <a-skeleton v-if="!render"
+      <a-skeleton
+v-if="!render"
                   class="skeleton-wrapper"
                   :animation="true">
-        <a-skeleton-line :rows="8"
+        <a-skeleton-line
+:rows="8"
                          :line-height="42"
                          :line-spacing="12" />
       </a-skeleton>
       <!-- 设置 -->
-      <a-spin v-else
+      <a-spin
+v-else
               class="full"
               :loading="loading">
         <!-- 快捷键操作 -->
-        <terminal-shortcut-action-block v-model:enabled="enabled"
+        <terminal-shortcut-action-block
+v-model:enabled="enabled"
                                         @reset="loadDefaultPreference"
                                         @save="savePreference" />
         <!-- 全局快捷键 -->
-        <terminal-shortcut-keys-block title="全局快捷键"
+        <terminal-shortcut-keys-block
+title="全局快捷键"
                                       :type="TerminalShortcutType.GLOBAL"
                                       :items="shortcutKeys"
                                       @set-editable="setEditableStatus"
                                       @clear-editable="clearEditableStatus"
                                       @update-enabled="updateEnabledStatus" />
         <!-- 会话快捷键 -->
-        <terminal-shortcut-keys-block title="会话快捷键"
+        <terminal-shortcut-keys-block
+title="会话快捷键"
                                       :type="TerminalShortcutType.SESSION"
                                       :items="shortcutKeys"
                                       @set-editable="setEditableStatus"
                                       @clear-editable="clearEditableStatus"
                                       @update-enabled="updateEnabledStatus" />
         <!-- 终端快捷键 -->
-        <terminal-shortcut-keys-block title="终端快捷键"
+        <terminal-shortcut-keys-block
+title="终端快捷键"
                                       :type="TerminalShortcutType.TERMINAL"
                                       :items="shortcutKeys"
                                       @set-editable="setEditableStatus"
@@ -47,7 +54,7 @@
 
 <script lang="ts">
   export default {
-    name: 'terminalShortcutSetting'
+    name: 'TerminalShortcutSetting'
   };
 </script>
 

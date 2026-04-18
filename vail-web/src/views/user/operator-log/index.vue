@@ -1,11 +1,13 @@
 <template>
-  <div class="layout-container" v-if="render">
+  <div v-if="render" class="layout-container">
     <!-- 表格 -->
-    <operator-log-table ref="table"
+    <operator-log-table
+ref="table"
                         @open-detail="openLogDetail"
                         @open-clear="(s) => clearModal.open(s)" />
     <!-- 清理模态框 -->
-    <operator-log-clear-modal ref="clearModal"
+    <operator-log-clear-modal
+ref="clearModal"
                               @clear="() => table.reload()" />
     <!-- json 查看器模态框 -->
     <json-editor-modal ref="jsonView" />
@@ -14,7 +16,7 @@
 
 <script lang="ts">
   export default {
-    name: 'operatorLog'
+    name: 'OperatorLog'
   };
 </script>
 

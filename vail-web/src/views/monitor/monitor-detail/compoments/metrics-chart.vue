@@ -1,5 +1,6 @@
 <template>
-  <a-card class="full"
+  <a-card
+class="full"
           size="small"
           style="border-radius: 8px;"
           :loading="loading"
@@ -16,12 +17,14 @@
       </div>
     </template>
     <!-- 无数据 -->
-    <div v-if="!series.length && !loading"
+    <div
+v-if="!series.length && !loading"
          class="nodata-chart">
       <a-empty description="此监控指标暂无数据" />
     </div>
     <!-- 图表 -->
-    <chart v-else-if="chartOption"
+    <chart
+v-else-if="chartOption"
            :options="chartOption"
            class="chart"
            width="100%"
@@ -31,7 +34,7 @@
 
 <script lang="ts">
   export default {
-    name: 'metricsChart'
+    name: 'MetricsChart'
   };
 </script>
 
