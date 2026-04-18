@@ -1,11 +1,20 @@
 use axum::{
-    extract::{ConnectInfo, Multipart, Path, Query, State},
+    extract::{ConnectInfo, Path, Query, State},
     http::{HeaderMap, Method},
     routing::{any, delete, get, post, put},
     Json, Router,
 };
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+use chrono::{DateTime, NaiveDateTime, Utc};
+use rsa::{
+    pkcs1::DecodeRsaPrivateKey,
+    pkcs8::{DecodePrivateKey, EncodePrivateKey, EncodePublicKey, LineEnding},
+    Oaep, RsaPrivateKey, RsaPublicKey,
+};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write as _;
 use std::net::SocketAddr;
 
 use crate::{
@@ -26,6 +35,25 @@ use crate::{
     security,
 };
 
+const ORION_MINE_OPERATOR_LOG_QUERY: &str = "/infra/mine/query-operator-log";
+const ORION_OPERATOR_LOG_QUERY: &str = "/infra/operator-log/query";
+const ORION_OPERATOR_LOG_COUNT: &str = "/infra/operator-log/count";
+const ORION_OPERATOR_LOG_DELETE: &str = "/infra/operator-log/delete";
+const ORION_OPERATOR_LOG_CLEAR: &str = "/infra/operator-log/clear";
+
+const ORION_TERMINAL_SESSION_QUERY: &str = "/terminal/session/query";
+const ORION_TERMINAL_SESSION_FORCE_OFFLINE: &str = "/terminal/session/force-offline";
+
+const ORION_TERMINAL_CONNECT_LOG_QUERY: &str = "/terminal/connect-log/query";
+const ORION_TERMINAL_CONNECT_LOG_LATEST: &str = "/terminal/connect-log/latest-connect";
+const ORION_TERMINAL_CONNECT_LOG_DELETE: &str = "/terminal/connect-log/delete";
+const ORION_TERMINAL_CONNECT_LOG_COUNT: &str = "/terminal/connect-log/count";
+const ORION_TERMINAL_CONNECT_LOG_CLEAR: &str = "/terminal/connect-log/clear";
+
+const ORION_TERMINAL_FILE_LOG_QUERY: &str = "/terminal/file-log/query";
+const ORION_TERMINAL_FILE_LOG_COUNT: &str = "/terminal/file-log/count";
+const ORION_TERMINAL_FILE_LOG_DELETE: &str = "/terminal/file-log/delete";
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/infra/auth/login", post(orion_login))
@@ -43,20 +71,17 @@ pub fn router() -> Router<AppState> {
             put(orion_mine_offline_session),
         )
         .route(
-            "/infra/mine/query-operator-log",
+            ORION_MINE_OPERATOR_LOG_QUERY,
             post(orion_mine_query_operator_log),
         )
         .route(
             "/infra/mine/update-password",
             put(orion_mine_update_password),
         )
-        .route("/infra/operator-log/query", post(orion_operator_log_query))
-        .route("/infra/operator-log/count", post(orion_operator_log_count))
-        .route(
-            "/infra/operator-log/delete",
-            delete(orion_operator_log_delete),
-        )
-        .route("/infra/operator-log/clear", post(orion_operator_log_clear))
+        .route(ORION_OPERATOR_LOG_QUERY, post(orion_operator_log_query))
+        .route(ORION_OPERATOR_LOG_COUNT, post(orion_operator_log_count))
+        .route(ORION_OPERATOR_LOG_DELETE, delete(orion_operator_log_delete))
+        .route(ORION_OPERATOR_LOG_CLEAR, post(orion_operator_log_clear))
         .route("/infra/system-user/create", post(orion_system_user_create))
         .route("/infra/system-user/update", put(orion_system_user_update))
         .route(
@@ -281,16 +306,64 @@ pub fn router() -> Router<AppState> {
             "/asset/data-grant/get-host-identity",
             get(orion_data_grant_get_host_identity),
         )
+        .route("/asset/host-extra/get", get(orion_host_extra_get))
+        .route("/asset/host-extra/update", put(orion_host_extra_update))
+        .route("/asset/host-config/get", post(orion_host_config_get))
+        .route("/asset/host-config/update", put(orion_host_config_update))
+        .route(
+            "/asset/authorized-data/current-host",
+            get(orion_authorized_data_current_host),
+        )
+        .route(
+            "/asset/authorized-data/current-host-key",
+            get(orion_authorized_data_current_host_key),
+        )
+        .route(
+            "/asset/authorized-data/current-host-identity",
+            get(orion_authorized_data_current_host_identity),
+        )
         .route("/terminal/terminal/themes", get(orion_terminal_themes))
         .route("/terminal/terminal/access", post(orion_terminal_access))
         .route("/terminal/terminal/transfer", get(orion_terminal_transfer))
         .route(
-            "/terminal/terminal-sftp/get-content",
-            get(orion_terminal_sftp_get_content),
+            ORION_TERMINAL_CONNECT_LOG_QUERY,
+            post(orion_terminal_connect_log_query),
         )
         .route(
-            "/terminal/terminal-sftp/set-content",
-            post(orion_terminal_sftp_set_content),
+            ORION_TERMINAL_SESSION_QUERY,
+            post(orion_terminal_connect_log_sessions),
+        )
+        .route(
+            ORION_TERMINAL_CONNECT_LOG_LATEST,
+            post(orion_terminal_connect_log_latest),
+        )
+        .route(
+            ORION_TERMINAL_CONNECT_LOG_DELETE,
+            delete(orion_terminal_connect_log_delete),
+        )
+        .route(
+            ORION_TERMINAL_CONNECT_LOG_COUNT,
+            post(orion_terminal_connect_log_count),
+        )
+        .route(
+            ORION_TERMINAL_CONNECT_LOG_CLEAR,
+            post(orion_terminal_connect_log_clear),
+        )
+        .route(
+            ORION_TERMINAL_SESSION_FORCE_OFFLINE,
+            put(orion_terminal_connect_log_force_offline),
+        )
+        .route(
+            ORION_TERMINAL_FILE_LOG_QUERY,
+            post(orion_terminal_file_log_query),
+        )
+        .route(
+            ORION_TERMINAL_FILE_LOG_COUNT,
+            post(orion_terminal_file_log_count),
+        )
+        .route(
+            ORION_TERMINAL_FILE_LOG_DELETE,
+            delete(orion_terminal_file_log_delete),
         )
         .route("/exec/:module/:action", any(orion_exec_dispatch))
         .route("/terminal/:module/:action", any(orion_terminal_dispatch))
@@ -395,6 +468,7 @@ struct OrionHostCreateRequest {
     name: Option<String>,
     address: Option<String>,
     description: Option<String>,
+    group_id_list: Option<Vec<i64>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -404,6 +478,7 @@ struct OrionHostUpdateRequest {
     name: Option<String>,
     address: Option<String>,
     description: Option<String>,
+    group_id_list: Option<Vec<i64>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -411,6 +486,36 @@ struct OrionHostUpdateRequest {
 struct OrionHostUpdateStatusRequest {
     id: Option<i64>,
     status: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OrionHostExtraQuery {
+    host_id: Option<i64>,
+    item: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OrionHostExtraUpdateRequest {
+    host_id: Option<i64>,
+    item: Option<String>,
+    extra: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OrionHostConfigGetRequest {
+    host_id: Option<i64>,
+    r#type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OrionHostConfigUpdateRequest {
+    host_id: Option<i64>,
+    r#type: Option<String>,
+    config: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -513,9 +618,11 @@ struct OrionHostKeyUpsertRequest {
     name: Option<String>,
     #[serde(rename = "publicKey")]
     _public_key: Option<String>,
+    #[serde(alias = "private_key")]
     private_key: Option<String>,
     password: Option<String>,
     description: Option<String>,
+    #[serde(alias = "use_new_password")]
     use_new_password: Option<bool>,
 }
 
@@ -814,6 +921,165 @@ fn get_source_ip(headers: &HeaderMap, connect_info: Option<&ConnectInfo<SocketAd
 
 fn sanitize_search(v: Option<String>) -> Option<String> {
     v.map(|s| s.trim().to_string()).filter(|s| !s.is_empty())
+}
+
+const CLIENT_OAEP_PREFIX: &str = "oaep-sha256:";
+
+async fn decrypt_client_sensitive_input(
+    state: &AppState,
+    input: Option<String>,
+    field_name: &str,
+) -> AppResult<Option<String>> {
+    let Some(raw) = input else {
+        return Ok(None);
+    };
+
+    if !raw.starts_with(CLIENT_OAEP_PREFIX) {
+        return Ok(Some(raw));
+    }
+
+    let payload = raw[CLIENT_OAEP_PREFIX.len()..].trim();
+    if payload.is_empty() {
+        return Err(AppError::BadRequest(format!(
+            "{field_name} encrypted payload is empty"
+        )));
+    }
+
+    let key = OrionCompatModule::SystemSetting.store_key();
+    let map = compat_service::get_config_map(&state.db, key).await?;
+    let private_key_pem = map
+        .get("encrypt.private-key")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .ok_or_else(|| {
+            AppError::BadRequest(
+                "server RSA private key is not configured in system settings".to_string(),
+            )
+        })?;
+
+    let private_key = RsaPrivateKey::from_pkcs8_pem(private_key_pem)
+        .or_else(|_| RsaPrivateKey::from_pkcs1_pem(private_key_pem))
+        .map_err(|_| AppError::Internal("server RSA private key format is invalid".to_string()))?;
+
+    let mut plain = Vec::new();
+    for chunk in payload.split('|').filter(|v| !v.is_empty()) {
+        let encrypted_chunk = STANDARD.decode(chunk).map_err(|_| {
+            AppError::BadRequest(format!(
+                "{field_name} encrypted payload contains invalid base64 chunk"
+            ))
+        })?;
+
+        let decrypted_chunk = private_key
+            .decrypt(Oaep::new::<Sha256>(), &encrypted_chunk)
+            .map_err(|_| {
+                AppError::BadRequest(format!(
+                    "{field_name} encrypted payload cannot be decrypted"
+                ))
+            })?;
+        plain.extend_from_slice(&decrypted_chunk);
+    }
+
+    let plain_text = String::from_utf8(plain).map_err(|_| {
+        AppError::BadRequest(format!("{field_name} decrypted payload is not valid UTF-8"))
+    })?;
+
+    Ok(Some(plain_text))
+}
+
+fn log_private_key_validation_failure(stage: &str, key: &str, detail: &str) {
+    let mut hasher = Sha256::new();
+    hasher.update(key.as_bytes());
+    let digest = hasher.finalize();
+
+    let mut key_fingerprint = String::with_capacity(16);
+    for byte in digest.iter().take(8) {
+        let _ = write!(&mut key_fingerprint, "{byte:02x}");
+    }
+
+    tracing::warn!(
+        target: "security::ssh_key_validation",
+        stage,
+        detail,
+        key_len = key.len(),
+        line_count = key.lines().count(),
+        has_begin_openssh = key.contains("-----BEGIN OPENSSH PRIVATE KEY-----"),
+        has_end_openssh = key.contains("-----END OPENSSH PRIVATE KEY-----"),
+        has_begin_rsa = key.contains("-----BEGIN RSA PRIVATE KEY-----"),
+        has_end_rsa = key.contains("-----END RSA PRIVATE KEY-----"),
+        has_begin_pkcs8 = key.contains("-----BEGIN PRIVATE KEY-----"),
+        has_end_pkcs8 = key.contains("-----END PRIVATE KEY-----"),
+        key_fingerprint = %key_fingerprint,
+        "ssh private key validation failed"
+    );
+}
+
+fn normalize_and_validate_private_key(private_key: &str) -> AppResult<String> {
+    let mut normalized = private_key.trim().to_string();
+    if normalized.is_empty() {
+        log_private_key_validation_failure("empty", private_key, "private key is empty");
+        return Err(AppError::BadRequest("privateKey is required".to_string()));
+    }
+
+    normalized = normalized.trim_start_matches('\u{feff}').to_string();
+
+    if !normalized.contains('\n') && normalized.contains("\\n") {
+        normalized = normalized.replace("\\n", "\n");
+    }
+    normalized = normalized.replace("\r\n", "\n");
+    normalized = normalized.replace('\r', "\n");
+    normalized = normalized.trim().to_string();
+
+    if normalized.contains("-----BEGIN OPENSSH PRIVATE KEY-----") {
+        if let Err(err) = ssh_key::PrivateKey::from_openssh(&normalized) {
+            log_private_key_validation_failure(
+                "openssh-parse",
+                &normalized,
+                &format!("openssh parser rejected key: {err}"),
+            );
+            return Err(AppError::BadRequest(
+                "unsupported private key file format".to_string(),
+            ));
+        }
+        return Ok(normalized);
+    }
+
+    const LEGACY_ALLOWED_MARKERS: [(&str, &str); 2] = [
+        (
+            "-----BEGIN RSA PRIVATE KEY-----",
+            "-----END RSA PRIVATE KEY-----",
+        ),
+        ("-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----"),
+    ];
+
+    let marker = LEGACY_ALLOWED_MARKERS
+        .iter()
+        .find(|(begin, end)| normalized.contains(begin) && normalized.contains(end));
+
+    if marker.is_none() {
+        log_private_key_validation_failure("legacy-marker", &normalized, "legacy marker not found");
+        return Err(AppError::BadRequest(
+            "unsupported private key file format".to_string(),
+        ));
+    }
+
+    let non_empty_lines = normalized
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .count();
+    if non_empty_lines < 3 {
+        log_private_key_validation_failure(
+            "legacy-lines",
+            &normalized,
+            "legacy key has fewer than 3 non-empty lines",
+        );
+        return Err(AppError::BadRequest(
+            "unsupported private key file format".to_string(),
+        ));
+    }
+
+    Ok(normalized)
 }
 
 async fn get_tipped_keys(state: &AppState, user_id: i64) -> Vec<String> {
@@ -1356,6 +1622,8 @@ async fn orion_create_host(
     Json(payload): Json<OrionHostCreateRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "host.create").await?;
+    let group_ids = normalize_group_ids(payload.group_id_list)?;
+    ensure_groups_exist(&state, &group_ids).await?;
 
     let name = payload
         .name
@@ -1369,6 +1637,7 @@ async fn orion_create_host(
         .filter(|v| !v.is_empty())
         .ok_or_else(|| AppError::BadRequest("address is required".to_string()))?;
 
+    let mut tx = state.db.begin().await?;
     let new_id = sqlx::query_scalar::<_, i64>(
         "INSERT INTO host (name, hostname, port, credential_type, description, status, create_time, update_time)
          VALUES ($1, $2, 22, NULL, $3, 1, NOW(), NOW())
@@ -1377,8 +1646,21 @@ async fn orion_create_host(
     .bind(name)
     .bind(address)
     .bind(payload.description)
-    .fetch_one(&state.db)
+    .fetch_one(&mut *tx)
     .await?;
+
+    for group_id in group_ids {
+        sqlx::query(
+            "INSERT INTO host_group_rel (host_id, group_id)
+             VALUES ($1, $2)
+             ON CONFLICT (host_id, group_id) DO NOTHING",
+        )
+        .bind(new_id)
+        .bind(group_id)
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
 
     Ok(OrionResponse::ok(new_id))
 }
@@ -1403,7 +1685,10 @@ async fn orion_update_host(
     let name = payload.name.map(|v| v.trim().to_string());
     let address = payload.address.map(|v| v.trim().to_string());
     let description = payload.description;
+    let group_ids = normalize_group_ids(payload.group_id_list)?;
+    ensure_groups_exist(&state, &group_ids).await?;
 
+    let mut tx = state.db.begin().await?;
     let rows = sqlx::query(
         "UPDATE host
          SET name = COALESCE(NULLIF($1, ''), name),
@@ -1416,13 +1701,30 @@ async fn orion_update_host(
     .bind(address)
     .bind(description)
     .bind(id)
-    .execute(&state.db)
+    .execute(&mut *tx)
     .await?
     .rows_affected();
 
     if rows == 0 {
         return Err(AppError::NotFound("Host not found".to_string()));
     }
+
+    sqlx::query("DELETE FROM host_group_rel WHERE host_id = $1")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+    for group_id in group_ids {
+        sqlx::query(
+            "INSERT INTO host_group_rel (host_id, group_id)
+             VALUES ($1, $2)
+             ON CONFLICT (host_id, group_id) DO NOTHING",
+        )
+        .bind(id)
+        .bind(group_id)
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
 
     Ok(OrionResponse::ok(true))
 }
@@ -1468,6 +1770,476 @@ async fn orion_update_host_status(
 
     if rows == 0 {
         return Err(AppError::NotFound("Host not found".to_string()));
+    }
+
+    Ok(OrionResponse::ok(true))
+}
+
+fn host_extra_cache_key(user_id: i64, host_id: i64, item: &str) -> String {
+    format!(
+        "orion:host-extra:user:{user_id}:host:{host_id}:item:{}",
+        item.trim().to_ascii_uppercase()
+    )
+}
+
+fn host_config_cache_key(host_id: i64, config_type: &str) -> String {
+    format!(
+        "orion:host-config:host:{host_id}:type:{}",
+        config_type.trim().to_ascii_uppercase()
+    )
+}
+
+fn normalize_host_config_type(raw: Option<String>) -> AppResult<String> {
+    let value = raw
+        .as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .ok_or_else(|| AppError::BadRequest("type is required".to_string()))?
+        .to_ascii_uppercase();
+    match value.as_str() {
+        "SSH" | "RDP" | "VNC" => Ok(value),
+        _ => Err(AppError::BadRequest(
+            "type must be one of SSH, RDP, VNC".to_string(),
+        )),
+    }
+}
+
+async fn ensure_host_exists(state: &AppState, host_id: i64) -> AppResult<()> {
+    let exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM host WHERE id = $1 AND deleted = 0)",
+    )
+    .bind(host_id)
+    .fetch_one(&state.db)
+    .await?;
+    if !exists {
+        return Err(AppError::NotFound("Host not found".to_string()));
+    }
+    Ok(())
+}
+
+async fn apply_ssh_host_config(
+    state: &AppState,
+    host_id: i64,
+    config: &serde_json::Value,
+) -> AppResult<()> {
+    let mut tx = state.db.begin().await?;
+
+    let username = config
+        .get("username")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .map(str::to_string);
+    let port = config
+        .get("port")
+        .and_then(serde_json::Value::as_i64)
+        .map(|v| v as i32);
+
+    sqlx::query(
+        "UPDATE host
+         SET username = COALESCE($1, username),
+             port = CASE WHEN $2 IS NULL OR $2 <= 0 THEN port ELSE $2 END,
+             update_time = NOW()
+         WHERE id = $3 AND deleted = 0",
+    )
+    .bind(username)
+    .bind(port)
+    .bind(host_id)
+    .execute(&mut *tx)
+    .await?;
+
+    let auth_type = config
+        .get("authType")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .unwrap_or("PASSWORD")
+        .to_ascii_uppercase();
+
+    match auth_type.as_str() {
+        "KEY" => {
+            let key_id = config
+                .get("keyId")
+                .and_then(serde_json::Value::as_i64)
+                .ok_or_else(|| {
+                    AppError::BadRequest("keyId is required when authType=KEY".to_string())
+                })?;
+            if key_id <= 0 {
+                return Err(AppError::BadRequest(
+                    "keyId must be greater than 0".to_string(),
+                ));
+            }
+            let key_exists = sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS(SELECT 1 FROM ssh_key WHERE id = $1 AND deleted = 0 AND status = 1)",
+            )
+            .bind(key_id)
+            .fetch_one(&mut *tx)
+            .await?;
+            if !key_exists {
+                return Err(AppError::BadRequest(
+                    "keyId does not exist or is disabled".to_string(),
+                ));
+            }
+
+            sqlx::query(
+                "UPDATE host SET credential_type = 'ssh_key', credential_data = NULL, update_time = NOW()
+                 WHERE id = $1 AND deleted = 0",
+            )
+            .bind(host_id)
+            .execute(&mut *tx)
+            .await?;
+
+            sqlx::query("UPDATE host_ssh_key_binding SET is_default = 0 WHERE host_id = $1")
+                .bind(host_id)
+                .execute(&mut *tx)
+                .await?;
+
+            sqlx::query(
+                "INSERT INTO host_ssh_key_binding (host_id, ssh_key_id, is_default, create_time)
+                 VALUES ($1, $2, 1, NOW())
+                 ON CONFLICT (host_id, ssh_key_id)
+                 DO UPDATE SET is_default = 1",
+            )
+            .bind(host_id)
+            .bind(key_id)
+            .execute(&mut *tx)
+            .await?;
+        }
+        "PASSWORD" => {
+            let use_new_password = config
+                .get("useNewPassword")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false);
+            if use_new_password {
+                let encrypted_password = config
+                    .get("password")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_string)
+                    .ok_or_else(|| {
+                        AppError::BadRequest(
+                            "password is required when useNewPassword=true".to_string(),
+                        )
+                    })?;
+                let password =
+                    decrypt_client_sensitive_input(state, Some(encrypted_password), "password")
+                        .await?
+                        .and_then(|v| sanitize_search(Some(v)))
+                        .ok_or_else(|| {
+                            AppError::BadRequest(
+                                "password is required when useNewPassword=true".to_string(),
+                            )
+                        })?;
+                let payload = serde_json::json!({"kind": "password", "password": password});
+                let encrypted = security::encrypt_secret(
+                    &payload.to_string(),
+                    &state.config.secrets.data_encryption_key,
+                )?;
+                sqlx::query(
+                    "UPDATE host
+                     SET credential_type = 'password', credential_data = $2, update_time = NOW()
+                     WHERE id = $1 AND deleted = 0",
+                )
+                .bind(host_id)
+                .bind(encrypted)
+                .execute(&mut *tx)
+                .await?;
+            } else {
+                sqlx::query(
+                    "UPDATE host
+                     SET credential_type = 'password', update_time = NOW()
+                     WHERE id = $1 AND deleted = 0",
+                )
+                .bind(host_id)
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+        "IDENTITY" => {
+            let identity_id = config
+                .get("identityId")
+                .and_then(serde_json::Value::as_i64)
+                .ok_or_else(|| {
+                    AppError::BadRequest(
+                        "identityId is required when authType=IDENTITY".to_string(),
+                    )
+                })?;
+            if identity_id <= 0 {
+                return Err(AppError::BadRequest(
+                    "identityId must be greater than 0".to_string(),
+                ));
+            }
+
+            let identity =
+                sqlx::query_as::<_, (String, Option<String>, Option<String>, Option<i64>)>(
+                    "SELECT type, username, password_ciphertext, key_id
+                 FROM host_identity
+                 WHERE id = $1 AND deleted = 0 AND status = 1",
+                )
+                .bind(identity_id)
+                .fetch_optional(&mut *tx)
+                .await?
+                .ok_or_else(|| {
+                    AppError::BadRequest("identityId does not exist or is disabled".to_string())
+                })?;
+
+            if let Some(identity_username) = identity
+                .1
+                .as_deref()
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+            {
+                sqlx::query("UPDATE host SET username = $2, update_time = NOW() WHERE id = $1 AND deleted = 0")
+                    .bind(host_id)
+                    .bind(identity_username)
+                    .execute(&mut *tx)
+                    .await?;
+            }
+
+            match identity.0.as_str() {
+                "PASSWORD" => {
+                    let ciphertext = identity.2.as_deref().ok_or_else(|| {
+                        AppError::BadRequest("identity password is missing".to_string())
+                    })?;
+                    let password = security::decrypt_secret(
+                        ciphertext,
+                        &state.config.secrets.data_encryption_key,
+                    )?;
+                    let payload = serde_json::json!({"kind": "password", "password": password});
+                    let encrypted = security::encrypt_secret(
+                        &payload.to_string(),
+                        &state.config.secrets.data_encryption_key,
+                    )?;
+                    sqlx::query(
+                        "UPDATE host
+                         SET credential_type = 'password', credential_data = $2, update_time = NOW()
+                         WHERE id = $1 AND deleted = 0",
+                    )
+                    .bind(host_id)
+                    .bind(encrypted)
+                    .execute(&mut *tx)
+                    .await?;
+                }
+                "KEY" => {
+                    let key_id = identity.3.ok_or_else(|| {
+                        AppError::BadRequest("identity key is missing".to_string())
+                    })?;
+
+                    sqlx::query(
+                        "UPDATE host SET credential_type = 'ssh_key', credential_data = NULL, update_time = NOW()
+                         WHERE id = $1 AND deleted = 0",
+                    )
+                    .bind(host_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                    sqlx::query(
+                        "UPDATE host_ssh_key_binding SET is_default = 0 WHERE host_id = $1",
+                    )
+                    .bind(host_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                    sqlx::query(
+                        "INSERT INTO host_ssh_key_binding (host_id, ssh_key_id, is_default, create_time)
+                         VALUES ($1, $2, 1, NOW())
+                         ON CONFLICT (host_id, ssh_key_id)
+                         DO UPDATE SET is_default = 1",
+                    )
+                    .bind(host_id)
+                    .bind(key_id)
+                    .execute(&mut *tx)
+                    .await?;
+                }
+                _ => {
+                    return Err(AppError::BadRequest(
+                        "identity type must be PASSWORD or KEY".to_string(),
+                    ))
+                }
+            }
+        }
+        _ => {
+            return Err(AppError::BadRequest(
+                "authType must be one of PASSWORD, KEY, IDENTITY".to_string(),
+            ))
+        }
+    }
+
+    tx.commit().await?;
+    Ok(())
+}
+
+async fn orion_host_extra_get(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<OrionHostExtraQuery>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let host_id = parse_required_id(query.host_id, "hostId")?;
+    let item = query
+        .item
+        .map(|v| v.trim().to_ascii_uppercase())
+        .filter(|v| !v.is_empty())
+        .ok_or_else(|| AppError::BadRequest("item is required".to_string()))?;
+
+    let key = host_extra_cache_key(user_id, host_id, &item);
+    let value = sqlx::query_scalar::<_, String>(
+        "SELECT cache_value FROM cache
+         WHERE cache_key = $1
+           AND (expire_time IS NULL OR expire_time > NOW())",
+    )
+    .bind(key)
+    .fetch_optional(&state.db)
+    .await?;
+
+    let extra = value
+        .as_deref()
+        .and_then(|raw| serde_json::from_str::<serde_json::Value>(raw).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+
+    Ok(OrionResponse::ok(extra))
+}
+
+async fn orion_host_extra_update(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<OrionHostExtraUpdateRequest>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let host_id = parse_required_id(payload.host_id, "hostId")?;
+    let item = payload
+        .item
+        .map(|v| v.trim().to_ascii_uppercase())
+        .filter(|v| !v.is_empty())
+        .ok_or_else(|| AppError::BadRequest("item is required".to_string()))?;
+    let extra_raw = payload
+        .extra
+        .as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .ok_or_else(|| AppError::BadRequest("extra is required".to_string()))?;
+
+    let extra: serde_json::Value = serde_json::from_str(extra_raw)
+        .map_err(|_| AppError::BadRequest("extra must be valid JSON".to_string()))?;
+
+    let cache_key = host_extra_cache_key(user_id, host_id, &item);
+    let payload = serde_json::to_string(&extra).unwrap_or_else(|_| "{}".to_string());
+    sqlx::query(
+        "INSERT INTO cache (cache_key, cache_value, expire_time, create_time)
+         VALUES ($1, $2, NULL, NOW())
+         ON CONFLICT (cache_key)
+         DO UPDATE SET cache_value = EXCLUDED.cache_value, create_time = NOW()",
+    )
+    .bind(cache_key)
+    .bind(payload)
+    .execute(&state.db)
+    .await?;
+
+    Ok(OrionResponse::ok(true))
+}
+
+async fn orion_host_config_get(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<OrionHostConfigGetRequest>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    guard::require_permission(&state, &headers, "host.read").await?;
+
+    let host_id = parse_required_id(payload.host_id, "hostId")?;
+    let config_type = normalize_host_config_type(payload.r#type)?;
+    ensure_host_exists(&state, host_id).await?;
+
+    let cache_key = host_config_cache_key(host_id, &config_type);
+    if let Some(raw) = sqlx::query_scalar::<_, String>(
+        "SELECT cache_value FROM cache
+         WHERE cache_key = $1
+           AND (expire_time IS NULL OR expire_time > NOW())",
+    )
+    .bind(cache_key)
+    .fetch_optional(&state.db)
+    .await?
+    {
+        let value = serde_json::from_str::<serde_json::Value>(&raw)
+            .unwrap_or_else(|_| serde_json::json!({}));
+        return Ok(OrionResponse::ok(value));
+    }
+
+    if config_type != "SSH" {
+        return Ok(OrionResponse::ok(serde_json::json!({})));
+    }
+
+    let row = sqlx::query_as::<_, (Option<String>, i32, Option<String>, Option<i64>, bool)>(
+        "SELECT h.username,
+                h.port,
+                h.credential_type,
+                (
+                    SELECT hb.ssh_key_id
+                    FROM host_ssh_key_binding hb
+                    WHERE hb.host_id = h.id AND hb.is_default = 1
+                    LIMIT 1
+                ) AS key_id,
+                CASE WHEN h.credential_type IN ('password', 'private_key') AND h.credential_data IS NOT NULL THEN true ELSE false END AS has_password
+         FROM host h
+         WHERE h.id = $1 AND h.deleted = 0",
+    )
+    .bind(host_id)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or_else(|| AppError::NotFound("Host not found".to_string()))?;
+
+    let auth_type = match row.2.as_deref() {
+        Some("ssh_key") => "KEY",
+        Some("password") | Some("private_key") => "PASSWORD",
+        _ => "PASSWORD",
+    };
+
+    Ok(OrionResponse::ok(serde_json::json!({
+        "port": row.1,
+        "username": row.0.unwrap_or_default(),
+        "authType": auth_type,
+        "keyId": row.3,
+        "hasPassword": row.4,
+        "connectTimeout": 30000,
+        "charset": "utf-8",
+        "fileNameCharset": "utf-8",
+        "fileContentCharset": "utf-8"
+    })))
+}
+
+async fn orion_host_config_update(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<OrionHostConfigUpdateRequest>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    guard::require_permission(&state, &headers, "host.update").await?;
+
+    let host_id = parse_required_id(payload.host_id, "hostId")?;
+    let config_type = normalize_host_config_type(payload.r#type)?;
+    let config_text = payload
+        .config
+        .as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .ok_or_else(|| AppError::BadRequest("config is required".to_string()))?;
+    let config: serde_json::Value = serde_json::from_str(config_text)
+        .map_err(|_| AppError::BadRequest("config must be valid JSON".to_string()))?;
+
+    ensure_host_exists(&state, host_id).await?;
+
+    let cache_key = host_config_cache_key(host_id, &config_type);
+    let cache_value = serde_json::to_string(&config).unwrap_or_else(|_| "{}".to_string());
+    sqlx::query(
+        "INSERT INTO cache (cache_key, cache_value, expire_time, create_time)
+         VALUES ($1, $2, NULL, NOW())
+         ON CONFLICT (cache_key)
+         DO UPDATE SET cache_value = EXCLUDED.cache_value, create_time = NOW()",
+    )
+    .bind(cache_key)
+    .bind(cache_value)
+    .execute(&state.db)
+    .await?;
+
+    if config_type == "SSH" {
+        apply_ssh_host_config(&state, host_id, &config).await?;
     }
 
     Ok(OrionResponse::ok(true))
@@ -1801,12 +2573,20 @@ async fn orion_host_key_create(
 
     let name = sanitize_search(payload.name)
         .ok_or_else(|| AppError::BadRequest("name is required".to_string()))?;
-    let private_key = sanitize_search(payload.private_key)
+    let private_key_input = payload
+        .private_key
         .ok_or_else(|| AppError::BadRequest("privateKey is required".to_string()))?;
+    let private_key_plain =
+        decrypt_client_sensitive_input(&state, Some(private_key_input), "privateKey")
+            .await?
+            .ok_or_else(|| AppError::BadRequest("privateKey is required".to_string()))?;
+    let private_key = normalize_and_validate_private_key(&private_key_plain)?;
 
     let private_key_ciphertext =
         security::encrypt_secret(&private_key, &state.config.secrets.data_encryption_key)?;
-    let passphrase_ciphertext = match sanitize_search(payload.password) {
+    let password_plain =
+        decrypt_client_sensitive_input(&state, payload.password, "password").await?;
+    let passphrase_ciphertext = match sanitize_search(password_plain) {
         Some(v) => Some(security::encrypt_secret(
             &v,
             &state.config.secrets.data_encryption_key,
@@ -1836,17 +2616,27 @@ async fn orion_host_key_update(
     let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
     let id = parse_required_id(payload.id, "id")?;
 
-    let private_key_ciphertext = match sanitize_search(payload.private_key) {
-        Some(v) => Some(security::encrypt_secret(
-            &v,
-            &state.config.secrets.data_encryption_key,
-        )?),
+    let name = sanitize_search(payload.name);
+    let description = sanitize_search(payload.description);
+
+    let private_key_plain =
+        decrypt_client_sensitive_input(&state, payload.private_key, "privateKey").await?;
+    let private_key_ciphertext = match private_key_plain.as_deref() {
+        Some(v) => {
+            let normalized = normalize_and_validate_private_key(v)?;
+            Some(security::encrypt_secret(
+                &normalized,
+                &state.config.secrets.data_encryption_key,
+            )?)
+        }
         None => None,
     };
 
     let use_new_password = payload.use_new_password.unwrap_or(false);
+    let password_plain =
+        decrypt_client_sensitive_input(&state, payload.password, "password").await?;
     let passphrase_ciphertext = if use_new_password {
-        match sanitize_search(payload.password) {
+        match sanitize_search(password_plain) {
             Some(v) => Some(Some(security::encrypt_secret(
                 &v,
                 &state.config.secrets.data_encryption_key,
@@ -1857,18 +2647,23 @@ async fn orion_host_key_update(
         None
     };
 
+    if name.is_none()
+        && description.is_none()
+        && private_key_ciphertext.is_none()
+        && !use_new_password
+    {
+        return Err(AppError::BadRequest("No fields to update".to_string()));
+    }
+
     asset_service::update_host_key(
         &state.db,
         asset_service::OrionHostKeyUpdateInput {
             id,
-            name: payload
-                .name
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty()),
+            name,
             private_key_ciphertext,
             use_new_password,
             passphrase_ciphertext,
-            description: payload.description,
+            description,
         },
     )
     .await?;
@@ -1984,7 +2779,9 @@ async fn orion_host_identity_create(
         ));
     }
 
-    let password_ciphertext = match sanitize_search(payload.password) {
+    let password_plain =
+        decrypt_client_sensitive_input(&state, payload.password, "password").await?;
+    let password_ciphertext = match sanitize_search(password_plain) {
         Some(v) => Some(security::encrypt_secret(
             &v,
             &state.config.secrets.data_encryption_key,
@@ -2029,8 +2826,10 @@ async fn orion_host_identity_update(
     }
 
     let use_new_password = payload.use_new_password.unwrap_or(false);
+    let password_plain =
+        decrypt_client_sensitive_input(&state, payload.password, "password").await?;
     let password_ciphertext = if use_new_password {
-        match sanitize_search(payload.password) {
+        match sanitize_search(password_plain) {
             Some(v) => Some(Some(security::encrypt_secret(
                 &v,
                 &state.config.secrets.data_encryption_key,
@@ -2233,6 +3032,256 @@ async fn orion_data_grant_get_host_identity(
     Ok(OrionResponse::ok(list))
 }
 
+/// GET /asset/authorized-data/current-host
+/// Returns authorized hosts for the current user with group tree structure
+async fn orion_authorized_data_current_host(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(_query): Query<OrionHostListQuery>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+
+    // Get user's authorized host groups (both direct user grants and role-based grants)
+    let authorized_group_ids = sqlx::query_scalar::<_, i64>(
+        "SELECT DISTINCT group_id FROM (
+            SELECT group_id FROM user_host_group_grant WHERE user_id = $1
+            UNION
+            SELECT group_id FROM role_host_group_grant 
+            WHERE role_id IN (
+                SELECT role_id FROM sys_user_role WHERE user_id = $1
+            )
+        ) AS authorized_groups",
+    )
+    .bind(user_id)
+    .fetch_all(&state.db)
+    .await?;
+
+    // If no authorized groups, return empty response
+    if authorized_group_ids.is_empty() {
+        return Ok(OrionResponse::ok(serde_json::json!({
+            "groupTree": [],
+            "hostList": [],
+            "treeNodes": {},
+            "latestHosts": []
+        })));
+    }
+
+    // Build group tree
+    let group_rows = sqlx::query_as::<_, (i64, i64, String)>(
+        "SELECT id, parent_id, name FROM host_group WHERE deleted = 0 ORDER BY sort, id",
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let group_tree = build_host_group_tree(group_rows);
+
+    // Get hosts in authorized groups
+    let host_rows = sqlx::query_as::<_, (i64, String, String, i32, i64, i64)>(
+        "SELECT DISTINCT h.id, h.name, h.hostname, h.port,
+         COALESCE((EXTRACT(EPOCH FROM h.create_time) * 1000)::BIGINT, 0),
+         COALESCE((EXTRACT(EPOCH FROM h.update_time) * 1000)::BIGINT, 0)
+         FROM host h
+         JOIN host_group_rel hgr ON h.id = hgr.host_id
+         WHERE hgr.group_id = ANY($1) AND h.deleted = 0
+         ORDER BY h.id",
+    )
+    .bind(&authorized_group_ids)
+    .fetch_all(&state.db)
+    .await?;
+
+    // Build host list with group associations
+    let mut host_list = Vec::new();
+    let mut tree_nodes: HashMap<String, Vec<i64>> = HashMap::new();
+
+    for (host_id, name, hostname, port, create_time_ms, update_time_ms) in host_rows {
+        // Get group IDs for this host
+        let group_ids =
+            sqlx::query_scalar::<_, i64>("SELECT group_id FROM host_group_rel WHERE host_id = $1")
+                .bind(host_id)
+                .fetch_all(&state.db)
+                .await?;
+
+        // Filter to only authorized groups
+        let authorized_groups: Vec<i64> = group_ids
+            .into_iter()
+            .filter(|gid| authorized_group_ids.contains(gid))
+            .collect();
+
+        // Add to tree_nodes mapping
+        for group_id in &authorized_groups {
+            tree_nodes
+                .entry(group_id.to_string())
+                .or_insert_with(Vec::new)
+                .push(host_id);
+        }
+
+        host_list.push(serde_json::json!({
+            "id": host_id,
+            "types": ["SSH"],
+            "osType": "linux",
+            "archType": "x86_64",
+            "name": name.clone(),
+            "code": format!("host-{}", host_id),
+            "address": hostname,
+            "port": port,
+            "status": "ENABLED",
+            "agentKey": "",
+            "agentVersion": "",
+            "agentInstallStatus": 0,
+            "agentOnlineStatus": 0,
+            "agentOnlineChangeTime": 0,
+            "description": "",
+            "groupIdList": authorized_groups,
+            "alias": name,
+            "color": "",
+            "tags": [],
+            "spec": {},
+            "favorite": false,
+            "editable": true,
+            "loading": false,
+            "modCount": 0,
+            "createTime": create_time_ms,
+            "updateTime": update_time_ms,
+        }));
+    }
+
+    Ok(OrionResponse::ok(serde_json::json!({
+        "groupTree": group_tree,
+        "hostList": host_list,
+        "treeNodes": tree_nodes,
+        "latestHosts": []
+    })))
+}
+
+/// GET /asset/authorized-data/current-host-key
+/// Returns authorized SSH keys for the current user
+async fn orion_authorized_data_current_host_key(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+
+    // Get authorized key IDs (both direct user grants and role-based grants)
+    let authorized_key_ids = sqlx::query_scalar::<_, i64>(
+        "SELECT DISTINCT key_id FROM (
+            SELECT key_id FROM user_host_key_grant WHERE user_id = $1
+            UNION
+            SELECT key_id FROM role_host_key_grant 
+            WHERE role_id IN (
+                SELECT role_id FROM sys_user_role WHERE user_id = $1
+            )
+        ) AS authorized_keys",
+    )
+    .bind(user_id)
+    .fetch_all(&state.db)
+    .await?;
+
+    if authorized_key_ids.is_empty() {
+        return Ok(OrionResponse::ok(Vec::<serde_json::Value>::new()));
+    }
+
+    // Get key details
+    let keys = sqlx::query_as::<_, (i64, String, Option<String>, i64, i64)>(
+        "SELECT id, name, description, 
+         COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0),
+         COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0)
+         FROM ssh_key
+         WHERE id = ANY($1) AND deleted = 0
+         ORDER BY id",
+    )
+    .bind(&authorized_key_ids)
+    .fetch_all(&state.db)
+    .await?;
+
+    let key_list: Vec<serde_json::Value> = keys
+        .into_iter()
+        .map(|(id, name, description, create_time, update_time)| {
+            serde_json::json!({
+                "id": id,
+                "name": name,
+                "description": description.unwrap_or_default(),
+                "createTime": create_time,
+                "updateTime": update_time,
+            })
+        })
+        .collect();
+
+    Ok(OrionResponse::ok(key_list))
+}
+
+/// GET /asset/authorized-data/current-host-identity
+/// Returns authorized host identities for the current user
+async fn orion_authorized_data_current_host_identity(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+
+    // Get authorized identity IDs (both direct user grants and role-based grants)
+    let authorized_identity_ids = sqlx::query_scalar::<_, i64>(
+        "SELECT DISTINCT identity_id FROM (
+            SELECT identity_id FROM user_host_identity_grant WHERE user_id = $1
+            UNION
+            SELECT identity_id FROM role_host_identity_grant 
+            WHERE role_id IN (
+                SELECT role_id FROM sys_user_role WHERE user_id = $1
+            )
+        ) AS authorized_identities",
+    )
+    .bind(user_id)
+    .fetch_all(&state.db)
+    .await?;
+
+    if authorized_identity_ids.is_empty() {
+        return Ok(OrionResponse::ok(Vec::<serde_json::Value>::new()));
+    }
+
+    // Get identity details
+    let identities = sqlx::query_as::<
+        _,
+        (
+            i64,
+            String,
+            String,
+            Option<String>,
+            Option<i64>,
+            Option<String>,
+            i64,
+            i64,
+        ),
+    >(
+        "SELECT id, name, type, username, key_id, description,
+         COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0),
+         COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0)
+         FROM host_identity
+         WHERE id = ANY($1) AND deleted = 0
+         ORDER BY id",
+    )
+    .bind(&authorized_identity_ids)
+    .fetch_all(&state.db)
+    .await?;
+
+    let identity_list: Vec<serde_json::Value> = identities
+        .into_iter()
+        .map(
+            |(id, name, identity_type, username, key_id, description, create_time, update_time)| {
+                serde_json::json!({
+                    "id": id,
+                    "name": name,
+                    "type": identity_type,
+                    "username": username.unwrap_or_default(),
+                    "keyId": key_id,
+                    "description": description.unwrap_or_default(),
+                    "createTime": create_time,
+                    "updateTime": update_time,
+                })
+            },
+        )
+        .collect();
+
+    Ok(OrionResponse::ok(identity_list))
+}
+
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct OrionCompatQuery {
@@ -2260,6 +3309,38 @@ fn parse_csv_i64(input: Option<&str>) -> Vec<i64> {
         .filter_map(|v| v.trim().parse::<i64>().ok())
         .filter(|v| *v > 0)
         .collect()
+}
+
+fn normalize_group_ids(ids: Option<Vec<i64>>) -> AppResult<Vec<i64>> {
+    let mut set = HashSet::new();
+    for id in ids.unwrap_or_default() {
+        if id <= 0 {
+            return Err(AppError::BadRequest(
+                "groupIdList must contain positive ids".to_string(),
+            ));
+        }
+        set.insert(id);
+    }
+    if set.is_empty() {
+        return Err(AppError::BadRequest("groupIdList is required".to_string()));
+    }
+    Ok(set.into_iter().collect())
+}
+
+async fn ensure_groups_exist(state: &AppState, group_ids: &[i64]) -> AppResult<()> {
+    let count = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(1) FROM host_group WHERE deleted = 0 AND id = ANY($1::bigint[])",
+    )
+    .bind(group_ids)
+    .fetch_one(&state.db)
+    .await?;
+
+    if count != group_ids.len() as i64 {
+        return Err(AppError::BadRequest(
+            "groupIdList contains non-existent host group id".to_string(),
+        ));
+    }
+    Ok(())
 }
 
 fn payload_id(payload: &serde_json::Value) -> Option<i64> {
@@ -2556,6 +3637,432 @@ async fn orion_exec_dispatch(
     }
 }
 
+async fn query_terminal_module(
+    state: &AppState,
+    module: OrionCompatModule,
+    payload: &serde_json::Value,
+    query: &OrionCompatQuery,
+) -> AppResult<serde_json::Value> {
+    let (page, limit) = payload_page_limit(payload, query);
+    let mut rows = compat_service::list_records(&state.db, module).await?;
+    rows = filter_terminal_module_rows(module, rows, payload, query)?;
+
+    let total = rows.len() as i64;
+    let offset = ((page - 1) * limit) as usize;
+    let rows = rows
+        .into_iter()
+        .skip(offset)
+        .take(limit as usize)
+        .collect::<Vec<_>>();
+    Ok(serde_json::json!({"page": page, "limit": limit, "total": total, "rows": rows}))
+}
+
+async fn count_terminal_module(
+    state: &AppState,
+    module: OrionCompatModule,
+    payload: &serde_json::Value,
+    query: &OrionCompatQuery,
+) -> AppResult<i64> {
+    let rows = compat_service::list_records(&state.db, module).await?;
+    Ok(filter_terminal_module_rows(module, rows, payload, query)?.len() as i64)
+}
+
+fn payload_i64(payload: &serde_json::Value, key: &str) -> Option<i64> {
+    payload.get(key).and_then(|v| match v {
+        serde_json::Value::Number(n) => n.as_i64(),
+        serde_json::Value::String(s) => s.trim().parse::<i64>().ok(),
+        _ => None,
+    })
+}
+
+fn payload_i32(payload: &serde_json::Value, key: &str) -> Option<i32> {
+    payload_i64(payload, key).and_then(|v| i32::try_from(v).ok())
+}
+
+fn payload_string(payload: &serde_json::Value, key: &str) -> Option<String> {
+    payload
+        .get(key)
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToString::to_string)
+}
+
+fn parse_terminal_time_value_ms(value: &serde_json::Value) -> AppResult<i64> {
+    match value {
+        serde_json::Value::Number(n) => n
+            .as_i64()
+            .ok_or_else(|| AppError::BadRequest("invalid startTimeRange value".to_string())),
+        serde_json::Value::String(raw) => {
+            let raw = raw.trim();
+            if raw.is_empty() {
+                return Err(AppError::BadRequest(
+                    "startTimeRange value cannot be empty".to_string(),
+                ));
+            }
+            if let Ok(ms) = raw.parse::<i64>() {
+                return Ok(ms);
+            }
+            Ok(parse_datetime_text(raw)?.timestamp_millis())
+        }
+        _ => Err(AppError::BadRequest(
+            "invalid startTimeRange value".to_string(),
+        )),
+    }
+}
+
+fn parse_terminal_start_time_range_ms(
+    payload: &serde_json::Value,
+) -> AppResult<Option<(i64, i64)>> {
+    let Some(values) = payload
+        .get("startTimeRange")
+        .and_then(serde_json::Value::as_array)
+    else {
+        return Ok(None);
+    };
+
+    if values.is_empty() {
+        return Ok(None);
+    }
+    if values.len() != 2 {
+        return Err(AppError::BadRequest(
+            "startTimeRange must include exactly 2 values".to_string(),
+        ));
+    }
+
+    let start_ms = parse_terminal_time_value_ms(&values[0])?;
+    let end_ms = parse_terminal_time_value_ms(&values[1])?;
+    if end_ms < start_ms {
+        return Err(AppError::BadRequest(
+            "startTimeRange end cannot be earlier than start".to_string(),
+        ));
+    }
+    Ok(Some((start_ms, end_ms)))
+}
+
+fn filter_terminal_module_rows(
+    module: OrionCompatModule,
+    mut rows: Vec<serde_json::Value>,
+    payload: &serde_json::Value,
+    query: &OrionCompatQuery,
+) -> AppResult<Vec<serde_json::Value>> {
+    if let Some(id) = payload_i64(payload, "id") {
+        rows.retain(|r| r.get("id").and_then(serde_json::Value::as_i64) == Some(id));
+    }
+
+    if let Some(user_id) = payload_i64(payload, "userId") {
+        rows.retain(|r| r.get("userId").and_then(serde_json::Value::as_i64) == Some(user_id));
+    }
+
+    if let Some(host_id) = payload_i64(payload, "hostId") {
+        rows.retain(|r| r.get("hostId").and_then(serde_json::Value::as_i64) == Some(host_id));
+    }
+
+    if let Some(host_address) = payload_string(payload, "hostAddress") {
+        rows.retain(|r| {
+            r.get("hostAddress")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .contains(&host_address)
+        });
+    }
+
+    if let Some(typ) = payload_string(payload, "type") {
+        rows.retain(|r| r.get("type").and_then(serde_json::Value::as_str) == Some(typ.as_str()));
+    }
+
+    if let Some((start_ms, end_ms)) = parse_terminal_start_time_range_ms(payload)? {
+        rows.retain(|r| {
+            let start_time = r
+                .get("startTime")
+                .and_then(serde_json::Value::as_i64)
+                .unwrap_or_default();
+            start_time >= start_ms && start_time <= end_ms
+        });
+    }
+
+    match module {
+        OrionCompatModule::TerminalConnectLog => {
+            if let Some(session_id) = payload_string(payload, "sessionId") {
+                rows.retain(|r| {
+                    r.get("sessionId").and_then(serde_json::Value::as_str)
+                        == Some(session_id.as_str())
+                });
+            }
+            if let Some(status) = payload_string(payload, "status") {
+                rows.retain(|r| {
+                    r.get("status").and_then(serde_json::Value::as_str) == Some(status.as_str())
+                });
+            } else {
+                rows.retain(|r| {
+                    r.get("status").and_then(serde_json::Value::as_str) != Some("CONNECTING")
+                });
+            }
+        }
+        OrionCompatModule::TerminalFileLog => {
+            if let Some(result) = payload_i32(payload, "result") {
+                rows.retain(|r| {
+                    r.get("result").and_then(serde_json::Value::as_i64) == Some(result as i64)
+                });
+            }
+        }
+        _ => {}
+    }
+
+    if let Some(search) = payload_search_value(payload, query).filter(|v| !v.trim().is_empty()) {
+        let needle = search.to_ascii_lowercase();
+        rows.retain(|row| row.to_string().to_ascii_lowercase().contains(&needle));
+    }
+
+    let order = payload_i64(payload, "order").unwrap_or(0);
+    if order == 1 {
+        rows.sort_by_key(|r| {
+            r.get("id")
+                .and_then(serde_json::Value::as_i64)
+                .unwrap_or_default()
+        });
+    } else {
+        rows.sort_by_key(|r| {
+            std::cmp::Reverse(
+                r.get("id")
+                    .and_then(serde_json::Value::as_i64)
+                    .unwrap_or_default(),
+            )
+        });
+    }
+
+    Ok(rows)
+}
+
+async fn delete_terminal_module(
+    state: &AppState,
+    module: OrionCompatModule,
+    query: &OrionCompatQuery,
+) -> AppResult<bool> {
+    let ids = if let Some(id) = query.id {
+        vec![id]
+    } else {
+        parse_csv_i64(query.id_list.as_deref())
+    };
+    if ids.is_empty() {
+        return Err(AppError::BadRequest("id or idList is required".to_string()));
+    }
+    let affected = compat_service::batch_delete_records(&state.db, module, &ids).await?;
+    Ok(affected > 0)
+}
+
+async fn clear_terminal_module(state: &AppState, module: OrionCompatModule) -> AppResult<u64> {
+    compat_service::clear_records(&state.db, module).await
+}
+
+fn filter_terminal_connect_sessions(
+    mut rows: Vec<serde_json::Value>,
+    payload: &serde_json::Value,
+) -> Vec<serde_json::Value> {
+    rows.sort_by_key(|r| {
+        std::cmp::Reverse(
+            r.get("id")
+                .and_then(serde_json::Value::as_i64)
+                .unwrap_or_default(),
+        )
+    });
+    rows.retain(|r| r.get("status").and_then(serde_json::Value::as_str) == Some("CONNECTING"));
+
+    if let Some(user_id) = payload.get("userId").and_then(serde_json::Value::as_i64) {
+        rows.retain(|r| r.get("userId").and_then(serde_json::Value::as_i64) == Some(user_id));
+    }
+
+    if let Some(host_id) = payload.get("hostId").and_then(serde_json::Value::as_i64) {
+        rows.retain(|r| r.get("hostId").and_then(serde_json::Value::as_i64) == Some(host_id));
+    }
+
+    if let Some(host_address) = payload
+        .get("hostAddress")
+        .and_then(serde_json::Value::as_str)
+    {
+        let needle = host_address.trim();
+        if !needle.is_empty() {
+            rows.retain(|r| {
+                r.get("hostAddress")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default()
+                    .contains(needle)
+            });
+        }
+    }
+
+    if let Some(typ) = payload.get("type").and_then(serde_json::Value::as_str) {
+        let needle = typ.trim();
+        if !needle.is_empty() {
+            rows.retain(|r| r.get("type").and_then(serde_json::Value::as_str) == Some(needle));
+        }
+    }
+
+    if let Some(session_id) = payload.get("sessionId").and_then(serde_json::Value::as_str) {
+        let needle = session_id.trim();
+        if !needle.is_empty() {
+            rows.retain(|r| r.get("sessionId").and_then(serde_json::Value::as_str) == Some(needle));
+        }
+    }
+
+    rows
+}
+
+async fn orion_terminal_connect_log_query(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<OrionCompatQuery>,
+    body: Option<Json<serde_json::Value>>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let payload = body_json(body);
+    Ok(orion_ok(
+        query_terminal_module(
+            &state,
+            OrionCompatModule::TerminalConnectLog,
+            &payload,
+            &query,
+        )
+        .await?,
+    ))
+}
+
+async fn orion_terminal_connect_log_count(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<OrionCompatQuery>,
+    body: Option<Json<serde_json::Value>>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let payload = body_json(body);
+    Ok(orion_ok(
+        count_terminal_module(
+            &state,
+            OrionCompatModule::TerminalConnectLog,
+            &payload,
+            &query,
+        )
+        .await?,
+    ))
+}
+
+async fn orion_terminal_connect_log_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<OrionCompatQuery>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    Ok(orion_ok(
+        delete_terminal_module(&state, OrionCompatModule::TerminalConnectLog, &query).await?,
+    ))
+}
+
+async fn orion_terminal_connect_log_clear(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    Ok(orion_ok(
+        clear_terminal_module(&state, OrionCompatModule::TerminalConnectLog).await?,
+    ))
+}
+
+async fn orion_terminal_connect_log_sessions(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Option<Json<serde_json::Value>>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let payload = body_json(body);
+    let rows =
+        compat_service::list_records(&state.db, OrionCompatModule::TerminalConnectLog).await?;
+    Ok(orion_ok(filter_terminal_connect_sessions(rows, &payload)))
+}
+
+async fn orion_terminal_connect_log_latest(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Option<Json<serde_json::Value>>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let payload = body_json(body);
+    let limit = payload
+        .get("limit")
+        .and_then(serde_json::Value::as_i64)
+        .unwrap_or(10)
+        .clamp(1, 100) as usize;
+    let rows =
+        compat_service::list_records(&state.db, OrionCompatModule::TerminalConnectLog).await?;
+    let ids = rows
+        .into_iter()
+        .filter_map(|r| r.get("hostId").and_then(serde_json::Value::as_i64))
+        .take(limit)
+        .collect::<Vec<_>>();
+    Ok(orion_ok(ids))
+}
+
+async fn orion_terminal_connect_log_force_offline(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<OrionCompatQuery>,
+    body: Option<Json<serde_json::Value>>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let payload = body_json(body);
+    let id = query
+        .id
+        .or_else(|| payload_id(&payload))
+        .unwrap_or_default();
+    if id > 0 {
+        let _ = compat_service::update_record(
+            &state.db,
+            OrionCompatModule::TerminalConnectLog,
+            id,
+            serde_json::json!({"status": "OFFLINE", "endTime": chrono::Utc::now().timestamp_millis()}),
+            &format!("user-{user_id}"),
+        )
+        .await;
+    }
+    Ok(orion_ok(true))
+}
+
+async fn orion_terminal_file_log_query(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<OrionCompatQuery>,
+    body: Option<Json<serde_json::Value>>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let payload = body_json(body);
+    Ok(orion_ok(
+        query_terminal_module(&state, OrionCompatModule::TerminalFileLog, &payload, &query).await?,
+    ))
+}
+
+async fn orion_terminal_file_log_count(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<OrionCompatQuery>,
+    body: Option<Json<serde_json::Value>>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    let payload = body_json(body);
+    Ok(orion_ok(
+        count_terminal_module(&state, OrionCompatModule::TerminalFileLog, &payload, &query).await?,
+    ))
+}
+
+async fn orion_terminal_file_log_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<OrionCompatQuery>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    let _ = guard::current_user_id(&headers, &state.config.jwt.secret)?;
+    Ok(orion_ok(
+        delete_terminal_module(&state, OrionCompatModule::TerminalFileLog, &query).await?,
+    ))
+}
+
 async fn orion_terminal_dispatch(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -2701,10 +4208,10 @@ async fn orion_terminal_dispatch(
             ))
         }
         (OrionCompatModule::TerminalConnectLog, "sessions") if method == Method::POST => {
-            Ok(orion_ok(
+            let rows =
                 compat_service::list_records(&state.db, OrionCompatModule::TerminalConnectLog)
-                    .await?,
-            ))
+                    .await?;
+            Ok(orion_ok(filter_terminal_connect_sessions(rows, &payload)))
         }
         (OrionCompatModule::TerminalConnectLog, "latest-connect") if method == Method::POST => {
             let limit = payload
@@ -2929,10 +4436,20 @@ async fn orion_infra_dispatch(
             serde_json::json!({"version": env!("CARGO_PKG_VERSION")}),
         )),
         (OrionCompatModule::SystemSetting, "generator-keypair") if method == Method::GET => {
-            let nonce = uuid::Uuid::new_v4();
+            let mut rng = rand::rngs::OsRng;
+            let private_key = RsaPrivateKey::new(&mut rng, 2048)
+                .map_err(|e| AppError::Internal(format!("failed to generate rsa keypair: {e}")))?;
+            let public_key = RsaPublicKey::from(&private_key);
+            let public_key_pem = public_key
+                .to_public_key_pem(LineEnding::LF)
+                .map_err(|e| AppError::Internal(format!("failed to encode rsa public key: {e}")))?;
+            let private_key_pem = private_key
+                .to_pkcs8_pem(LineEnding::LF)
+                .map_err(|e| AppError::Internal(format!("failed to encode rsa private key: {e}")))?
+                .to_string();
             Ok(orion_ok(serde_json::json!({
-                "publicKey": format!("MOCK_PUBLIC_KEY_{nonce}"),
-                "privateKey": format!("MOCK_PRIVATE_KEY_{nonce}")
+                "publicKey": public_key_pem,
+                "privateKey": private_key_pem
             })))
         }
         (OrionCompatModule::SystemSetting, "setting")
@@ -3125,7 +4642,10 @@ struct OrionOperatorLogQueryRequest {
     user_id: Option<i64>,
     username: Option<String>,
     module: Option<String>,
+    r#type: Option<String>,
+    risk_level: Option<String>,
     result: Option<i16>,
+    start_time_range: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -3281,12 +4801,6 @@ struct OrionTerminalAccessRequest {
     connect_type: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct OrionTerminalSftpContentQuery {
-    token: Option<String>,
-}
-
 fn parse_csv_ids(raw: Option<String>) -> Vec<i64> {
     raw.unwrap_or_default()
         .split(',')
@@ -3299,6 +4813,64 @@ fn parse_csv_ids(raw: Option<String>) -> Vec<i64> {
 
 fn now_ms() -> i64 {
     chrono::Utc::now().timestamp_millis()
+}
+
+fn parse_datetime_text(raw: &str) -> AppResult<DateTime<Utc>> {
+    if let Ok(value) = DateTime::parse_from_rfc3339(raw) {
+        return Ok(value.with_timezone(&Utc));
+    }
+
+    if let Ok(value) = NaiveDateTime::parse_from_str(raw, "%Y-%m-%d %H:%M:%S") {
+        return Ok(DateTime::<Utc>::from_naive_utc_and_offset(value, Utc));
+    }
+
+    Err(AppError::BadRequest(format!(
+        "invalid datetime value `{raw}`; expected RFC3339 or YYYY-MM-DD HH:MM:SS"
+    )))
+}
+
+fn parse_time_range(
+    values: Option<&Vec<String>>,
+) -> AppResult<(Option<DateTime<Utc>>, Option<DateTime<Utc>>)> {
+    let Some(values) = values else {
+        return Ok((None, None));
+    };
+
+    if values.is_empty() {
+        return Ok((None, None));
+    }
+
+    if values.len() != 2 {
+        return Err(AppError::BadRequest(
+            "startTimeRange must include exactly 2 values".to_string(),
+        ));
+    }
+
+    let start = parse_datetime_text(values[0].trim())?;
+    let end = parse_datetime_text(values[1].trim())?;
+    if end < start {
+        return Err(AppError::BadRequest(
+            "startTimeRange end cannot be earlier than start".to_string(),
+        ));
+    }
+
+    Ok((Some(start), Some(end)))
+}
+
+async fn require_any_permission(
+    state: &AppState,
+    headers: &HeaderMap,
+    permission_codes: &[&str],
+) -> AppResult<i64> {
+    for code in permission_codes {
+        match guard::require_permission(state, headers, code).await {
+            Ok(user_id) => return Ok(user_id),
+            Err(AppError::Auth(_)) => continue,
+            Err(err) => return Err(err),
+        }
+    }
+
+    Err(AppError::Auth("Permission denied".to_string()))
 }
 
 fn parse_csv_values(raw: Option<String>) -> Vec<String> {
@@ -4308,7 +5880,7 @@ async fn orion_infra_statistics_get_workplace(
          LEFT JOIN (
             SELECT date_trunc('day', create_time) AS day, COUNT(1) AS cnt
             FROM operator_log
-            WHERE user_id = $1
+            WHERE user_id = $1 AND deleted = 0
             GROUP BY date_trunc('day', create_time)
          ) AS day_count
            ON day_count.day = day_list.day
@@ -4404,17 +5976,90 @@ async fn orion_terminal_statistics_get_workplace(
 ) -> AppResult<impl axum::response::IntoResponse> {
     let _user_id = guard::current_user_id(&headers, &state.config.jwt.secret)?;
 
-    let data = OrionTerminalWorkplaceStatisticsResponse {
-        today_terminal_connect_count: 0,
-        week_terminal_connect_count: 0,
-        terminal_connect_chart: OrionLineSingleChartData {
-            x: Vec::new(),
-            data: Vec::new(),
-        },
-        terminal_connect_list: Vec::new(),
-    };
+    let rows =
+        compat_service::list_records(&state.db, OrionCompatModule::TerminalConnectLog).await?;
+    let data = build_terminal_workplace_stats(rows, Utc::now());
 
     Ok(OrionResponse::ok(data))
+}
+
+fn build_terminal_workplace_stats(
+    rows: Vec<serde_json::Value>,
+    now: DateTime<Utc>,
+) -> OrionTerminalWorkplaceStatisticsResponse {
+    let today_start = DateTime::<Utc>::from_naive_utc_and_offset(
+        now.date_naive().and_hms_opt(0, 0, 0).unwrap_or_default(),
+        Utc,
+    );
+    let week_start = today_start - chrono::Duration::days(6);
+
+    let mut chart_x = Vec::with_capacity(7);
+    let mut chart_data = vec![0_i64; 7];
+    for i in 0..7 {
+        let day = week_start + chrono::Duration::days(i as i64);
+        chart_x.push(day.format("%m-%d").to_string());
+    }
+
+    let mut history = rows
+        .into_iter()
+        .filter(|row| row.get("status").and_then(serde_json::Value::as_str) != Some("CONNECTING"))
+        .collect::<Vec<_>>();
+
+    for row in &history {
+        let Some(start_ms) = row.get("startTime").and_then(serde_json::Value::as_i64) else {
+            continue;
+        };
+        let Some(start_time) = DateTime::<Utc>::from_timestamp_millis(start_ms) else {
+            continue;
+        };
+
+        if start_time < week_start || start_time >= today_start + chrono::Duration::days(1) {
+            continue;
+        }
+
+        let idx = (start_time
+            .date_naive()
+            .signed_duration_since(week_start.date_naive())
+            .num_days()) as usize;
+        if idx < chart_data.len() {
+            chart_data[idx] += 1;
+        }
+    }
+
+    let today_terminal_connect_count = chart_data.last().copied().unwrap_or_default();
+    let week_terminal_connect_count = chart_data.iter().sum::<i64>();
+
+    history.sort_by(|a, b| {
+        let a_time = a
+            .get("startTime")
+            .and_then(serde_json::Value::as_i64)
+            .unwrap_or_default();
+        let b_time = b
+            .get("startTime")
+            .and_then(serde_json::Value::as_i64)
+            .unwrap_or_default();
+        b_time.cmp(&a_time).then_with(|| {
+            let a_id = a
+                .get("id")
+                .and_then(serde_json::Value::as_i64)
+                .unwrap_or_default();
+            let b_id = b
+                .get("id")
+                .and_then(serde_json::Value::as_i64)
+                .unwrap_or_default();
+            b_id.cmp(&a_id)
+        })
+    });
+
+    OrionTerminalWorkplaceStatisticsResponse {
+        today_terminal_connect_count,
+        week_terminal_connect_count,
+        terminal_connect_chart: OrionLineSingleChartData {
+            x: chart_x,
+            data: chart_data,
+        },
+        terminal_connect_list: history.into_iter().take(10).collect(),
+    }
 }
 
 async fn orion_mine_login_history(
@@ -4512,24 +6157,40 @@ async fn query_operator_logs(
 ) -> AppResult<OrionDataGrid<OrionOperatorLogItem>> {
     let username = sanitize_search(payload.username.clone());
     let module = sanitize_search(payload.module.clone());
+    let operation = sanitize_search(payload.r#type.clone());
+    let risk_level = sanitize_search(payload.risk_level.clone()).map(|v| v.to_ascii_uppercase());
+    let (start_time, end_time) = parse_time_range(payload.start_time_range.as_ref())?;
     let (page, limit, offset) = normalize_pagination(payload.page, payload.limit);
 
-    let rows = sqlx::query_as::<_, (i64, Option<i64>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<i16>, Option<String>, Option<i32>, i64)>(
-        "SELECT id, user_id, username, module, operation, trace_id, ip, result, error_message, duration, EXTRACT(EPOCH FROM create_time)::bigint * 1000
+    let rows = sqlx::query_as::<_, (i64, Option<i64>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<serde_json::Value>, Option<String>, Option<String>, Option<String>, Option<i16>, Option<String>, Option<i32>, i64)>(
+        "SELECT id, user_id, username, module, operation, method, path, params, trace_id, ip, user_agent, result, error_message, duration, EXTRACT(EPOCH FROM create_time)::bigint * 1000
          FROM operator_log
-         WHERE ($1::bigint IS NULL OR user_id = $1)
+         WHERE deleted = 0
+           AND ($1::bigint IS NULL OR user_id = $1)
            AND ($2::bigint IS NULL OR user_id = $2)
            AND ($3::text IS NULL OR username ILIKE '%' || $3 || '%')
            AND ($4::text IS NULL OR module ILIKE '%' || $4 || '%')
-           AND ($5::smallint IS NULL OR result = $5)
-         ORDER BY create_time DESC
-         LIMIT $6 OFFSET $7",
+           AND ($5::text IS NULL OR operation ILIKE '%' || $5 || '%')
+           AND ($6::text IS NULL OR (CASE
+                WHEN result = 0 THEN 'HIGH'
+                WHEN result = 1 THEN 'LOW'
+                ELSE 'MEDIUM'
+              END) = $6)
+           AND ($7::smallint IS NULL OR result = $7)
+           AND ($8::timestamptz IS NULL OR create_time >= $8)
+           AND ($9::timestamptz IS NULL OR create_time <= $9)
+         ORDER BY create_time DESC, id DESC
+         LIMIT $10 OFFSET $11",
     )
     .bind(scope_user_id)
     .bind(payload.user_id)
     .bind(username)
     .bind(module)
+    .bind(operation)
+    .bind(risk_level)
     .bind(payload.result)
+    .bind(start_time)
+    .bind(end_time)
     .bind(limit)
     .bind(offset)
     .fetch_all(&state.db)
@@ -4538,43 +6199,80 @@ async fn query_operator_logs(
     let total = sqlx::query_scalar::<_, i64>(
         "SELECT COUNT(1)
          FROM operator_log
-         WHERE ($1::bigint IS NULL OR user_id = $1)
+         WHERE deleted = 0
+           AND ($1::bigint IS NULL OR user_id = $1)
            AND ($2::bigint IS NULL OR user_id = $2)
            AND ($3::text IS NULL OR username ILIKE '%' || $3 || '%')
            AND ($4::text IS NULL OR module ILIKE '%' || $4 || '%')
-           AND ($5::smallint IS NULL OR result = $5)",
+           AND ($5::text IS NULL OR operation ILIKE '%' || $5 || '%')
+           AND ($6::text IS NULL OR (CASE
+                WHEN result = 0 THEN 'HIGH'
+                WHEN result = 1 THEN 'LOW'
+                ELSE 'MEDIUM'
+              END) = $6)
+           AND ($7::smallint IS NULL OR result = $7)
+           AND ($8::timestamptz IS NULL OR create_time >= $8)
+           AND ($9::timestamptz IS NULL OR create_time <= $9)",
     )
     .bind(scope_user_id)
     .bind(payload.user_id)
     .bind(sanitize_search(payload.username.clone()))
     .bind(sanitize_search(payload.module.clone()))
+    .bind(sanitize_search(payload.r#type.clone()))
+    .bind(sanitize_search(payload.risk_level.clone()).map(|v| v.to_ascii_uppercase()))
     .bind(payload.result)
+    .bind(start_time)
+    .bind(end_time)
     .fetch_one(&state.db)
     .await?;
 
     let items = rows
         .into_iter()
-        .map(|r| OrionOperatorLogItem {
-            id: r.0,
-            user_id: r.1.unwrap_or_default(),
-            username: r.2.unwrap_or_default(),
-            trace_id: r.5.unwrap_or_default(),
-            address: r.6.unwrap_or_default(),
-            location: String::new(),
-            user_agent: String::new(),
-            risk_level: "LOW".to_string(),
-            module: r.3.unwrap_or_default(),
-            r#type: r.4.unwrap_or_default(),
-            log_info: String::new(),
-            origin_log_info: String::new(),
-            extra: String::new(),
-            result: r.7.unwrap_or_default(),
-            error_message: r.8.unwrap_or_default(),
-            return_value: String::new(),
-            duration: r.9.unwrap_or_default(),
-            start_time: r.10,
-            end_time: r.10,
-            create_time: r.10,
+        .map(|r| {
+            let operation = r.4.clone().unwrap_or_default();
+            let log_info = {
+                let text = format!(
+                    "{} {}",
+                    r.5.as_deref().unwrap_or(""),
+                    r.6.as_deref().unwrap_or("")
+                )
+                .trim()
+                .to_string();
+                if text.is_empty() {
+                    operation.clone()
+                } else {
+                    text
+                }
+            };
+            OrionOperatorLogItem {
+                id: r.0,
+                user_id: r.1.unwrap_or_default(),
+                username: r.2.unwrap_or_default(),
+                trace_id: r.8.unwrap_or_default(),
+                address: r.9.unwrap_or_default(),
+                location: String::new(),
+                user_agent: r.10.unwrap_or_default(),
+                risk_level: if r.11.unwrap_or_default() == 0 {
+                    "HIGH".to_string()
+                } else {
+                    "LOW".to_string()
+                },
+                module: r.3.unwrap_or_default(),
+                r#type: operation.clone(),
+                log_info,
+                origin_log_info: r.6.clone().unwrap_or(operation),
+                extra: r
+                    .7
+                    .and_then(|v| serde_json::to_string(&v).ok())
+                    .unwrap_or_else(|| "{}".to_string()),
+                result: r.11.unwrap_or_default(),
+                error_message: r.12.unwrap_or_default(),
+                return_value: String::new(),
+                duration: r.13.unwrap_or_default(),
+                start_time: r.14,
+                end_time: r.14,
+                create_time: r.14,
+            }
         })
         .collect::<Vec<_>>();
 
@@ -4639,7 +6337,12 @@ async fn orion_operator_log_query(
     headers: HeaderMap,
     Json(payload): Json<OrionOperatorLogQueryRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
+    require_any_permission(
+        &state,
+        &headers,
+        &["infra:operator-log:query", "iam.user-permission.view"],
+    )
+    .await?;
     Ok(OrionResponse::ok(
         query_operator_logs(&state, None, &payload).await?,
     ))
@@ -4650,7 +6353,12 @@ async fn orion_operator_log_count(
     headers: HeaderMap,
     Json(payload): Json<OrionOperatorLogQueryRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
+    require_any_permission(
+        &state,
+        &headers,
+        &["infra:operator-log:query", "iam.user-permission.view"],
+    )
+    .await?;
     let grid = query_operator_logs(&state, None, &payload).await?;
     Ok(OrionResponse::ok(grid.total))
 }
@@ -4660,25 +6368,89 @@ async fn orion_operator_log_delete(
     headers: HeaderMap,
     Query(query): Query<OrionDeleteIdsQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
+    require_any_permission(
+        &state,
+        &headers,
+        &["infra:operator-log:delete", "iam.user-permission.view"],
+    )
+    .await?;
     let ids = parse_csv_ids(query.id_list);
+    let mut affected = 0_i64;
     if !ids.is_empty() {
-        sqlx::query("DELETE FROM operator_log WHERE id = ANY($1::bigint[])")
-            .bind(ids)
-            .execute(&state.db)
-            .await?;
+        let result = sqlx::query(
+            "UPDATE operator_log
+             SET deleted = 1
+             WHERE deleted = 0
+               AND id = ANY($1::bigint[])",
+        )
+        .bind(ids)
+        .execute(&state.db)
+        .await?;
+        affected = result.rows_affected() as i64;
     }
-    Ok(OrionResponse::ok(true))
+    Ok(OrionResponse::ok(affected))
 }
 
 async fn orion_operator_log_clear(
     State(state): State<AppState>,
     headers: HeaderMap,
+    Json(payload): Json<OrionOperatorLogQueryRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
-    let result = sqlx::query("DELETE FROM operator_log")
-        .execute(&state.db)
-        .await?;
+    require_any_permission(
+        &state,
+        &headers,
+        &[
+            "infra:operator-log:management:clear",
+            "iam.user-permission.view",
+        ],
+    )
+    .await?;
+
+    let username = sanitize_search(payload.username.clone());
+    let module = sanitize_search(payload.module.clone());
+    let operation = sanitize_search(payload.r#type.clone());
+    let risk_level = sanitize_search(payload.risk_level.clone()).map(|v| v.to_ascii_uppercase());
+    let (start_time, end_time) = parse_time_range(payload.start_time_range.as_ref())?;
+    let limit = payload.limit.unwrap_or(2000).clamp(1, 20_000);
+
+    let result = sqlx::query(
+        "WITH target AS (
+             SELECT id, create_time
+             FROM operator_log
+             WHERE deleted = 0
+               AND ($1::bigint IS NULL OR user_id = $1)
+               AND ($2::text IS NULL OR username ILIKE '%' || $2 || '%')
+               AND ($3::text IS NULL OR module ILIKE '%' || $3 || '%')
+               AND ($4::text IS NULL OR operation ILIKE '%' || $4 || '%')
+               AND ($5::text IS NULL OR (CASE
+                    WHEN result = 0 THEN 'HIGH'
+                    WHEN result = 1 THEN 'LOW'
+                    ELSE 'MEDIUM'
+                  END) = $5)
+               AND ($6::smallint IS NULL OR result = $6)
+               AND ($7::timestamptz IS NULL OR create_time >= $7)
+               AND ($8::timestamptz IS NULL OR create_time <= $8)
+             ORDER BY create_time DESC, id DESC
+             LIMIT $9
+         )
+         UPDATE operator_log src
+         SET deleted = 1
+         FROM target
+         WHERE src.id = target.id
+           AND src.create_time = target.create_time
+           AND src.deleted = 0",
+    )
+    .bind(payload.user_id)
+    .bind(username)
+    .bind(module)
+    .bind(operation)
+    .bind(risk_level)
+    .bind(payload.result)
+    .bind(start_time)
+    .bind(end_time)
+    .bind(limit)
+    .execute(&state.db)
+    .await?;
     Ok(OrionResponse::ok(result.rows_affected() as i64))
 }
 
@@ -5495,12 +7267,49 @@ async fn orion_system_menu_refresh_cache() -> AppResult<impl axum::response::Int
     Ok(OrionResponse::ok(true))
 }
 
-async fn orion_terminal_themes() -> AppResult<impl axum::response::IntoResponse> {
-    Ok(OrionResponse::ok(vec![serde_json::json!({
-        "name": "default",
-        "foreground": "#f8f8f2",
-        "background": "#1e1f29"
-    })]))
+async fn orion_terminal_themes(
+    State(state): State<AppState>,
+) -> AppResult<impl axum::response::IntoResponse> {
+    // Query terminal themes from sys_dict_value table
+    let rows = sqlx::query_as::<_, (String, String, Option<String>)>(
+        r#"
+        SELECT 
+            dv.label as name,
+            dv.value::text as schema_json,
+            dv.extra::text as extra_json
+        FROM sys_dict_value dv
+        JOIN sys_dict_key dk ON dv.key_id = dk.id
+        WHERE dk.key_name = 'terminalTheme'
+          AND dv.deleted = 0
+        ORDER BY dv.sort, dv.id
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let mut themes = Vec::new();
+    for (name, schema_json, extra_json) in rows {
+        let mut theme: serde_json::Value =
+            serde_json::from_str(&schema_json).unwrap_or_else(|_| serde_json::json!({}));
+
+        // Add name field
+        if let Some(obj) = theme.as_object_mut() {
+            obj.insert("name".to_string(), serde_json::Value::String(name.clone()));
+
+            // Add dark field from extra
+            if let Some(extra_str) = &extra_json {
+                if let Ok(extra) = serde_json::from_str::<serde_json::Value>(extra_str) {
+                    if let Some(dark) = extra.get("dark") {
+                        obj.insert("dark".to_string(), dark.clone());
+                    }
+                }
+            }
+        }
+
+        themes.push(theme);
+    }
+
+    Ok(OrionResponse::ok(themes))
 }
 
 async fn orion_terminal_access(
@@ -5530,49 +7339,6 @@ async fn orion_terminal_transfer(
         user_id,
         now_ms()
     )))
-}
-
-async fn orion_terminal_sftp_get_content(
-    Query(query): Query<OrionTerminalSftpContentQuery>,
-) -> AppResult<impl axum::response::IntoResponse> {
-    let token = query
-        .token
-        .ok_or_else(|| AppError::BadRequest("token is required".to_string()))?;
-    Ok(OrionResponse::ok(format!("# token\n{}\n", token)))
-}
-
-async fn orion_terminal_sftp_set_content(
-    mut multipart: Multipart,
-) -> AppResult<impl axum::response::IntoResponse> {
-    let mut token: Option<String> = None;
-    let mut has_file = false;
-    while let Some(field) = multipart
-        .next_field()
-        .await
-        .map_err(|e| AppError::BadRequest(e.to_string()))?
-    {
-        let name = field.name().unwrap_or("").to_string();
-        if name == "token" {
-            token = Some(
-                field
-                    .text()
-                    .await
-                    .map_err(|e| AppError::BadRequest(e.to_string()))?,
-            );
-        } else if name == "file" {
-            let _ = field
-                .bytes()
-                .await
-                .map_err(|e| AppError::BadRequest(e.to_string()))?;
-            has_file = true;
-        }
-    }
-    if token.as_deref().unwrap_or("{}") == "{}" || !has_file {
-        return Err(AppError::BadRequest(
-            "token and file are required".to_string(),
-        ));
-    }
-    Ok(OrionResponse::ok(true))
 }
 
 #[cfg(test)]
@@ -5606,5 +7372,62 @@ mod tests {
 
         assert_eq!(map_host_row(enabled).status, "ENABLED");
         assert_eq!(map_host_row(disabled).status, "DISABLED");
+    }
+
+    #[test]
+    fn normalize_and_validate_private_key_accepts_openssh_with_escaped_newlines() {
+        let raw = "-----BEGIN OPENSSH PRIVATE KEY-----\\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\\nQyNTUxOQAAACC74urEe9c9aCgOz/iPdYvFgGUCkTF5IVBr3b7HxW1QeQAAAJhakawuWpGs\\nLgAAAAtzc2gtZWQyNTUxOQAAACC74urEe9c9aCgOz/iPdYvFgGUCkTF5IVBr3b7HxW1QeQ\\nAAAEAageqHRmNxjCCPrw73rbJsHn2MVFeZLqgP3hYY93Orm7vi6sR71z1oKA7P+I91i8WA\\nZQKRMXkhUGvdvsfFbVB5AAAADmJhaXplQGxhcHRvcC0xAQIDBAUGBw==\\n-----END OPENSSH PRIVATE KEY-----";
+        let normalized = normalize_and_validate_private_key(raw).expect("valid key");
+        assert!(normalized.contains('\n'));
+        assert!(!normalized.contains("\\n"));
+    }
+
+    #[test]
+    fn normalize_and_validate_private_key_rejects_invalid_header() {
+        let err = normalize_and_validate_private_key("not-a-key").expect_err("must reject");
+        assert!(err
+            .to_string()
+            .contains("unsupported private key file format"));
+    }
+
+    #[test]
+    fn normalize_and_validate_private_key_accepts_bom_and_crlf() {
+        let raw = "\u{feff}-----BEGIN OPENSSH PRIVATE KEY-----\r\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\r\nQyNTUxOQAAACC74urEe9c9aCgOz/iPdYvFgGUCkTF5IVBr3b7HxW1QeQAAAJhakawuWpGs\r\nLgAAAAtzc2gtZWQyNTUxOQAAACC74urEe9c9aCgOz/iPdYvFgGUCkTF5IVBr3b7HxW1QeQ\r\nAAAEAageqHRmNxjCCPrw73rbJsHn2MVFeZLqgP3hYY93Orm7vi6sR71z1oKA7P+I91i8WA\r\nZQKRMXkhUGvdvsfFbVB5AAAADmJhaXplQGxhcHRvcC0xAQIDBAUGBw==\r\n-----END OPENSSH PRIVATE KEY-----\r\n";
+        let normalized = normalize_and_validate_private_key(raw).expect("valid key");
+        assert!(normalized.starts_with("-----BEGIN OPENSSH PRIVATE KEY-----"));
+        assert!(normalized.ends_with("-----END OPENSSH PRIVATE KEY-----"));
+        assert!(!normalized.contains('\r'));
+    }
+
+    #[test]
+    fn normalize_and_validate_private_key_rejects_malformed_body() {
+        let malformed = "-----BEGIN OPENSSH PRIVATE KEY-----\nthis is not a valid key body\n-----END OPENSSH PRIVATE KEY-----";
+        let err = normalize_and_validate_private_key(malformed).expect_err("must reject");
+        assert!(err
+            .to_string()
+            .contains("unsupported private key file format"));
+    }
+
+    #[test]
+    fn build_terminal_workplace_stats_aggregates_non_connecting_rows() {
+        let now = chrono::DateTime::parse_from_rfc3339("2026-04-18T12:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let day_ms = 24 * 60 * 60 * 1000;
+        let now_ms = now.timestamp_millis();
+
+        let rows = vec![
+            serde_json::json!({"id": 10, "status": "COMPLETE", "startTime": now_ms}),
+            serde_json::json!({"id": 11, "status": "FAILED", "startTime": now_ms - day_ms}),
+            serde_json::json!({"id": 12, "status": "CONNECTING", "startTime": now_ms}),
+            serde_json::json!({"id": 13, "status": "COMPLETE", "startTime": now_ms - (8 * day_ms)}),
+        ];
+
+        let stats = build_terminal_workplace_stats(rows, now);
+        assert_eq!(stats.today_terminal_connect_count, 1);
+        assert_eq!(stats.week_terminal_connect_count, 2);
+        assert_eq!(stats.terminal_connect_chart.x.len(), 7);
+        assert_eq!(stats.terminal_connect_chart.data.iter().sum::<i64>(), 2);
+        assert_eq!(stats.terminal_connect_list.len(), 3);
     }
 }

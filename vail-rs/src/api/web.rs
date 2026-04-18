@@ -36,6 +36,15 @@ pub async fn assets(Path(path): Path<String>) -> impl IntoResponse {
         return response;
     }
 
+    if path.starts_with("assets/")
+        || path
+            .rsplit('/')
+            .next()
+            .is_some_and(|name| name.contains('.'))
+    {
+        return (StatusCode::NOT_FOUND, "Asset not found").into_response();
+    }
+
     build_asset_response("index.html")
         .unwrap_or_else(|| (StatusCode::NOT_FOUND, "Frontend bundle not found").into_response())
 }

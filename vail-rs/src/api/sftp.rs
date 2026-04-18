@@ -315,6 +315,7 @@ async fn upload_batch(
     let host_ssh_config = ssh_client::resolve_host_ssh_config(
         &state.db,
         &state.config.secrets.data_encryption_key,
+        Some(user_id),
         host_id,
     )
     .await?;
@@ -547,6 +548,7 @@ async fn complete_upload(
     let host_ssh_config = ssh_client::resolve_host_ssh_config(
         &state.db,
         &state.config.secrets.data_encryption_key,
+        Some(user_id),
         task.4,
     )
     .await?;

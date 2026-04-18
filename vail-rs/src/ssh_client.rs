@@ -1,10 +1,13 @@
 use std::{io::Write, net::TcpStream, path::Path, time::Duration};
 
 use serde::Deserialize;
+use serde_json::Value;
+use sha2::{Digest, Sha256};
+use ssh_key::HashAlg;
 
 use crate::{error::AppError, security};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum HostAuthMethod {
     Password(String),
     PrivateKey {
@@ -13,7 +16,7 @@ pub enum HostAuthMethod {
     },
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct HostSshConfig {
     pub host_id: i64,
     pub hostname: String,
@@ -31,9 +34,129 @@ struct StoredCredentialPayload {
     passphrase: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HostSshExtraSetting {
+    auth_type: Option<String>,
+    username: Option<String>,
+    key_id: Option<i64>,
+    identity_id: Option<i64>,
+}
+
+const EXTRA_AUTH_DEFAULT: &str = "DEFAULT";
+const EXTRA_AUTH_CUSTOM_KEY: &str = "CUSTOM_KEY";
+const EXTRA_AUTH_CUSTOM_IDENTITY: &str = "CUSTOM_IDENTITY";
+
+fn host_extra_key(user_id: i64, host_id: i64, item: &str) -> String {
+    format!(
+        "orion:host-extra:user:{user_id}:host:{host_id}:item:{}",
+        item.trim().to_ascii_uppercase()
+    )
+}
+
+async fn has_authorized_key(
+    db: &sqlx::PgPool,
+    user_id: i64,
+    key_id: i64,
+) -> Result<bool, AppError> {
+    let allowed = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(
+            SELECT 1
+            FROM user_host_key_grant ug
+            WHERE ug.user_id = $1 AND ug.key_id = $2
+            UNION
+            SELECT 1
+            FROM role_host_key_grant rg
+            WHERE rg.key_id = $2
+              AND rg.role_id IN (SELECT role_id FROM sys_user_role WHERE user_id = $1)
+        )",
+    )
+    .bind(user_id)
+    .bind(key_id)
+    .fetch_one(db)
+    .await?;
+    Ok(allowed)
+}
+
+async fn has_authorized_identity(
+    db: &sqlx::PgPool,
+    user_id: i64,
+    identity_id: i64,
+) -> Result<bool, AppError> {
+    let allowed = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(
+            SELECT 1
+            FROM user_host_identity_grant ug
+            WHERE ug.user_id = $1 AND ug.identity_id = $2
+            UNION
+            SELECT 1
+            FROM role_host_identity_grant rg
+            WHERE rg.identity_id = $2
+              AND rg.role_id IN (SELECT role_id FROM sys_user_role WHERE user_id = $1)
+        )",
+    )
+    .bind(user_id)
+    .bind(identity_id)
+    .fetch_one(db)
+    .await?;
+    Ok(allowed)
+}
+
+async fn has_host_read_permission(db: &sqlx::PgPool, user_id: i64) -> Result<bool, AppError> {
+    let allowed = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(
+            SELECT 1
+            FROM sys_user_role ur
+            JOIN sys_role r ON r.id = ur.role_id AND r.deleted = 0 AND r.status = 1
+            JOIN sys_role_permission rp ON rp.role_id = ur.role_id
+            JOIN sys_permission p ON p.id = rp.permission_id
+            WHERE ur.user_id = $1 AND p.code = 'host.read'
+        )",
+    )
+    .bind(user_id)
+    .fetch_one(db)
+    .await?;
+    Ok(allowed)
+}
+
+async fn load_ssh_key_auth(
+    db: &sqlx::PgPool,
+    encryption_key: &str,
+    key_id: i64,
+) -> Result<HostAuthMethod, AppError> {
+    let row = sqlx::query_as::<_, (String, Option<String>)>(
+        "SELECT private_key_ciphertext, passphrase_ciphertext
+         FROM ssh_key
+         WHERE id = $1 AND deleted = 0 AND status = 1",
+    )
+    .bind(key_id)
+    .fetch_optional(db)
+    .await?
+    .ok_or_else(|| AppError::NotFound("SSH key not found or disabled".to_string()))?;
+
+    let private_key = security::decrypt_secret(&row.0, encryption_key)?;
+    let passphrase = match row.1.as_deref() {
+        Some(v) if !v.trim().is_empty() => Some(security::decrypt_secret(v, encryption_key)?),
+        _ => None,
+    };
+
+    Ok(HostAuthMethod::PrivateKey {
+        private_key,
+        passphrase,
+    })
+}
+
+fn normalize_username(raw: Option<String>) -> Option<String> {
+    raw.as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .map(str::to_string)
+}
+
 pub async fn resolve_host_ssh_config(
     db: &sqlx::PgPool,
     encryption_key: &str,
+    user_id: Option<i64>,
     host_id: i64,
 ) -> Result<HostSshConfig, AppError> {
     let row = sqlx::query_as::<
@@ -47,6 +170,7 @@ pub async fn resolve_host_ssh_config(
             Option<String>,
             Option<String>,
             Option<String>,
+            Option<i64>,
         ),
     >(
         "SELECT
@@ -57,7 +181,8 @@ pub async fn resolve_host_ssh_config(
             h.credential_type,
             h.credential_data,
             k.private_key_ciphertext,
-            k.passphrase_ciphertext
+            k.passphrase_ciphertext,
+            hb.ssh_key_id
          FROM host h
          LEFT JOIN host_ssh_key_binding hb ON hb.host_id = h.id AND hb.is_default = 1
          LEFT JOIN ssh_key k ON k.id = hb.ssh_key_id AND k.deleted = 0 AND k.status = 1
@@ -72,13 +197,17 @@ pub async fn resolve_host_ssh_config(
         return Err(AppError::BadRequest("Invalid host port".to_string()));
     }
 
-    let username = row
+    let mut username = row
         .3
         .as_deref()
         .map(str::trim)
         .filter(|v| !v.is_empty())
         .ok_or_else(|| AppError::BadRequest("Host username is required".to_string()))?
         .to_string();
+
+    let mut auth_source = "host".to_string();
+    let mut selected_key_id: Option<i64> = None;
+    let mut selected_identity_id: Option<i64> = None;
 
     let auth = match row.4.as_deref() {
         Some("password") | Some("private_key") => {
@@ -123,6 +252,7 @@ pub async fn resolve_host_ssh_config(
             }
         }
         Some("ssh_key") => {
+            selected_key_id = row.8;
             let private_key_ciphertext = row.6.as_deref().ok_or_else(|| {
                 AppError::BadRequest("Host has no active default SSH key binding".to_string())
             })?;
@@ -144,6 +274,159 @@ pub async fn resolve_host_ssh_config(
             ))
         }
     };
+
+    let mut auth = auth;
+
+    if let Some(uid) = user_id {
+        let cache_key = host_extra_key(uid, host_id, "SSH");
+        if let Some(extra_json) = sqlx::query_scalar::<_, String>(
+            "SELECT cache_value FROM cache
+             WHERE cache_key = $1
+               AND (expire_time IS NULL OR expire_time > NOW())",
+        )
+        .bind(&cache_key)
+        .fetch_optional(db)
+        .await?
+        {
+            let parsed: Option<HostSshExtraSetting> = serde_json::from_str::<Value>(&extra_json)
+                .ok()
+                .and_then(|v| serde_json::from_value(v).ok());
+
+            if let Some(extra) = parsed {
+                let auth_type = extra
+                    .auth_type
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|v| !v.is_empty())
+                    .unwrap_or(EXTRA_AUTH_DEFAULT);
+
+                match auth_type {
+                    EXTRA_AUTH_CUSTOM_KEY => {
+                        let key_id = extra.key_id.ok_or_else(|| {
+                            AppError::BadRequest("SSH extra config keyId is required".to_string())
+                        })?;
+                        if key_id <= 0 {
+                            return Err(AppError::BadRequest(
+                                "SSH extra config keyId must be greater than 0".to_string(),
+                            ));
+                        }
+
+                        let is_admin = has_host_read_permission(db, uid).await?;
+                        if !is_admin && !has_authorized_key(db, uid, key_id).await? {
+                            return Err(AppError::Auth(
+                                "SSH key is not authorized for current user".to_string(),
+                            ));
+                        }
+
+                        if let Some(v) = normalize_username(extra.username) {
+                            username = v;
+                        }
+                        auth_source = "extra_custom_key".to_string();
+                        selected_key_id = Some(key_id);
+                        selected_identity_id = None;
+                        auth = load_ssh_key_auth(db, encryption_key, key_id).await?;
+                    }
+                    EXTRA_AUTH_CUSTOM_IDENTITY => {
+                        let identity_id = extra.identity_id.ok_or_else(|| {
+                            AppError::BadRequest(
+                                "SSH extra config identityId is required".to_string(),
+                            )
+                        })?;
+                        if identity_id <= 0 {
+                            return Err(AppError::BadRequest(
+                                "SSH extra config identityId must be greater than 0".to_string(),
+                            ));
+                        }
+
+                        let is_admin = has_host_read_permission(db, uid).await?;
+                        if !is_admin && !has_authorized_identity(db, uid, identity_id).await? {
+                            return Err(AppError::Auth(
+                                "Host identity is not authorized for current user".to_string(),
+                            ));
+                        }
+
+                        let identity = sqlx::query_as::<
+                            _,
+                            (String, Option<String>, Option<String>, Option<i64>),
+                        >(
+                            "SELECT type, username, password_ciphertext, key_id
+                             FROM host_identity
+                             WHERE id = $1 AND deleted = 0 AND status = 1",
+                        )
+                        .bind(identity_id)
+                        .fetch_optional(db)
+                        .await?
+                        .ok_or_else(|| {
+                            AppError::NotFound("Host identity not found or disabled".to_string())
+                        })?;
+
+                        auth_source = "extra_custom_identity".to_string();
+                        selected_identity_id = Some(identity_id);
+                        selected_key_id = None;
+
+                        if let Some(v) = normalize_username(identity.1.clone()) {
+                            username = v;
+                        }
+
+                        match identity.0.as_str() {
+                            "PASSWORD" => {
+                                let ciphertext = identity.2.as_deref().ok_or_else(|| {
+                                    AppError::BadRequest(
+                                        "Host identity password is missing".to_string(),
+                                    )
+                                })?;
+                                let password =
+                                    security::decrypt_secret(ciphertext, encryption_key)?;
+                                auth = HostAuthMethod::Password(password);
+                            }
+                            "KEY" => {
+                                let key_id = identity.3.ok_or_else(|| {
+                                    AppError::BadRequest("Host identity key is missing".to_string())
+                                })?;
+                                selected_key_id = Some(key_id);
+                                auth = load_ssh_key_auth(db, encryption_key, key_id).await?;
+                            }
+                            _ => {
+                                return Err(AppError::BadRequest(
+                                    "Host identity type is invalid".to_string(),
+                                ))
+                            }
+                        }
+                    }
+                    EXTRA_AUTH_DEFAULT => {}
+                    _ => {
+                        return Err(AppError::BadRequest(
+                            "SSH extra config authType is invalid".to_string(),
+                        ))
+                    }
+                }
+            }
+        }
+    }
+
+    let resolved_auth_type = match &auth {
+        HostAuthMethod::Password(_) => "password",
+        HostAuthMethod::PrivateKey { .. } => {
+            if selected_key_id.is_some() {
+                "ssh_key"
+            } else {
+                "private_key"
+            }
+        }
+    };
+
+    tracing::info!(
+        target: "security::ssh_auth",
+        host_id = row.0,
+        hostname = %row.1,
+        port = row.2,
+        username = %username,
+        auth_source = %auth_source,
+        auth_type = resolved_auth_type,
+        selected_key_id = ?selected_key_id,
+        selected_identity_id = ?selected_identity_id,
+        "resolved ssh authentication material"
+    );
 
     Ok(HostSshConfig {
         host_id: row.0,
@@ -197,7 +480,10 @@ pub async fn upload_files(
     .map_err(|e| AppError::Internal(format!("sftp upload task join error: {e}")))?
 }
 
-fn connect_session(config: &HostSshConfig, timeout_secs: u64) -> Result<ssh2::Session, AppError> {
+pub fn connect_session(
+    config: &HostSshConfig,
+    timeout_secs: u64,
+) -> Result<ssh2::Session, AppError> {
     let stream = TcpStream::connect((config.hostname.as_str(), config.port)).map_err(|e| {
         AppError::Ssh(format!(
             "failed to connect to {}:{}: {e}",
@@ -222,9 +508,27 @@ fn connect_session(config: &HostSshConfig, timeout_secs: u64) -> Result<ssh2::Se
         HostAuthMethod::PrivateKey {
             private_key,
             passphrase,
-        } => session
-            .userauth_pubkey_memory(&config.username, None, private_key, passphrase.as_deref())
-            .map_err(|e| AppError::Ssh(format!("ssh private key authentication failed: {e}")))?,
+        } => {
+            if let Err(e) = session.userauth_pubkey_memory(
+                &config.username,
+                None,
+                private_key,
+                passphrase.as_deref(),
+            ) {
+                let key_fingerprint = private_key_fingerprint(private_key);
+                tracing::warn!(
+                    target: "security::ssh_auth",
+                    username = %config.username,
+                    hostname = %config.hostname,
+                    port = config.port,
+                    key_fingerprint = %key_fingerprint,
+                    "ssh private key authentication rejected by server"
+                );
+                return Err(AppError::Ssh(format!(
+                    "ssh private key authentication failed: {e}"
+                )));
+            }
+        }
     }
 
     if !session.authenticated() {
@@ -234,6 +538,22 @@ fn connect_session(config: &HostSshConfig, timeout_secs: u64) -> Result<ssh2::Se
     }
 
     Ok(session)
+}
+
+fn private_key_fingerprint(private_key: &str) -> String {
+    if let Ok(parsed) = ssh_key::PrivateKey::from_openssh(private_key) {
+        let fp = parsed.public_key().fingerprint(HashAlg::Sha256);
+        return fp.to_string();
+    }
+
+    let mut hasher = Sha256::new();
+    hasher.update(private_key.as_bytes());
+    let digest = hasher.finalize();
+    let mut out = String::with_capacity(16);
+    for byte in digest.iter().take(8) {
+        out.push_str(&format!("{byte:02x}"));
+    }
+    out
 }
 
 fn ensure_remote_dir(sftp: &ssh2::Sftp, path: &Path) -> Result<(), ssh2::Error> {

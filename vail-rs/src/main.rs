@@ -48,11 +48,11 @@ async fn main() {
         .merge(api::orion::router())
         .merge(api::ssh::router())
         .merge(api::ssh_key::router())
-        .merge(api::sftp::router());
+        .merge(api::sftp::router())
+        .merge(api::terminal::router());
 
     let app = Router::new()
-        .nest("/api", api_router.clone())
-        .merge(api_router)
+        .nest("/api/v1", api_router.clone())
         .route("/", get(api::web::index))
         .route("/*path", get(api::web::assets))
         .layer(TraceLayer::new_for_http())

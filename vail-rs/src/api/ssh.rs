@@ -160,6 +160,7 @@ async fn create_session(
     let host_ssh_config = ssh_client::resolve_host_ssh_config(
         &state.db,
         &state.config.secrets.data_encryption_key,
+        Some(user_id),
         payload.host_id,
     )
     .await?;

@@ -37,8 +37,9 @@ impl OrionCompatModule {
             "command-snippet" => Some(Self::CommandSnippet),
             "path-bookmark-group" => Some(Self::PathBookmarkGroup),
             "path-bookmark" => Some(Self::PathBookmark),
-            "terminal-connect-log" => Some(Self::TerminalConnectLog),
-            "terminal-file-log" => Some(Self::TerminalFileLog),
+            "session" => Some(Self::TerminalConnectLog),
+            "connect-log" => Some(Self::TerminalConnectLog),
+            "file-log" => Some(Self::TerminalFileLog),
             _ => None,
         }
     }
