@@ -4,24 +4,59 @@ services:
   postgres:
     image: postgres:18-alpine
     environment:
-      POSTGRES_USER: vail
-      POSTGRES_PASSWORD: vail
-      POSTGRES_DB: vail
+      POSTGRES_USER: ${POSTGRES_USER:-vail}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vail}
+      POSTGRES_DB: ${POSTGRES_DB:-vail}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vail -d vail"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 10
 
+  backend-dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: vail-rs/Dockerfile
+    environment:
+      VAIL_CONFIG: /app/config.toml
+      RUST_LOG: ${RUST_LOG:-info}
+      VAIL_DB_HOST: ${VAIL_DB_HOST:-postgres}
+      VAIL_DB_PORT: ${VAIL_DB_PORT:-5432}
+      VAIL_DB_USERNAME: ${VAIL_DB_USERNAME:-${POSTGRES_USER:-vail}}
+      VAIL_DB_PASSWORD: ${VAIL_DB_PASSWORD:-${POSTGRES_PASSWORD:-vail}}
+      VAIL_DB_DATABASE: ${VAIL_DB_DATABASE:-${POSTGRES_DB:-vail}}
+      VAIL_JWT_ALGORITHM: ${VAIL_JWT_ALGORITHM:-EdDSA}
+      VAIL_JWT_SECRET: ${VAIL_JWT_SECRET:-}
+      VAIL_JWT_PRIVATE_KEY: ${VAIL_JWT_PRIVATE_KEY:-}
+      VAIL_JWT_PUBLIC_KEY: ${VAIL_JWT_PUBLIC_KEY:-}
+      VAIL_DATA_ENCRYPTION_KEY: ${VAIL_DATA_ENCRYPTION_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:8080"
+
   backend:
+    profiles: ["prod"]
     image: ${VAIL_BACKEND_IMAGE:-ghcr.io/ginbun/vail:latest}
     environment:
       VAIL_CONFIG: /app/config.toml
-      RUST_LOG: info
+      RUST_LOG: ${RUST_LOG:-info}
+      VAIL_DB_HOST: ${VAIL_DB_HOST:-postgres}
+      VAIL_DB_PORT: ${VAIL_DB_PORT:-5432}
+      VAIL_DB_USERNAME: ${VAIL_DB_USERNAME:-${POSTGRES_USER:-vail}}
+      VAIL_DB_PASSWORD: ${VAIL_DB_PASSWORD:-${POSTGRES_PASSWORD:-vail}}
+      VAIL_DB_DATABASE: ${VAIL_DB_DATABASE:-${POSTGRES_DB:-vail}}
+      VAIL_JWT_ALGORITHM: ${VAIL_JWT_ALGORITHM:-EdDSA}
+      VAIL_JWT_SECRET: ${VAIL_JWT_SECRET:-}
+      VAIL_JWT_PRIVATE_KEY: ${VAIL_JWT_PRIVATE_KEY:-}
+      VAIL_JWT_PUBLIC_KEY: ${VAIL_JWT_PUBLIC_KEY:-}
+      VAIL_DATA_ENCRYPTION_KEY: ${VAIL_DATA_ENCRYPTION_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

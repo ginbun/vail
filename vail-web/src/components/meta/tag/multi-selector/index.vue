@@ -1,13 +1,16 @@
 <template>
   <a-select
-v-model:model-value="value"
+:model-value="modelValue"
             :placeholder="placeholder"
             :options="optionData"
             :loading="loading"
             :limit="limit as number"
             :allow-create="allowCreate"
+            :separator="','"
+            :filter-option="labelFilter"
             multiple
             allow-clear
+            @change="onChange"
             @exceed-limit="() => { emits('onLimited', limit, `最多选择${limit}个tag`) }">
     <!-- 选项 -->
     <template #option="{ data: { label } }">
@@ -30,6 +33,7 @@ v-model:model-value="value"
   import { ref, computed, onMounted, onActivated } from 'vue';
   import { useCacheStore } from '@/store';
   import { dataColor } from '@/utils';
+  import { labelFilter } from '@/types/form';
   import { createTag } from '@/api/meta/tag';
   import useLoading from '@/hooks/loading';
 
@@ -45,52 +49,60 @@ v-model:model-value="value"
     tagColor: () => [],
   });
 
-  const emits = defineEmits(['update:modelValue', 'onLimited']);
+  const emits = defineEmits(['update:modelValue', 'onLimited', 'onIllegal']);
 
   const { loading, setLoading } = useLoading();
   const cacheStore = useCacheStore();
 
-  const value = computed<Array<number>>({
-    get() {
-      return props.modelValue as Array<number>;
-    },
-    async set(e) {
-      await checkCreateTag(e as Array<any>);
-      emits('update:modelValue', e);
-    }
-  });
+  const RFC_1035_REGEXP = /^[a-zA-Z]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
+
   const optionData = ref<SelectOptionData[]>([]);
 
-  // 检查是否可以创建tag
-  const checkCreateTag = async (tags: Array<any>) => {
-    if (!tags.length) {
-      return;
+  // 处理变化
+  const onChange = async (e: any) => {
+    const values = await checkCreateTag(e as Array<any>);
+    emits('update:modelValue', values);
+  };
+
+  // 检查并创建 tag，返回处理后的 id 数组
+  const checkCreateTag = async (tags: Array<any>): Promise<number[]> => {
+    if (!tags || !tags.length) {
+      return [];
     }
-    for (let i = 0; i < tags.length; i++) {
-      const tag = tags[i];
-      // 为 number 代表为 id 已存在
+    const result: number[] = [];
+    for (const tag of tags) {
+      // 如果是数字，说明是已存在的 tag ID
       if (typeof tag === 'number') {
+        result.push(tag);
         continue;
       }
-      // 已存在则跳过
-      const find = optionData.value.find((o) => o.label === tag);
-      if (find) {
-        // 删除并且跳出循环
-        tags.splice(i, 1);
-        return;
+      
+      // 如果是字符串，说明是新输入的标签
+      // 1. 验证是否已在选项中存在（可能用户输入了已存在的标签名但没从下拉选）
+      const existingOption = optionData.value.find((o) => o.label === tag);
+      if (existingOption) {
+        result.push(existingOption.value as number);
+        continue;
       }
-      // 不存在则创建 tag
+
+      // 2. 验证 RFC 1035
+      if (!RFC_1035_REGEXP.test(tag)) {
+        emits('onIllegal', `标签 ${tag} 不符合 RFC 1035 规范 (字母开头, 允许字母数字连字符, 长度1-63)`);
+        continue;
+      }
+
+      // 3. 不存在则创建 tag
       setLoading(true);
       try {
-        // 创建 tag
-        tags[i] = await doCreateTag(tag);
+        const id = await doCreateTag(tag);
+        result.push(id);
       } catch (e) {
-        // 失败删除
-        tags.splice(i, 1);
+        // 忽略创建失败的
       } finally {
         setLoading(false);
       }
     }
+    return result;
   };
 
   // 创建 tag

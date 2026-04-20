@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -89,11 +90,41 @@ impl Default for JwtConfig {
 }
 
 impl JwtConfig {
+    const ED25519_SPKI_PREFIX: [u8; 12] = [
+        0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00,
+    ];
+
+    fn decode_ed25519_der(&self, value: &str, field_name: &str) -> Result<Vec<u8>, String> {
+        STANDARD
+            .decode(value.trim())
+            .map_err(|e| format!("invalid jwt.{field_name}: expected base64-encoded DER: {e}"))
+    }
+
+    fn decode_ed25519_public_key(&self) -> Result<Vec<u8>, String> {
+        let decoded = self.decode_ed25519_der(&self.public_key, "public_key")?;
+        if decoded.len() == 32 {
+            return Ok(decoded);
+        }
+
+        if decoded.starts_with(&Self::ED25519_SPKI_PREFIX)
+            && decoded.len() == 32 + Self::ED25519_SPKI_PREFIX.len()
+        {
+            return Ok(decoded[Self::ED25519_SPKI_PREFIX.len()..].to_vec());
+        }
+
+        Err(
+            "invalid jwt.public_key: expected base64-encoded Ed25519 public key or SPKI DER"
+                .to_string(),
+        )
+    }
+
     pub fn signing_key(&self) -> Result<EncodingKey, String> {
         match self.algorithm {
             Algorithm::HS256 => Ok(EncodingKey::from_secret(self.secret.as_bytes())),
-            Algorithm::EdDSA => EncodingKey::from_ed_pem(self.private_key.as_bytes())
-                .map_err(|e| format!("invalid jwt.private_key: {e}")),
+            Algorithm::EdDSA => {
+                let der = self.decode_ed25519_der(&self.private_key, "private_key")?;
+                Ok(EncodingKey::from_ed_der(&der))
+            }
             other => Err(format!("unsupported jwt.algorithm: {other:?}")),
         }
     }
@@ -101,8 +132,10 @@ impl JwtConfig {
     pub fn verification_key(&self) -> Result<DecodingKey, String> {
         match self.algorithm {
             Algorithm::HS256 => Ok(DecodingKey::from_secret(self.secret.as_bytes())),
-            Algorithm::EdDSA => DecodingKey::from_ed_pem(self.public_key.as_bytes())
-                .map_err(|e| format!("invalid jwt.public_key: {e}")),
+            Algorithm::EdDSA => {
+                let public_key = self.decode_ed25519_public_key()?;
+                Ok(DecodingKey::from_ed_der(&public_key))
+            }
             other => Err(format!("unsupported jwt.algorithm: {other:?}")),
         }
     }
@@ -345,10 +378,10 @@ fn apply_env_overrides(config: &mut Config) {
         config.jwt.secret = v;
     }
     if let Some(v) = env_string("VAIL_JWT_PRIVATE_KEY") {
-        config.jwt.private_key = v.replace("\\n", "\n");
+        config.jwt.private_key = v;
     }
     if let Some(v) = env_string("VAIL_JWT_PUBLIC_KEY") {
-        config.jwt.public_key = v.replace("\\n", "\n");
+        config.jwt.public_key = v;
     }
     if let Some(v) = env_u64("VAIL_JWT_EXPIRATION") {
         config.jwt.expiration = v;
@@ -406,8 +439,11 @@ mod tests {
     use super::*;
     use std::sync::{Mutex, OnceLock};
 
-    const TEST_ED25519_PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIHCDX8ke/yslwa9SElPghVHhz700q1H6SO9hmUJ6i8Ld\n-----END PRIVATE KEY-----\n";
-    const TEST_ED25519_PUBLIC_KEY: &str = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAsA29J+hOVKaDdV0/Ksm2B3zFrbDqFphgTpO79LTQ4zk=\n-----END PUBLIC KEY-----\n";
+    const TEST_ED25519_PRIVATE_KEY: &str =
+        "MC4CAQAwBQYDK2VwBCIEIHCDX8ke/yslwa9SElPghVHhz700q1H6SO9hmUJ6i8Ld";
+    const TEST_ED25519_PUBLIC_KEY: &str = "sA29J+hOVKaDdV0/Ksm2B3zFrbDqFphgTpO79LTQ4zk=";
+    const TEST_ED25519_PUBLIC_KEY_DER: &str =
+        "MCowBQYDK2VwAyEAsA29J+hOVKaDdV0/Ksm2B3zFrbDqFphgTpO79LTQ4zk=";
 
     fn env_test_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -420,8 +456,8 @@ mod tests {
             r#"
             [jwt]
             algorithm = "EdDSA"
-            private_key = "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----"
-            public_key = "-----BEGIN PUBLIC KEY-----\ndef\n-----END PUBLIC KEY-----"
+            private_key = "abc123base64"
+            public_key = "def456base64"
             expiration = 3600
             refresh_expiration = 604800
 
@@ -432,8 +468,8 @@ mod tests {
         .expect("config should parse");
 
         assert_eq!(cfg.jwt.algorithm, jsonwebtoken::Algorithm::EdDSA);
-        assert!(cfg.jwt.private_key.contains("BEGIN PRIVATE KEY"));
-        assert!(cfg.jwt.public_key.contains("BEGIN PUBLIC KEY"));
+        assert_eq!(cfg.jwt.private_key, "abc123base64");
+        assert_eq!(cfg.jwt.public_key, "def456base64");
     }
 
     #[test]
@@ -456,6 +492,18 @@ mod tests {
         cfg.secrets.data_encryption_key = "12345678901234567890123456789012".to_string();
 
         cfg.validate().expect("valid eddsa config");
+    }
+
+    #[test]
+    fn config_validation_accepts_eddsa_der_public_key() {
+        let mut cfg = Config::default();
+        cfg.jwt.algorithm = jsonwebtoken::Algorithm::EdDSA;
+        cfg.jwt.private_key = TEST_ED25519_PRIVATE_KEY.to_string();
+        cfg.jwt.public_key = TEST_ED25519_PUBLIC_KEY_DER.to_string();
+        cfg.secrets.data_encryption_key = "12345678901234567890123456789012".to_string();
+
+        cfg.validate()
+            .expect("valid eddsa config with der public key");
     }
 
     #[test]
@@ -518,8 +566,8 @@ mod tests {
         assert_eq!(cfg.jwt.algorithm, jsonwebtoken::Algorithm::EdDSA);
         assert_eq!(cfg.jwt.expiration, 7200);
         assert_eq!(cfg.jwt.refresh_expiration, 1_209_600);
-        assert!(cfg.jwt.private_key.contains("BEGIN PRIVATE KEY"));
-        assert!(cfg.jwt.public_key.contains("BEGIN PUBLIC KEY"));
+        assert_eq!(cfg.jwt.private_key, TEST_ED25519_PRIVATE_KEY);
+        assert_eq!(cfg.jwt.public_key, TEST_ED25519_PUBLIC_KEY);
         assert_eq!(
             cfg.secrets.data_encryption_key,
             "12345678901234567890123456789012"
@@ -548,11 +596,8 @@ mod tests {
                 .as_nanos()
         ));
 
-        let escaped_private = TEST_ED25519_PRIVATE_KEY.replace('\n', "\\n");
-        let escaped_public = TEST_ED25519_PUBLIC_KEY.replace('\n', "\\n");
-
         let content = format!(
-            "[jwt]\nalgorithm = \"EdDSA\"\nsecret = \"\"\nprivate_key = \"{escaped_private}\"\npublic_key = \"{escaped_public}\"\nexpiration = 3600\nrefresh_expiration = 604800\n\n[secrets]\ndata_encryption_key = \"12345678901234567890123456789012\"\n"
+            "[jwt]\nalgorithm = \"EdDSA\"\nsecret = \"\"\nprivate_key = \"{TEST_ED25519_PRIVATE_KEY}\"\npublic_key = \"{TEST_ED25519_PUBLIC_KEY}\"\nexpiration = 3600\nrefresh_expiration = 604800\n\n[secrets]\ndata_encryption_key = \"12345678901234567890123456789012\"\n"
         );
         std::fs::write(&temp_file, content).expect("write temp config");
 
@@ -573,5 +618,19 @@ mod tests {
             std::env::remove_var("VAIL_CONFIG");
         }
         let _ = std::fs::remove_file(&temp_file);
+    }
+
+    #[test]
+    fn config_validation_rejects_pem_for_eddsa_keys() {
+        let mut cfg = Config::default();
+        cfg.jwt.algorithm = jsonwebtoken::Algorithm::EdDSA;
+        cfg.jwt.private_key =
+            "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----".to_string();
+        cfg.jwt.public_key =
+            "-----BEGIN PUBLIC KEY-----\ndef\n-----END PUBLIC KEY-----".to_string();
+        cfg.secrets.data_encryption_key = "12345678901234567890123456789012".to_string();
+
+        let err = cfg.validate().expect_err("PEM must be rejected for EdDSA");
+        assert!(err.contains("base64"));
     }
 }

@@ -125,6 +125,8 @@ async fn issue_token_pair(
     user_id: i64,
     username: &str,
     session_id: Option<String>,
+    ip: Option<String>,
+    user_agent: Option<String>,
 ) -> AppResult<TokenPair> {
     let session_id = session_id.unwrap_or_else(|| Uuid::new_v4().to_string());
     let access_token = create_token(
@@ -138,12 +140,14 @@ async fn issue_token_pair(
     let refresh_hash = hash_refresh_token(&refresh_token);
 
     sqlx::query(
-        "INSERT INTO auth_refresh_token (user_id, token_hash, session_id, expires_at) VALUES ($1, $2, $3::uuid, NOW() + ($4 || ' seconds')::interval)",
+        "INSERT INTO auth_refresh_token (user_id, token_hash, session_id, expires_at, ip, user_agent) VALUES ($1, $2, $3::uuid, NOW() + ($4 || ' seconds')::interval, $5, $6)",
     )
     .bind(user_id)
     .bind(refresh_hash)
     .bind(&session_id)
     .bind(state.config.jwt.refresh_expiration as i64)
+    .bind(ip)
+    .bind(user_agent)
     .execute(&state.db)
     .await?;
 
@@ -161,6 +165,7 @@ async fn login(
     axum::extract::Json(payload): axum::extract::Json<LoginRequest>,
 ) -> AppResult<impl IntoResponse> {
     let source_ip = get_source_ip(&headers, connect_info.as_ref());
+    let user_agent = headers.get("user-agent").and_then(|v| v.to_str().ok()).map(|v| v.to_string());
 
     let user = sqlx::query_as::<_, (i64, String, String, Option<String>, bool)>(
         "SELECT u.id, u.username, u.password, u.nickname, COALESCE(m.enabled, false) AS mfa_enabled FROM sys_user u LEFT JOIN user_mfa_totp m ON m.user_id = u.id WHERE u.username = $1 AND u.deleted = 0",
@@ -207,7 +212,7 @@ async fn login(
         })));
     }
 
-    let pair = issue_token_pair(&state, user.0, &user.1, None).await?;
+    let pair = issue_token_pair(&state, user.0, &user.1, None, Some(source_ip.clone()), user_agent).await?;
 
     sqlx::query("UPDATE sys_user SET last_login_time = NOW(), last_login_ip = $1 WHERE id = $2")
         .bind(&source_ip)
@@ -274,7 +279,8 @@ async fn verify_totp_login(
         .execute(&state.db)
         .await?;
 
-    let pair = issue_token_pair(&state, challenge.0, &challenge.1, None).await?;
+    let user_agent = headers.get("user-agent").and_then(|v| v.to_str().ok()).map(|v| v.to_string());
+    let pair = issue_token_pair(&state, challenge.0, &challenge.1, None, Some(source_ip.clone()), user_agent).await?;
 
     sqlx::query("UPDATE sys_user SET last_login_time = NOW(), last_login_ip = $1 WHERE id = $2")
         .bind(&source_ip)
@@ -344,7 +350,7 @@ async fn refresh(
     .execute(&state.db)
     .await?;
 
-    let pair = issue_token_pair(&state, refresh_row.1, &refresh_row.2, Some(refresh_row.3)).await?;
+    let pair = issue_token_pair(&state, refresh_row.1, &refresh_row.2, Some(refresh_row.3), None, None).await?;
 
     Ok(axum::Json(ApiResponse::success(RefreshResponse {
         access_token: pair.access_token,

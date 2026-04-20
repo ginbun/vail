@@ -30,6 +30,9 @@ export const hostFormRules = {
   }, {
     maxLength: 64,
     message: '主机编码长度不能大于64位'
+  }, {
+    match: /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/,
+    message: '主机编码格式不正确 (Hostname 类型)'
   }],
   address: [{
     required: true,
@@ -37,6 +40,9 @@ export const hostFormRules = {
   }, {
     maxLength: 128,
     message: '主机地址长度不能大于128位'
+  }, {
+    match: /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/,
+    message: '主机地址格式不正确 (IP 或 DNS 名称)'
   }],
   port: [{
     required: true,
@@ -96,22 +102,22 @@ export const sshFormRules = {
     required: true,
     message: '请输入SSH输出编码'
   }, {
-    maxLength: 12,
-    message: 'SSH输出编码长度不能超过12位'
+    maxLength: 20,
+    message: 'SSH输出编码长度不能超过20位'
   }],
   fileNameCharset: [{
     required: true,
     message: '请输入文件名称编码'
   }, {
-    maxLength: 12,
-    message: '文件名称编码长度不能超过12位'
+    maxLength: 20,
+    message: '文件名称编码长度不能超过20位'
   }],
   fileContentCharset: [{
     required: true,
-    message: '请输入SSH输出编码'
+    message: '请输入文件内容编码'
   }, {
-    maxLength: 12,
-    message: '文件内容编码长度不能超过12位'
+    maxLength: 20,
+    message: '文件内容编码长度不能超过20位'
   }],
 } as Record<string, FieldRule | FieldRule[]>;
 
@@ -156,6 +162,9 @@ export const vncFormRules = {
   clipboardEncoding: [{
     required: true,
     message: '请选择剪切板编码'
+  }, {
+    maxLength: 20,
+    message: '剪切板编码长度不能超过20位'
   }],
 } as Record<string, FieldRule | FieldRule[]>;
 

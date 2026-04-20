@@ -87,59 +87,6 @@ async fn append_operator_log(
     Ok(())
 }
 
-async fn has_host_read_permission(state: &AppState, user_id: i64) -> AppResult<bool> {
-    let allowed = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(
-            SELECT 1
-            FROM sys_user_role ur
-            JOIN sys_role r ON r.id = ur.role_id AND r.deleted = 0 AND r.status = 1
-            JOIN sys_role_permission rp ON rp.role_id = ur.role_id
-            JOIN sys_permission p ON p.id = rp.permission_id
-            WHERE ur.user_id = $1 AND p.code = 'host.read'
-        )",
-    )
-    .bind(user_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(allowed)
-}
-
-async fn can_access_host(
-    state: &AppState,
-    user_id: i64,
-    host_id: i64,
-    is_admin: bool,
-) -> AppResult<bool> {
-    if is_admin {
-        let exists = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM host WHERE id = $1 AND deleted = 0 AND status = 1)",
-        )
-        .bind(host_id)
-        .fetch_one(&state.db)
-        .await?;
-        return Ok(exists);
-    }
-
-    let exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(
-            SELECT 1
-            FROM user_host_access uha
-            JOIN host h ON h.id = uha.host_id
-            WHERE uha.user_id = $1
-              AND uha.host_id = $2
-              AND h.deleted = 0
-              AND h.status = 1
-        )",
-    )
-    .bind(user_id)
-    .bind(host_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(exists)
-}
-
 async fn create_session(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -152,10 +99,7 @@ async fn create_session(
     }
 
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
-    let is_admin = has_host_read_permission(&state, user_id).await?;
-    if !can_access_host(&state, user_id, payload.host_id, is_admin).await? {
-        return Err(AppError::Auth("Host access denied".to_string()));
-    }
+    guard::require_host_permission(&state, user_id, payload.host_id).await?;
 
     let host_ssh_config = ssh_client::resolve_host_ssh_config(
         &state.db,
@@ -224,7 +168,7 @@ async fn list_sessions(
     Query(query): Query<ListSessionsQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
-    let is_admin = has_host_read_permission(&state, user_id).await?;
+    let is_admin = guard::has_host_read_permission(&state, user_id).await?;
 
     let rows = if is_admin {
         sqlx::query_as::<_, (i64, i64, String, i16, String, Option<String>)>(
@@ -279,7 +223,7 @@ async fn disconnect_session(
     }
 
     let actor_id = guard::current_user_id(&headers, &state.config.jwt)?;
-    let is_admin = has_host_read_permission(&state, actor_id).await?;
+    let is_admin = guard::has_host_read_permission(&state, actor_id).await?;
 
     let row = sqlx::query_as::<_, (i64, i64, i16)>(
         "SELECT user_id, host_id, status

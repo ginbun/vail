@@ -65,9 +65,10 @@ v-model="formModel.tags"
                             type="HOST"
                             :limit="5"
                             :tag-color="tagColor"
-                            :allow-create="true"
-                            placeholder="请选择主机标签"
-                            @on-limited="onLimitedTag" />
+                             :allow-create="true"
+                             placeholder="请选择主机标签"
+                             @on-limited="onLimitedTag"
+                             @on-illegal="onIllegalTag" />
       </a-form-item>
       <!-- 主机描述 -->
       <a-form-item field="description" label="主机描述">
@@ -186,6 +187,19 @@ type="primary"
       }
     });
     // 因为输入框已经限制数量 这里只做提示
+    setTimeout(() => {
+      formRef.value.clearValidate('tags');
+    }, 3000);
+  };
+
+  // tag 不合法
+  const onIllegalTag = (message: string) => {
+    formRef.value.setFields({
+      tags: {
+        status: 'error',
+        message
+      }
+    });
     setTimeout(() => {
       formRef.value.clearValidate('tags');
     }, 3000);

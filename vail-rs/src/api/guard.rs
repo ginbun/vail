@@ -68,15 +68,96 @@ pub async fn require_permission(
     .await?;
 
     if !allowed {
-        return Err(AppError::Auth("Permission denied".to_string()));
+        return Err(AppError::Forbidden("Permission denied".to_string()));
     }
 
     Ok(user_id)
 }
 
+pub async fn has_host_read_permission(state: &AppState, user_id: i64) -> AppResult<bool> {
+    let allowed = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(
+            SELECT 1
+            FROM sys_user_role ur
+            JOIN sys_role r ON r.id = ur.role_id AND r.deleted = 0 AND r.status = 1
+            JOIN sys_role_permission rp ON rp.role_id = ur.role_id
+            JOIN sys_permission p ON p.id = rp.permission_id
+            WHERE ur.user_id = $1 AND p.code = 'host.read'
+        )",
+    )
+    .bind(user_id)
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(allowed)
+}
+
+pub async fn check_host_permission(state: &AppState, user_id: i64, host_id: i64) -> AppResult<bool> {
+    // 1. Check host.read permission
+    let allowed = has_host_read_permission(state, user_id).await?;
+
+    // 2. Check specific host access
+    let access = if allowed {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM host WHERE id = $1 AND deleted = 0 AND status = 1)",
+        )
+        .bind(host_id)
+        .fetch_one(&state.db)
+        .await?
+    } else {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(
+                SELECT 1
+                FROM host h
+                WHERE h.id = $2 AND h.deleted = 0 AND h.status = 1
+                AND (
+                    -- Direct user-to-host access
+                    EXISTS(SELECT 1 FROM user_host_access WHERE user_id = $1 AND host_id = $2)
+                    OR
+                    -- Access via host group (direct user grant)
+                    EXISTS(
+                        SELECT 1 
+                        FROM host_group_rel hgr
+                        JOIN user_host_group_grant uhgg ON hgr.group_id = uhgg.group_id
+                        WHERE hgr.host_id = $2 AND uhgg.user_id = $1
+                    )
+                    OR
+                    -- Access via host group (role-based grant)
+                    EXISTS(
+                        SELECT 1
+                        FROM host_group_rel hgr
+                        JOIN role_host_group_grant rhgg ON hgr.group_id = rhgg.group_id
+                        JOIN sys_user_role ur ON rhgg.role_id = ur.role_id
+                        WHERE hgr.host_id = $2 AND ur.user_id = $1
+                    )
+                )
+            )",
+        )
+        .bind(user_id)
+        .bind(host_id)
+        .fetch_one(&state.db)
+        .await?
+    };
+
+    Ok(access)
+}
+
+pub async fn require_host_permission(
+    state: &AppState,
+    user_id: i64,
+    host_id: i64,
+) -> AppResult<()> {
+    if !check_host_permission(state, user_id, host_id).await? {
+        return Err(AppError::Forbidden("Host access denied".to_string()));
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use axum::http::HeaderValue;
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
     use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
     use serde::Serialize;
 
@@ -91,8 +172,10 @@ mod tests {
         session_id: String,
     }
 
-    const TEST_ED25519_PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIHCDX8ke/yslwa9SElPghVHhz700q1H6SO9hmUJ6i8Ld\n-----END PRIVATE KEY-----\n";
-    const TEST_ED25519_PUBLIC_KEY: &str = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAsA29J+hOVKaDdV0/Ksm2B3zFrbDqFphgTpO79LTQ4zk=\n-----END PUBLIC KEY-----\n";
+    const TEST_ED25519_PRIVATE_KEY: &str =
+        "MC4CAQAwBQYDK2VwBCIEIHCDX8ke/yslwa9SElPghVHhz700q1H6SO9hmUJ6i8Ld";
+    const TEST_ED25519_PUBLIC_KEY: &str =
+        "sA29J+hOVKaDdV0/Ksm2B3zFrbDqFphgTpO79LTQ4zk=";
 
     #[test]
     fn bearer_token_extracts_value() {
@@ -144,10 +227,11 @@ mod tests {
 
         let mut header = Header::new(Algorithm::EdDSA);
         header.typ = Some("JWT".to_string());
+        let private_der = STANDARD.decode(TEST_ED25519_PRIVATE_KEY).expect("base64 der");
         let token = encode(
             &header,
             &claims,
-            &EncodingKey::from_ed_pem(TEST_ED25519_PRIVATE_KEY.as_bytes()).expect("ed key"),
+            &EncodingKey::from_ed_der(&private_der),
         )
         .expect("jwt encode");
 

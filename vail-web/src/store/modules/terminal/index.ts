@@ -114,14 +114,9 @@ export default defineStore('terminal', {
           // 更新默认主题偏好
           await this.updateTerminalPreference(TerminalPreferenceItem.SSH_THEME, data.sshTheme);
         }
-        // 移除禁用的快捷键
-        if (data.shortcutSetting?.enabled) {
-          data.shortcutSetting.keys = data.shortcutSetting.keys.filter(s => s.enabled);
-        } else {
-          data.shortcutSetting = {
-            enabled: false,
-            keys: []
-          };
+        // 设置快捷键
+        if (data.shortcutSetting) {
+          this.preference.shortcutSetting = data.shortcutSetting;
         }
         // 选择赋值 (不能修改引用)
         const keys = Object.keys(this.preference);

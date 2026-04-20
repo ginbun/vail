@@ -13,14 +13,14 @@ database = "vail"
 
 [jwt]
 # Override via VAIL_JWT_ALGORITHM / VAIL_JWT_SECRET / VAIL_JWT_PRIVATE_KEY / VAIL_JWT_PUBLIC_KEY
-# Recommended: EdDSA (Ed25519 keypair)
+# Recommended: EdDSA (Ed25519 keypair, base64 key strings)
 algorithm = "EdDSA"
 # HS256 fallback secret (required only when algorithm = "HS256")
 secret = "REPLACE_WITH_A_RANDOM_32+_CHAR_SECRET_FOR_HS256"
-# Ed25519 signing key (PEM)
-private_key = "REPLACE_WITH_ED25519_PRIVATE_KEY_PEM"
-# Ed25519 verification key (PEM)
-public_key = "REPLACE_WITH_ED25519_PUBLIC_KEY_PEM"
+# Ed25519 signing key (base64 PKCS8 DER)
+private_key = "REPLACE_WITH_ED25519_PRIVATE_KEY_BASE64"
+# Ed25519 verification key (base64 public key)
+public_key = "REPLACE_WITH_ED25519_PUBLIC_KEY_BASE64"
 expiration = 3600
 refresh_expiration = 604800
 

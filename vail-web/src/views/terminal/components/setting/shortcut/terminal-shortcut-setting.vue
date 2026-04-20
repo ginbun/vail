@@ -207,7 +207,7 @@ title="终端快捷键"
     // 设置快捷键
     const keys: Array<TerminalShortcutKeyEditable> = [];
     for (const shortcutItem of TerminalShortcutItems) {
-      const shortcutKey = setting.keys?.find(s => s.item === shortcutItem.item);
+      const shortcutKey = setting?.keys?.find(s => s.item === shortcutItem.item);
       if (shortcutKey) {
         // 存在
         keys.push({
@@ -231,7 +231,7 @@ title="终端快捷键"
     // 计算快捷键
     keys.forEach(key => key.shortcutKey = computeShortcutKey(key));
     shortcutKeys.value = keys;
-    enabled.value = setting.enabled;
+    enabled.value = setting?.enabled ?? false;
   };
 
   // 加载用户快捷键

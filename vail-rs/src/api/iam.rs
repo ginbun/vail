@@ -9,12 +9,11 @@ use axum::{
 
 use crate::{
     api::{guard, AppState},
+    application::orion::audit_service,
     error::{AppError, AppResult},
-    model::{
-        ApiResponse, AssignUserHostsRequest, AssignUserRolesRequest, HostResponse,
-        IamMeSummaryResponse, IamUserPermissionsResponse,
-    },
+    model::*,
 };
+
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -159,69 +158,6 @@ fn normalize_ids(ids: Vec<i64>) -> Vec<i64> {
         .collect()
 }
 
-fn header_string(headers: &HeaderMap, key: &str) -> Option<String> {
-    headers
-        .get(key)
-        .and_then(|v| v.to_str().ok())
-        .map(|v| v.trim().to_string())
-        .filter(|v| !v.is_empty())
-}
-
-fn source_ip(headers: &HeaderMap) -> Option<String> {
-    header_string(headers, "x-forwarded-for")
-        .and_then(|v| v.split(',').next().map(|s| s.trim().to_string()))
-        .or_else(|| header_string(headers, "x-real-ip"))
-}
-
-async fn append_operator_log(
-    state: &AppState,
-    headers: &HeaderMap,
-    actor_user_id: i64,
-    operation: &str,
-    params: serde_json::Value,
-    result: i16,
-    error_message: Option<String>,
-) -> AppResult<()> {
-    let username = sqlx::query_scalar::<_, Option<String>>(
-        "SELECT username FROM sys_user WHERE id = $1 AND deleted = 0",
-    )
-    .bind(actor_user_id)
-    .fetch_one(&state.db)
-    .await?
-    .unwrap_or_else(|| actor_user_id.to_string());
-
-    sqlx::query(
-        "INSERT INTO operator_log (
-            user_id,
-            username,
-            module,
-            operation,
-            method,
-            path,
-            params,
-            result,
-            error_message,
-            duration,
-            trace_id,
-            ip,
-            user_agent,
-            create_time
-        ) VALUES ($1, $2, 'iam', $3, NULL, NULL, $4::jsonb, $5, $6, NULL, NULL, $7, $8, NOW())",
-    )
-    .bind(actor_user_id)
-    .bind(username)
-    .bind(operation)
-    .bind(params.to_string())
-    .bind(result)
-    .bind(error_message)
-    .bind(source_ip(headers))
-    .bind(header_string(headers, "user-agent"))
-    .execute(&state.db)
-    .await?;
-
-    Ok(())
-}
-
 async fn assign_user_roles(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -294,10 +230,11 @@ async fn assign_user_roles(
     }
     tx.commit().await?;
 
-    append_operator_log(
-        &state,
+    audit_service::log_operator_action(
+        &state.db,
         &headers,
         actor_user_id,
+        "iam",
         "assign_user_roles",
         serde_json::json!({
             "target_user_id": user_id,
@@ -387,10 +324,11 @@ async fn assign_user_hosts(
     }
     tx.commit().await?;
 
-    append_operator_log(
-        &state,
+    audit_service::log_operator_action(
+        &state.db,
         &headers,
         actor_user_id,
+        "iam",
         "assign_user_hosts",
         serde_json::json!({
             "target_user_id": user_id,
@@ -559,16 +497,30 @@ async fn get_me_summary(
     .fetch_all(&state.db)
     .await?;
 
-    let host_access_count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*)
-         FROM user_host_access uha
-         JOIN host h ON h.id = uha.host_id
-         WHERE uha.user_id = $1
-           AND h.deleted = 0",
-    )
-    .bind(user_id)
-    .fetch_one(&state.db)
-    .await?;
+    let is_admin = guard::has_host_read_permission(&state, user_id).await?;
+
+    let host_access_count = if is_admin {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM host WHERE deleted = 0",
+        )
+        .fetch_one(&state.db)
+        .await?
+    } else {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(DISTINCT h.id)
+             FROM host h
+             LEFT JOIN user_host_access uha ON h.id = uha.host_id AND uha.user_id = $1
+             LEFT JOIN host_group_rel hgr ON h.id = hgr.host_id
+             LEFT JOIN user_host_group_grant uhgg ON hgr.group_id = uhgg.group_id AND uhgg.user_id = $1
+             LEFT JOIN role_host_group_grant rhgg ON hgr.group_id = rhgg.group_id
+             LEFT JOIN sys_user_role ur ON rhgg.role_id = ur.role_id AND ur.user_id = $1
+             WHERE h.deleted = 0
+               AND (uha.user_id IS NOT NULL OR uhgg.user_id IS NOT NULL OR ur.user_id IS NOT NULL)",
+        )
+        .bind(user_id)
+        .fetch_one(&state.db)
+        .await?
+    };
 
     Ok(Json(ApiResponse::success(IamMeSummaryResponse {
         user_id,
@@ -583,6 +535,7 @@ async fn get_me_hosts(
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
+    let is_admin = guard::has_host_read_permission(&state, user_id).await?;
 
     let hosts = sqlx::query_as::<
         _,
@@ -600,7 +553,7 @@ async fn get_me_hosts(
             String,
         ),
     >(
-        "SELECT
+        "SELECT DISTINCT
             h.id,
             h.name,
             h.hostname,
@@ -617,13 +570,18 @@ async fn get_me_hosts(
             h.tags::text,
             h.status,
             h.create_time::text
-         FROM user_host_access uha
-         JOIN host h ON h.id = uha.host_id
-         WHERE uha.user_id = $1
-           AND h.deleted = 0
+         FROM host h
+         LEFT JOIN user_host_access uha ON h.id = uha.host_id AND uha.user_id = $1
+         LEFT JOIN host_group_rel hgr ON h.id = hgr.host_id
+         LEFT JOIN user_host_group_grant uhgg ON hgr.group_id = uhgg.group_id AND uhgg.user_id = $1
+         LEFT JOIN role_host_group_grant rhgg ON hgr.group_id = rhgg.group_id
+         LEFT JOIN sys_user_role ur ON rhgg.role_id = ur.role_id AND ur.user_id = $1
+         WHERE h.deleted = 0
+           AND ($2 = TRUE OR uha.user_id IS NOT NULL OR uhgg.user_id IS NOT NULL OR ur.user_id IS NOT NULL)
          ORDER BY h.id DESC",
     )
     .bind(user_id)
+    .bind(is_admin)
     .fetch_all(&state.db)
     .await?;
 

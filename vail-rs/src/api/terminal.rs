@@ -15,6 +15,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use encoding_rs::Encoding;
 use futures_util::StreamExt;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -53,6 +54,8 @@ enum SshWorkerCommand {
         config: HostSshConfig,
         width: u32,
         height: u32,
+        terminal_type: String,
+        charset: Option<String>,
     },
     Input(String),
     Resize {
@@ -74,6 +77,8 @@ enum SshWorkerEvent {
 struct SshConnectPayload {
     width: Option<u32>,
     height: Option<u32>,
+    terminal_type: Option<String>,
+    charset: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -227,10 +232,7 @@ async fn open_terminal_access_ws(
     let protocol = protocol.to_ascii_lowercase();
     let connect_type = connect_type.to_ascii_lowercase();
 
-    let is_admin = has_host_read_permission(&state, user_id).await?;
-    if !can_access_host(&state, user_id, host_id, is_admin).await? {
-        return Err(AppError::Auth("Host access denied".to_string()));
-    }
+    guard::require_host_permission(&state, user_id, host_id).await?;
 
     match (protocol.as_str(), connect_type.as_str()) {
         ("ssh", "ssh") => Ok(ws.on_upgrade(move |socket| async move {
@@ -459,7 +461,27 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
                                 continue;
                             }
                             let payload: SshConnectPayload = serde_json::from_str(body)
-                                .unwrap_or(SshConnectPayload { width: None, height: None });
+                                .unwrap_or(SshConnectPayload { width: None, height: None, terminal_type: None, charset: None });
+                            
+                            // 获取主机配置中的编码
+                            let mut charset = payload.charset;
+                            if charset.is_none() {
+                                let cache_key = format!("orion:host-config:host:{host_id}:type:SSH");
+                                if let Ok(Some(raw)) = sqlx::query_scalar::<_, String>(
+                                    "SELECT cache_value FROM cache
+                                     WHERE cache_key = $1
+                                       AND (expire_time IS NULL OR expire_time > NOW())",
+                                )
+                                .bind(cache_key)
+                                .fetch_optional(&state.db)
+                                .await
+                                {
+                                    if let Ok(config) = serde_json::from_str::<serde_json::Value>(&raw) {
+                                        charset = config.get("charset").and_then(|v| v.as_str()).map(|v| v.to_string());
+                                    }
+                                }
+                            }
+
                             let cfg = match ssh_client::resolve_host_ssh_config(
                                 &state.db,
                                 &state.config.secrets.data_encryption_key,
@@ -474,7 +496,8 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
                             };
                             let width = payload.width.unwrap_or(120).max(1);
                             let height = payload.height.unwrap_or(40).max(1);
-                            let _ = cmd_tx.send(SshWorkerCommand::Connect { config: cfg, width, height });
+                            let terminal_type = payload.terminal_type.unwrap_or_else(|| "xterm".to_string());
+                            let _ = cmd_tx.send(SshWorkerCommand::Connect { config: cfg, width, height, terminal_type, charset });
                             continue;
                         }
 
@@ -947,6 +970,7 @@ fn run_ssh_worker(
 ) {
     let mut session: Option<ssh2::Session> = None;
     let mut channel: Option<ssh2::Channel> = None;
+    let mut encoding: &'static Encoding = encoding_rs::UTF_8;
 
     loop {
         match cmd_rx.recv_timeout(Duration::from_millis(10)) {
@@ -955,12 +979,19 @@ fn run_ssh_worker(
                     config,
                     width,
                     height,
+                    terminal_type,
+                    charset,
                 } => {
+                    if let Some(label) = charset {
+                        if let Some(enc) = Encoding::for_label(label.as_bytes()) {
+                            encoding = enc;
+                        }
+                    }
                     match ssh_client::connect_session(&config, timeout_secs).and_then(|sess| {
                         let mut ch = sess.channel_session().map_err(|e| {
                             AppError::Ssh(format!("open shell channel failed: {e}"))
                         })?;
-                        ch.request_pty("xterm", None, Some((width, height, 0, 0)))
+                        ch.request_pty(&terminal_type, None, Some((width, height, 0, 0)))
                             .map_err(|e| AppError::Ssh(format!("request pty failed: {e}")))?;
                         ch.shell()
                             .map_err(|e| AppError::Ssh(format!("open shell failed: {e}")))?;
@@ -1021,8 +1052,8 @@ fn run_ssh_worker(
             let mut buf = [0_u8; 8192];
             match ch.read(&mut buf) {
                 Ok(read) if read > 0 => {
-                    let out = String::from_utf8_lossy(&buf[..read]).to_string();
-                    let _ = event_tx.send(SshWorkerEvent::Output(out));
+                    let (out, _, _) = encoding.decode(&buf[..read]);
+                    let _ = event_tx.send(SshWorkerEvent::Output(out.into_owned()));
                 }
                 Ok(_) => {
                     if ch.eof() {
@@ -1096,12 +1127,7 @@ async fn handle_transfer_socket(state: AppState, mut socket: WebSocket, user_id:
                             }
                         };
 
-                        let is_admin = has_host_read_permission(&state, user_id)
-                            .await
-                            .unwrap_or(false);
-                        let allowed = can_access_host(&state, user_id, host_id, is_admin)
-                            .await
-                            .unwrap_or(false);
+                        let allowed = guard::require_host_permission(&state, user_id, host_id).await.is_ok();
                         if !allowed {
                             if send_transfer(
                                 &mut socket,
@@ -1612,57 +1638,7 @@ fn parse_transfer_token(token: &str) -> AppResult<i64> {
         .map_err(|_| AppError::BadRequest("invalid user in transfer token".to_string()))
 }
 
-async fn has_host_read_permission(state: &AppState, user_id: i64) -> AppResult<bool> {
-    let allowed = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(
-            SELECT 1
-            FROM sys_user_role ur
-            JOIN sys_role r ON r.id = ur.role_id AND r.deleted = 0 AND r.status = 1
-            JOIN sys_role_permission rp ON rp.role_id = ur.role_id
-            JOIN sys_permission p ON p.id = rp.permission_id
-            WHERE ur.user_id = $1 AND p.code = 'host.read'
-        )",
-    )
-    .bind(user_id)
-    .fetch_one(&state.db)
-    .await?;
-    Ok(allowed)
-}
 
-async fn can_access_host(
-    state: &AppState,
-    user_id: i64,
-    host_id: i64,
-    is_admin: bool,
-) -> AppResult<bool> {
-    if is_admin {
-        let exists = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM host WHERE id = $1 AND deleted = 0 AND status = 1)",
-        )
-        .bind(host_id)
-        .fetch_one(&state.db)
-        .await?;
-        return Ok(exists);
-    }
-
-    let exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(
-            SELECT 1
-            FROM user_host_access uha
-            JOIN host h ON h.id = uha.host_id
-            WHERE uha.user_id = $1
-              AND uha.host_id = $2
-              AND h.deleted = 0
-              AND h.status = 1
-        )",
-    )
-    .bind(user_id)
-    .bind(host_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(exists)
-}
 
 async fn with_sftp<R, F>(state: &AppState, host_id: i64, action: F) -> AppResult<R>
 where
@@ -2012,6 +1988,9 @@ fn is_dir(perm: u32) -> bool {
 
 fn normalize_remote_path(raw: &str) -> AppResult<String> {
     let trimmed = raw.trim().replace('\\', "/");
+    if trimmed.is_empty() || trimmed == "~" || trimmed == "." {
+        return Ok(".".to_string());
+    }
     if !trimmed.starts_with('/') {
         return Err(AppError::BadRequest(
             "path must be absolute unix path".to_string(),
@@ -2145,6 +2124,14 @@ mod tests {
     fn split_path_list_skips_empty() {
         let list = split_path_list("/a|| /b | ");
         assert_eq!(list, vec!["/a", "/b"]);
+    }
+
+    #[test]
+    fn normalize_remote_path_supports_home_and_current() {
+        assert_eq!(normalize_remote_path("~").unwrap(), ".");
+        assert_eq!(normalize_remote_path(".").unwrap(), ".");
+        assert_eq!(normalize_remote_path("  ").unwrap(), ".");
+        assert_eq!(normalize_remote_path("/tmp/a").unwrap(), "/tmp/a");
     }
 
     #[test]

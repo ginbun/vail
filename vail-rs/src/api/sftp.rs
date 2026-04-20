@@ -169,59 +169,6 @@ fn calc_uploaded_size_from_chunks(task_dir: &PathBuf) -> Result<i64, AppError> {
     Ok(total)
 }
 
-async fn has_host_read_permission(state: &AppState, user_id: i64) -> AppResult<bool> {
-    let allowed = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(
-            SELECT 1
-            FROM sys_user_role ur
-            JOIN sys_role r ON r.id = ur.role_id AND r.deleted = 0 AND r.status = 1
-            JOIN sys_role_permission rp ON rp.role_id = ur.role_id
-            JOIN sys_permission p ON p.id = rp.permission_id
-            WHERE ur.user_id = $1 AND p.code = 'host.read'
-        )",
-    )
-    .bind(user_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(allowed)
-}
-
-async fn can_access_host(
-    state: &AppState,
-    user_id: i64,
-    host_id: i64,
-    is_admin: bool,
-) -> AppResult<bool> {
-    if is_admin {
-        let exists = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM host WHERE id = $1 AND deleted = 0 AND status = 1)",
-        )
-        .bind(host_id)
-        .fetch_one(&state.db)
-        .await?;
-        return Ok(exists);
-    }
-
-    let exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(
-            SELECT 1
-            FROM user_host_access uha
-            JOIN host h ON h.id = uha.host_id
-            WHERE uha.user_id = $1
-              AND uha.host_id = $2
-              AND h.deleted = 0
-              AND h.status = 1
-        )",
-    )
-    .bind(user_id)
-    .bind(host_id)
-    .fetch_one(&state.db)
-    .await?;
-
-    Ok(exists)
-}
-
 async fn upload_batch(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -296,10 +243,7 @@ async fn upload_batch(
         )));
     }
 
-    let is_admin = has_host_read_permission(&state, user_id).await?;
-    if !can_access_host(&state, user_id, host_id, is_admin).await? {
-        return Err(AppError::Auth("Host access denied".to_string()));
-    }
+    guard::require_host_permission(&state, user_id, host_id).await?;
 
     let base = normalize_remote_base_path(remote_base_path.as_deref().unwrap_or("/tmp"))?;
     let mut pending_uploads = Vec::with_capacity(files.len());
@@ -355,10 +299,7 @@ async fn create_upload_task(
     axum::extract::Json(payload): axum::extract::Json<CreateUploadTaskRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
-    let is_admin = has_host_read_permission(&state, user_id).await?;
-    if !can_access_host(&state, user_id, payload.host_id, is_admin).await? {
-        return Err(AppError::Auth("Host access denied".to_string()));
-    }
+    guard::require_host_permission(&state, user_id, payload.host_id).await?;
 
     let task_no = uuid::Uuid::new_v4().to_string();
 
@@ -626,7 +567,7 @@ async fn list_upload_tasks(
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
-    let is_admin = has_host_read_permission(&state, user_id).await?;
+    let is_admin = guard::has_host_read_permission(&state, user_id).await?;
 
     let tasks = sqlx::query_as::<_, (i64, String, i64, i64, i64, i16, String)>(if is_admin {
         "SELECT id, task_no, host_id, file_size, uploaded_size, status, create_time::text FROM upload_task ORDER BY id DESC LIMIT 50"
@@ -648,7 +589,7 @@ async fn get_upload_task(
     axum::extract::Path(id): axum::extract::Path<i64>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
-    let is_admin = has_host_read_permission(&state, user_id).await?;
+    let is_admin = guard::has_host_read_permission(&state, user_id).await?;
 
     let task = if is_admin {
         sqlx::query_as::<_, (i64, String, i64, i64, i64, i16, String)>(

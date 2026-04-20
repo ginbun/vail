@@ -19,7 +19,7 @@ use std::net::SocketAddr;
 
 use crate::{
     api::{auth, guard, AppState},
-    application::orion::{asset_service, compat_service, host_service, system_user_service},
+    application::orion::{asset_service, audit_service, compat_service, host_service, system_user_service},
     domain::orion::{
         asset::{OrionHostIdentityAggregate, OrionHostKeyAggregate},
         compat::OrionCompatModule,
@@ -1625,6 +1625,7 @@ async fn orion_create_host(
     Json(payload): Json<OrionHostCreateRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "host.create").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let group_ids = normalize_group_ids(payload.group_id_list)?;
     ensure_groups_exist(&state, &group_ids).await?;
 
@@ -1641,6 +1642,9 @@ async fn orion_create_host(
         .ok_or_else(|| AppError::BadRequest("address is required".to_string()))?;
 
     let mut tx = state.db.begin().await?;
+    let audit_name = name.clone();
+    let audit_address = address.clone();
+    let audit_group_ids = group_ids.clone();
     let new_id = sqlx::query_scalar::<_, i64>(
         "INSERT INTO host (name, hostname, port, credential_type, description, status, create_time, update_time)
          VALUES ($1, $2, 22, NULL, $3, 1, NOW(), NOW())
@@ -1665,6 +1669,23 @@ async fn orion_create_host(
     }
     tx.commit().await?;
 
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "asset",
+        "create_host",
+        serde_json::json!({
+            "id": new_id,
+            "name": audit_name,
+            "address": audit_address,
+            "groupIdList": audit_group_ids,
+        }),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(new_id))
 }
 
@@ -1674,6 +1695,7 @@ async fn orion_update_host(
     Json(payload): Json<OrionHostUpdateRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "host.update").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let id = payload
         .id
@@ -1690,6 +1712,9 @@ async fn orion_update_host(
     let description = payload.description;
     let group_ids = normalize_group_ids(payload.group_id_list)?;
     ensure_groups_exist(&state, &group_ids).await?;
+    let audit_name = name.clone();
+    let audit_address = address.clone();
+    let audit_group_ids = group_ids.clone();
 
     let mut tx = state.db.begin().await?;
     let rows = sqlx::query(
@@ -1729,6 +1754,23 @@ async fn orion_update_host(
     }
     tx.commit().await?;
 
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "asset",
+        "update_host",
+        serde_json::json!({
+            "id": id,
+            "name": audit_name,
+            "address": audit_address,
+            "groupIdList": audit_group_ids,
+        }),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(true))
 }
 
@@ -1738,6 +1780,7 @@ async fn orion_update_host_status(
     Json(payload): Json<OrionHostUpdateStatusRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "host.update").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let id = payload
         .id
@@ -1774,6 +1817,21 @@ async fn orion_update_host_status(
     if rows == 0 {
         return Err(AppError::NotFound("Host not found".to_string()));
     }
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "asset",
+        "update_host_status",
+        serde_json::json!({
+            "id": id,
+            "status": status_text,
+        }),
+        1,
+        None,
+    )
+    .await?;
 
     Ok(OrionResponse::ok(true))
 }
@@ -2254,6 +2312,7 @@ async fn orion_delete_host(
     Query(query): Query<OrionHostIdQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "host.delete").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     if query.id <= 0 {
         return Err(AppError::BadRequest(
             "id must be greater than 0".to_string(),
@@ -2271,6 +2330,18 @@ async fn orion_delete_host(
     if rows == 0 {
         return Err(AppError::NotFound("Host not found".to_string()));
     }
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "asset",
+        "delete_host",
+        serde_json::json!({ "id": query.id }),
+        1,
+        None,
+    )
+    .await?;
 
     Ok(OrionResponse::ok(true))
 }
@@ -2572,7 +2643,7 @@ async fn orion_host_key_create(
     headers: HeaderMap,
     Json(payload): Json<OrionHostKeyUpsertRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
     let name = sanitize_search(payload.name)
         .ok_or_else(|| AppError::BadRequest("name is required".to_string()))?;
@@ -2587,6 +2658,8 @@ async fn orion_host_key_create(
 
     let private_key_ciphertext =
         security::encrypt_secret(&private_key, &state.config.secrets.data_encryption_key)?;
+    let audit_name = name.clone();
+    let audit_description = payload.description.clone();
     let password_plain =
         decrypt_client_sensitive_input(&state, payload.password, "password").await?;
     let passphrase_ciphertext = match sanitize_search(password_plain) {
@@ -2608,6 +2681,22 @@ async fn orion_host_key_create(
     )
     .await?;
 
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "asset",
+        "create_host_key",
+        serde_json::json!({
+            "id": id,
+            "name": audit_name,
+            "description": audit_description,
+        }),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(id))
 }
 
@@ -2616,11 +2705,13 @@ async fn orion_host_key_update(
     headers: HeaderMap,
     Json(payload): Json<OrionHostKeyUpsertRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(payload.id, "id")?;
 
     let name = sanitize_search(payload.name);
     let description = sanitize_search(payload.description);
+    let audit_name = name.clone();
+    let audit_description = description.clone();
 
     let private_key_plain =
         decrypt_client_sensitive_input(&state, payload.private_key, "privateKey").await?;
@@ -2668,6 +2759,24 @@ async fn orion_host_key_update(
             passphrase_ciphertext,
             description,
         },
+    )
+    .await?;
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "asset",
+        "update_host_key",
+        serde_json::json!({
+            "id": id,
+            "name": audit_name,
+            "description": audit_description,
+            "useNewPassword": use_new_password,
+            "updatedPrivateKey": private_key_plain.is_some(),
+        }),
+        1,
+        None,
     )
     .await?;
 
@@ -2736,10 +2845,22 @@ async fn orion_host_key_delete(
     headers: HeaderMap,
     Query(query): Query<OrionIdQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(query.id, "id")?;
 
     asset_service::delete_host_key(&state.db, id).await?;
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "asset",
+        "delete_host_key",
+        serde_json::json!({ "id": id }),
+        1,
+        None,
+    )
+    .await?;
 
     Ok(OrionResponse::ok(true))
 }
@@ -2749,7 +2870,7 @@ async fn orion_host_key_batch_delete(
     headers: HeaderMap,
     Query(query): Query<OrionDeleteIdsQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id_list = sanitize_search(query.id_list)
         .ok_or_else(|| AppError::BadRequest("idList is required".to_string()))?;
 
@@ -2757,8 +2878,21 @@ async fn orion_host_key_batch_delete(
         .split(',')
         .filter_map(|v| v.trim().parse::<i64>().ok())
         .collect::<Vec<_>>();
+    let audit_ids = ids.clone();
 
     asset_service::batch_delete_host_keys(&state.db, ids).await?;
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "asset",
+        "batch_delete_host_key",
+        serde_json::json!({ "ids": audit_ids }),
+        1,
+        None,
+    )
+    .await?;
 
     Ok(OrionResponse::ok(true))
 }
@@ -4498,10 +4632,23 @@ async fn orion_infra_dispatch(
             let created = compat_service::create_record(
                 &state.db,
                 module,
-                payload,
+                payload.clone(),
                 &format!("user-{user_id}"),
             )
             .await?;
+            if module == OrionCompatModule::Tag {
+                let _ = audit_service::log_operator_action(
+                    &state.db,
+                    &headers,
+                    user_id,
+                    "tag",
+                    "create",
+                    payload,
+                    1,
+                    None,
+                )
+                .await;
+            }
             Ok(orion_ok(created))
         }
         (_, "update") if method == Method::PUT => {
@@ -4516,10 +4663,23 @@ async fn orion_infra_dispatch(
                 &state.db,
                 module,
                 id,
-                payload,
+                payload.clone(),
                 &format!("user-{user_id}"),
             )
             .await?;
+            if module == OrionCompatModule::Tag {
+                let _ = audit_service::log_operator_action(
+                    &state.db,
+                    &headers,
+                    user_id,
+                    "tag",
+                    "update",
+                    payload,
+                    1,
+                    None,
+                )
+                .await;
+            }
             Ok(orion_ok(updated))
         }
         (_, "get") if method == Method::GET => {
@@ -4566,6 +4726,19 @@ async fn orion_infra_dispatch(
                 return Err(AppError::BadRequest("id is required".to_string()));
             }
             let affected = compat_service::delete_record(&state.db, module, id).await?;
+            if module == OrionCompatModule::Tag && affected > 0 {
+                let _ = audit_service::log_operator_action(
+                    &state.db,
+                    &headers,
+                    user_id,
+                    "tag",
+                    "delete",
+                    serde_json::json!({ "id": id }),
+                    1,
+                    None,
+                )
+                .await;
+            }
             Ok(orion_ok(affected > 0))
         }
         _ => Err(AppError::NotFound("unsupported infra action".to_string())),
@@ -6106,8 +6279,8 @@ async fn orion_mine_user_session(
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
-    let rows = sqlx::query_as::<_, (i64, String, Option<String>, i64)>(
-        "SELECT id, session_id::text, NULLIF(revoked_at::text, ''), EXTRACT(EPOCH FROM created_at)::bigint * 1000
+    let rows = sqlx::query_as::<_, (i64, String, Option<String>, i64, Option<String>, Option<String>, Option<String>)>(
+        "SELECT id, session_id::text, NULLIF(revoked_at::text, ''), EXTRACT(EPOCH FROM created_at)::bigint * 1000, ip, location, user_agent
          FROM auth_refresh_token
          WHERE user_id = $1
          ORDER BY created_at DESC
@@ -6125,9 +6298,9 @@ async fn orion_mine_user_session(
                 "username": user_id.to_string(),
                 "visible": true,
                 "current": r.1.contains('-'),
-                "address": "",
-                "location": "",
-                "userAgent": "",
+                "address": r.4.unwrap_or_default(),
+                "location": r.5.unwrap_or_default(),
+                "userAgent": r.6.unwrap_or_default(),
                 "loginTime": r.3,
                 "offline": r.2.is_some()
             })
@@ -6332,6 +6505,19 @@ async fn orion_mine_update_password(
         .bind(user_id)
         .execute(&state.db)
         .await?;
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        user_id,
+        "iam",
+        "update_password",
+        serde_json::json!({}),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(true))
 }
 
@@ -6523,10 +6709,12 @@ async fn orion_system_user_create(
     Json(payload): Json<OrionSystemUserUpsertRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
-    let username = sanitize_search(payload.username)
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
+    let username = sanitize_search(payload.username.clone())
         .ok_or_else(|| AppError::BadRequest("username is required".to_string()))?;
     let password = payload
         .password
+        .clone()
         .ok_or_else(|| AppError::BadRequest("password is required".to_string()))?;
     let pass_hash = bcrypt::hash(password, bcrypt::DEFAULT_COST)
         .map_err(|e| AppError::Internal(e.to_string()))?;
@@ -6535,14 +6723,30 @@ async fn orion_system_user_create(
          VALUES ($1, $2, $3, $4, $5, $6, 1, NOW(), NOW(), 0)
          RETURNING id",
     )
-    .bind(username)
+    .bind(&username)
     .bind(pass_hash)
-    .bind(payload.nickname)
-    .bind(payload.avatar)
-    .bind(payload.mobile)
-    .bind(payload.email)
+    .bind(&payload.nickname)
+    .bind(&payload.avatar)
+    .bind(&payload.mobile)
+    .bind(&payload.email)
     .fetch_one(&state.db)
     .await?;
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "iam",
+        "create_user",
+        serde_json::json!({
+            "id": id,
+            "username": username,
+        }),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(id))
 }
 
@@ -6552,6 +6756,7 @@ async fn orion_system_user_update(
     Json(payload): Json<OrionSystemUserUpsertRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(payload.id, "id")?;
     let rows = sqlx::query(
         "UPDATE sys_user SET
@@ -6563,11 +6768,11 @@ async fn orion_system_user_update(
             update_time = NOW()
          WHERE id = $6 AND deleted = 0",
     )
-    .bind(payload.username.map(|v| v.trim().to_string()))
-    .bind(payload.nickname)
-    .bind(payload.avatar)
-    .bind(payload.mobile)
-    .bind(payload.email)
+    .bind(payload.username.as_ref().map(|v| v.trim().to_string()))
+    .bind(&payload.nickname)
+    .bind(&payload.avatar)
+    .bind(&payload.mobile)
+    .bind(&payload.email)
     .bind(id)
     .execute(&state.db)
     .await?
@@ -6575,6 +6780,22 @@ async fn orion_system_user_update(
     if rows == 0 {
         return Err(AppError::NotFound("User not found".to_string()));
     }
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "iam",
+        "update_user",
+        serde_json::json!({
+            "id": id,
+            "username": payload.username,
+        }),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(true))
 }
 
@@ -6584,6 +6805,7 @@ async fn orion_system_user_update_status(
     Json(payload): Json<OrionSystemUserUpsertRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(payload.id, "id")?;
     let status = payload
         .status
@@ -6599,6 +6821,22 @@ async fn orion_system_user_update_status(
     if rows == 0 {
         return Err(AppError::NotFound("User not found".to_string()));
     }
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "iam",
+        "update_user_status",
+        serde_json::json!({
+            "id": id,
+            "status": status,
+        }),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(true))
 }
 
@@ -6608,36 +6846,49 @@ async fn orion_system_user_grant_role(
     Json(payload): Json<OrionSystemUserUpsertRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let user_id = parse_required_id(payload.id, "id")?;
-    let role_ids = payload.role_id_list.unwrap_or_default();
+    let role_ids = payload.role_id_list.clone().unwrap_or_default();
     let mut tx = state.db.begin().await?;
     sqlx::query("DELETE FROM sys_user_role WHERE user_id = $1")
         .bind(user_id)
         .execute(&mut *tx)
         .await?;
-    for role_id in role_ids {
-        if role_id > 0 {
-            sqlx::query(
-                "INSERT INTO sys_user_role (user_id, role_id, create_time)
-                 VALUES ($1, $2, NOW())
-                 ON CONFLICT (user_id, role_id) DO NOTHING",
-            )
-            .bind(user_id)
-            .bind(role_id)
-            .execute(&mut *tx)
-            .await?;
+    for role_id in &role_ids {
+        if *role_id > 0 {
+            sqlx::query("INSERT INTO sys_user_role (user_id, role_id, create_time) VALUES ($1, $2, NOW())")
+                .bind(user_id)
+                .bind(role_id)
+                .execute(&mut *tx)
+                .await?;
         }
     }
     tx.commit().await?;
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "iam",
+        "grant_user_role",
+        serde_json::json!({
+            "id": user_id,
+            "role_ids": role_ids,
+        }),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(true))
 }
-
 async fn orion_system_user_reset_password(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(payload): Json<OrionSystemUserUpsertRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(payload.id, "id")?;
     let password = payload
         .password
@@ -6651,6 +6902,19 @@ async fn orion_system_user_reset_password(
     .bind(id)
     .execute(&state.db)
     .await?;
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "iam",
+        "reset_user_password",
+        serde_json::json!({ "id": id }),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(true))
 }
 
@@ -6751,6 +7015,7 @@ async fn orion_system_user_delete(
     Query(query): Query<OrionSystemUserIdQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(query.id, "id")?;
     sqlx::query(
         "UPDATE sys_user SET deleted = 1, update_time = NOW() WHERE id = $1 AND deleted = 0",
@@ -6758,6 +7023,19 @@ async fn orion_system_user_delete(
     .bind(id)
     .execute(&state.db)
     .await?;
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "iam",
+        "delete_user",
+        serde_json::json!({ "id": id }),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(true))
 }
 
@@ -6767,12 +7045,25 @@ async fn orion_system_user_batch_delete(
     Query(query): Query<OrionDeleteIdsQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let ids = parse_csv_ids(query.id_list);
     if !ids.is_empty() {
         sqlx::query("UPDATE sys_user SET deleted = 1, update_time = NOW() WHERE id = ANY($1::bigint[]) AND deleted = 0")
-            .bind(ids)
+            .bind(&ids)
             .execute(&state.db)
             .await?;
+
+        audit_service::log_operator_action(
+            &state.db,
+            &headers,
+            actor_user_id,
+            "iam",
+            "batch_delete_user",
+            serde_json::json!({ "ids": ids }),
+            1,
+            None,
+        )
+        .await?;
     }
     Ok(OrionResponse::ok(true))
 }
@@ -6836,11 +7127,12 @@ async fn orion_system_user_session_users_list(
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
-    let rows = sqlx::query_as::<_, (i64, i64, i64)>(
-        "SELECT id, user_id, EXTRACT(EPOCH FROM created_at)::bigint * 1000
-         FROM auth_refresh_token
-         WHERE revoked_at IS NULL
-         ORDER BY created_at DESC LIMIT 200",
+    let rows = sqlx::query_as::<_, (i64, i64, i64, Option<String>, Option<String>, Option<String>, String)>(
+        "SELECT r.id, r.user_id, EXTRACT(EPOCH FROM r.created_at)::bigint * 1000, r.ip, r.location, r.user_agent, u.username
+         FROM auth_refresh_token r
+         JOIN sys_user u ON u.id = r.user_id
+         WHERE r.revoked_at IS NULL
+         ORDER BY r.created_at DESC LIMIT 200",
     )
     .fetch_all(&state.db)
     .await?;
@@ -6849,12 +7141,12 @@ async fn orion_system_user_session_users_list(
         .map(|r| {
             serde_json::json!({
                 "id": r.0,
-                "username": r.1.to_string(),
+                "username": r.6,
                 "visible": true,
                 "current": false,
-                "address": "",
-                "location": "",
-                "userAgent": "",
+                "address": r.3.unwrap_or_default(),
+                "location": r.4.unwrap_or_default(),
+                "userAgent": r.5.unwrap_or_default(),
                 "loginTime": r.2
             })
         })
@@ -6869,11 +7161,18 @@ async fn orion_system_user_session_user_list(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
     let user_id = parse_required_id(query.id, "id")?;
-    let rows = sqlx::query_as::<_, (i64, i64)>(
-        "SELECT id, EXTRACT(EPOCH FROM created_at)::bigint * 1000
-         FROM auth_refresh_token
-         WHERE user_id = $1
-         ORDER BY created_at DESC LIMIT 200",
+    let rows = sqlx::query_as::<_, (i64, i64, Option<String>, Option<String>, Option<String>, String)>(
+        "SELECT r.id,
+                EXTRACT(EPOCH FROM r.created_at)::bigint * 1000,
+                r.ip,
+                r.location,
+                r.user_agent,
+                u.username
+         FROM auth_refresh_token r
+         JOIN sys_user u ON u.id = r.user_id
+         WHERE r.user_id = $1
+         ORDER BY r.created_at DESC
+         LIMIT 200",
     )
     .bind(user_id)
     .fetch_all(&state.db)
@@ -6883,12 +7182,12 @@ async fn orion_system_user_session_user_list(
         .map(|r| {
             serde_json::json!({
                 "id": r.0,
-                "username": user_id.to_string(),
+                "username": r.5,
                 "visible": true,
                 "current": false,
-                "address": "",
-                "location": "",
-                "userAgent": "",
+                "address": r.2.unwrap_or_default(),
+                "location": r.3.unwrap_or_default(),
+                "userAgent": r.4.unwrap_or_default(),
                 "loginTime": r.1
             })
         })
@@ -6927,6 +7226,7 @@ async fn orion_system_role_create(
     Json(payload): Json<OrionSystemRoleRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let name = sanitize_search(payload.name)
         .ok_or_else(|| AppError::BadRequest("name is required".to_string()))?;
     let code = sanitize_search(payload.code)
@@ -6936,12 +7236,29 @@ async fn orion_system_role_create(
          VALUES ($1, $2, $3, COALESCE($4, 1), NOW(), 0)
          RETURNING id",
     )
-    .bind(name)
-    .bind(code)
+    .bind(&name)
+    .bind(&code)
     .bind(payload.description)
     .bind(payload.status)
     .fetch_one(&state.db)
     .await?;
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "iam",
+        "create_role",
+        serde_json::json!({
+            "id": id,
+            "name": name,
+            "code": code,
+        }),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(id))
 }
 
@@ -6951,12 +7268,13 @@ async fn orion_system_role_update(
     Json(payload): Json<OrionSystemRoleRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(payload.id, "id")?;
     let rows = sqlx::query(
         "UPDATE sys_role SET name = COALESCE(NULLIF($1, ''), name), code = COALESCE(NULLIF($2, ''), code), description = COALESCE($3, description), status = COALESCE($4, status) WHERE id = $5 AND deleted = 0",
     )
-    .bind(payload.name.map(|v| v.trim().to_string()))
-    .bind(payload.code.map(|v| v.trim().to_string()))
+    .bind(payload.name.as_ref().map(|v| v.trim().to_string()))
+    .bind(payload.code.as_ref().map(|v| v.trim().to_string()))
     .bind(payload.description)
     .bind(payload.status)
     .bind(id)
@@ -6966,6 +7284,22 @@ async fn orion_system_role_update(
     if rows == 0 {
         return Err(AppError::NotFound("Role not found".to_string()));
     }
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "iam",
+        "update_role",
+        serde_json::json!({
+            "id": id,
+            "name": payload.name,
+        }),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(true))
 }
 
@@ -6975,6 +7309,7 @@ async fn orion_system_role_update_status(
     Json(payload): Json<OrionSystemRoleRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
+    let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(payload.id, "id")?;
     let status = payload
         .status
@@ -6984,6 +7319,22 @@ async fn orion_system_role_update_status(
         .bind(id)
         .execute(&state.db)
         .await?;
+
+    audit_service::log_operator_action(
+        &state.db,
+        &headers,
+        actor_user_id,
+        "iam",
+        "update_role_status",
+        serde_json::json!({
+            "id": id,
+            "status": status,
+        }),
+        1,
+        None,
+    )
+    .await?;
+
     Ok(OrionResponse::ok(true))
 }
 
@@ -7292,24 +7643,21 @@ async fn orion_terminal_themes(
 
     let mut themes = Vec::new();
     for (name, schema_json, extra_json) in rows {
-        let mut theme: serde_json::Value =
+        let schema: serde_json::Value =
             serde_json::from_str(&schema_json).unwrap_or_else(|_| serde_json::json!({}));
 
-        // Add name field
-        if let Some(obj) = theme.as_object_mut() {
-            obj.insert("name".to_string(), serde_json::Value::String(name.clone()));
-
-            // Add dark field from extra
-            if let Some(extra_str) = &extra_json {
-                if let Ok(extra) = serde_json::from_str::<serde_json::Value>(extra_str) {
-                    if let Some(dark) = extra.get("dark") {
-                        obj.insert("dark".to_string(), dark.clone());
-                    }
-                }
+        let mut dark = false;
+        if let Some(extra_str) = &extra_json {
+            if let Ok(extra) = serde_json::from_str::<serde_json::Value>(extra_str) {
+                dark = extra.get("dark").and_then(|v| v.as_bool()).unwrap_or(false);
             }
         }
 
-        themes.push(theme);
+        themes.push(serde_json::json!({
+            "name": name,
+            "dark": dark,
+            "schema": schema
+        }));
     }
 
     Ok(OrionResponse::ok(themes))
@@ -7322,6 +7670,7 @@ async fn orion_terminal_access(
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let host_id = parse_required_id(payload.host_id, "hostId")?;
+    guard::require_host_permission(&state, user_id, host_id).await?;
     let token = format!(
         "term:{}:{}:{}:{}",
         user_id,

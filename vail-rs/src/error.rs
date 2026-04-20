@@ -17,6 +17,9 @@ pub enum AppError {
     #[error("Internal server error: {0}")]
     Internal(String),
 
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
+
     #[error("SSH error: {0}")]
     Ssh(String),
 
@@ -29,6 +32,7 @@ impl axum::response::IntoResponse for AppError {
         let (status, message) = match self {
             AppError::Database(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             AppError::Auth(e) => (axum::http::StatusCode::UNAUTHORIZED, e),
+            AppError::Forbidden(e) => (axum::http::StatusCode::FORBIDDEN, e),
             AppError::NotFound(e) => (axum::http::StatusCode::NOT_FOUND, e),
             AppError::BadRequest(e) => (axum::http::StatusCode::BAD_REQUEST, e),
             AppError::Internal(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e),

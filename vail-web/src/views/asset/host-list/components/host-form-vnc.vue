@@ -112,7 +112,8 @@ field="clipboardEncoding"
         <a-select
 v-model="formModel.clipboardEncoding"
                   placeholder="请选择剪切板编码"
-                  :options="toOptions(clipboardEncodingKey)" />
+                  :options="charsetOptions"
+                  allow-create />
       </a-form-item>
       <!-- 操作 -->
       <a-form-item style="margin-bottom: 0;">
@@ -139,7 +140,7 @@ type="primary"
   import { ref, onMounted } from 'vue';
   import useLoading from '@/hooks/loading';
   import { useDictStore } from '@/store';
-  import { passwordAuthTypeKey, HostAuthType, HostType, clipboardEncodingKey, timezoneKey } from '../types/const';
+  import { passwordAuthTypeKey, HostAuthType, HostType, clipboardEncodingKey, timezoneKey, charsetOptions } from '../types/const';
   import { IdentityType } from '@/views/asset/host-identity/types/const';
   import { vncFormRules } from '../types/form.rules';
   import useHostConfigForm from '../types/use-host-config';

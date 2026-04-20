@@ -221,11 +221,15 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
   connect(): void {
     // 设置连接中
     super.setConnecting();
+    // 获取仿真类型
+    const { preference } = useTerminalStore();
+    const terminalType = preference.sshInteractSetting.terminalEmulationType || 'xterm';
     // 发送 connect 命令
     this.channel.send(InputProtocol.CONNECT, {
       body: JSON.stringify({
         width: this.inst.cols,
         height: this.inst.rows,
+        terminalType,
       })
     });
   }

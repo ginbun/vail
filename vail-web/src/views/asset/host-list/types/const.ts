@@ -98,6 +98,19 @@ export const clipboardNormalizeKey = 'clipboardNormalize';
 // 剪切板编码
 export const clipboardEncodingKey = 'clipboardEncoding';
 
+// 常用字符集编码选项
+export const charsetOptions = [
+  'UTF-8',
+  'GBK',
+  'GB18030',
+  'GB2312',
+  'Big5',
+  'Shift-JIS',
+  'EUC-JP',
+  'US-ASCII',
+  'ISO-8859-1',
+];
+
 // 加载的字典值
 export const dictKeys = [
   hostTypeKey, hostOsTypeKey, hostArchTypeKey, hostStatusKey,

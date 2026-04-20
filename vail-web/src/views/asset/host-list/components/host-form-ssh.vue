@@ -91,21 +91,33 @@ v-model="formModel.connectTimeout"
 field="charset"
                    label="SSH输出编码"
                    hide-asterisk>
-        <a-input v-model="formModel.charset" placeholder="请输入 SSH 输出编码" />
+        <a-select
+v-model="formModel.charset"
+                  placeholder="请选择 SSH 输出编码"
+                  :options="charsetOptions"
+                  allow-create />
       </a-form-item>
       <!-- 文件名称编码 -->
       <a-form-item
 field="fileNameCharset"
                    label="文件名称编码"
                    hide-asterisk>
-        <a-input v-model="formModel.fileNameCharset" placeholder="请输入 SFTP 文件名称编码" />
+        <a-select
+v-model="formModel.fileNameCharset"
+                  placeholder="请选择 SFTP 文件名称编码"
+                  :options="charsetOptions"
+                  allow-create />
       </a-form-item>
       <!-- 文件内容编码 -->
       <a-form-item
 field="fileContentCharset"
                    label="文件内容编码"
                    hide-asterisk>
-        <a-input v-model="formModel.fileContentCharset" placeholder="请输入 SFTP 文件内容编码" />
+        <a-select
+v-model="formModel.fileContentCharset"
+                  placeholder="请选择 SFTP 文件内容编码"
+                  :options="charsetOptions"
+                  allow-create />
       </a-form-item>
       <!-- 操作 -->
       <a-form-item style="margin-bottom: 0;">
@@ -145,7 +157,7 @@ class="extra-button"
   import { ref, onMounted } from 'vue';
   import useLoading from '@/hooks/loading';
   import { useDictStore } from '@/store';
-  import { sshAuthTypeKey, HostAuthType, HostType } from '../types/const';
+  import { sshAuthTypeKey, HostAuthType, HostType, charsetOptions } from '../types/const';
   import { sshFormRules } from '../types/form.rules';
   import { Message } from '@arco-design/web-vue';
   import { testHostConnect } from '@/api/asset/host';
