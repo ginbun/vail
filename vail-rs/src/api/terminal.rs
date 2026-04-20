@@ -1634,7 +1634,13 @@ fn parse_access_token(token: &str, signing_key: &str) -> AppResult<(i64, i64, St
         AppError::BadRequest("invalid timestamp in terminal access token".to_string())
     })?;
     ensure_token_freshness_ms(issued_at_ms, "terminal access token expired")?;
-    Ok((user_id, host_id, parts[3].to_string()))
+    let connect_type = parts[3].to_ascii_lowercase();
+    if !matches!(connect_type.as_str(), "ssh" | "sftp") {
+        return Err(AppError::BadRequest(
+            "invalid connect type in terminal access token".to_string(),
+        ));
+    }
+    Ok((user_id, host_id, connect_type))
 }
 
 fn parse_transfer_token(token: &str, signing_key: &str) -> AppResult<i64> {
@@ -2217,6 +2223,39 @@ mod tests {
         let token = format!("{payload}:{}", token_signature(&payload, "k"));
         let err = parse_access_token(&token, "k").unwrap_err();
         assert!(err.to_string().contains("terminal access token expired"));
+    }
+
+    #[test]
+    fn parse_access_token_rejects_unknown_connect_type() {
+        let payload = format!("term:1:2:rdp:{}", now_ms());
+        let token = format!("{payload}:{}", token_signature(&payload, "k"));
+        let err = parse_access_token(&token, "k").unwrap_err();
+        assert!(err.to_string().contains("invalid connect type"));
+    }
+
+    #[test]
+    fn parse_access_token_rejects_future_timestamp() {
+        let future = now_ms() + TOKEN_EXPIRE_MS + 1000;
+        let payload = format!("term:1:2:ssh:{future}");
+        let token = format!("{payload}:{}", token_signature(&payload, "k"));
+        let err = parse_access_token(&token, "k").unwrap_err();
+        assert!(err.to_string().contains("terminal access token expired"));
+    }
+
+    #[test]
+    fn parse_access_token_rejects_bad_signature() {
+        let payload = format!("term:1:2:ssh:{}", now_ms());
+        let token = format!("{payload}:invalid-signature");
+        let err = parse_access_token(&token, "k").unwrap_err();
+        assert!(err.to_string().contains("invalid terminal token signature"));
+    }
+
+    #[test]
+    fn parse_access_token_accepts_uppercase_connect_type() {
+        let payload = format!("term:1:2:SSH:{}", now_ms());
+        let token = format!("{payload}:{}", token_signature(&payload, "k"));
+        let (_, _, connect_type) = parse_access_token(&token, "k").expect("valid token");
+        assert_eq!(connect_type, "ssh");
     }
 
     #[test]

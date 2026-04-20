@@ -1280,6 +1280,10 @@ async fn orion_login(
     Json(payload): Json<OrionLoginRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     let source_ip = get_source_ip(&headers, connect_info.as_ref());
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.to_string());
     let user = sqlx::query_as::<_, (i64, String, String)>(
         "SELECT id, username, password FROM sys_user WHERE username = $1 AND deleted = 0",
     )
@@ -1313,6 +1317,21 @@ async fn orion_login(
         &state.config.jwt,
         state.config.jwt.expiration,
     );
+    let mut token_hasher = Sha256::new();
+    token_hasher.update(format!("orion:{}", token).as_bytes());
+    let token_hash = format!("{:x}", token_hasher.finalize());
+
+    sqlx::query(
+        "INSERT INTO auth_refresh_token (user_id, token_hash, session_id, expires_at, ip, user_agent) VALUES ($1, $2, $3::uuid, NOW() + ($4 || ' seconds')::interval, $5, $6)",
+    )
+    .bind(user.0)
+    .bind(token_hash)
+    .bind(&session_id)
+    .bind(state.config.jwt.expiration as i64)
+    .bind(&source_ip)
+    .bind(user_agent)
+    .execute(&state.db)
+    .await?;
 
     sqlx::query("UPDATE sys_user SET last_login_time = NOW(), last_login_ip = $1 WHERE id = $2")
         .bind(&source_ip)
@@ -1332,7 +1351,19 @@ async fn orion_login(
     Ok(OrionResponse::ok(OrionLoginResponse { token }))
 }
 
-async fn orion_logout() -> AppResult<impl axum::response::IntoResponse> {
+async fn orion_logout(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> AppResult<impl axum::response::IntoResponse> {
+    if let Ok(user_id) = guard::current_user_id(&headers, &state.config.jwt) {
+        sqlx::query(
+            "UPDATE auth_refresh_token SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL",
+        )
+        .bind(user_id)
+        .execute(&state.db)
+        .await?;
+    }
+
     Ok(OrionResponse::ok(true))
 }
 
