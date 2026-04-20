@@ -511,11 +511,13 @@ async fn get_me_summary(
              FROM host h
              LEFT JOIN user_host_access uha ON h.id = uha.host_id AND uha.user_id = $1
              LEFT JOIN host_group_rel hgr ON h.id = hgr.host_id
-             LEFT JOIN user_host_group_grant uhgg ON hgr.group_id = uhgg.group_id AND uhgg.user_id = $1
-             LEFT JOIN role_host_group_grant rhgg ON hgr.group_id = rhgg.group_id
+             LEFT JOIN host_group hg ON hgr.group_id = hg.id AND hg.deleted = 0
+             LEFT JOIN user_host_group_grant uhgg ON hg.id = uhgg.group_id AND uhgg.user_id = $1
+             LEFT JOIN role_host_group_grant rhgg ON hg.id = rhgg.group_id
              LEFT JOIN sys_user_role ur ON rhgg.role_id = ur.role_id AND ur.user_id = $1
+             LEFT JOIN sys_role r ON ur.role_id = r.id AND r.deleted = 0 AND r.status = 1
              WHERE h.deleted = 0
-               AND (uha.user_id IS NOT NULL OR uhgg.user_id IS NOT NULL OR ur.user_id IS NOT NULL)",
+               AND (uha.user_id IS NOT NULL OR uhgg.user_id IS NOT NULL OR r.id IS NOT NULL)",
         )
         .bind(user_id)
         .fetch_one(&state.db)
@@ -573,11 +575,13 @@ async fn get_me_hosts(
          FROM host h
          LEFT JOIN user_host_access uha ON h.id = uha.host_id AND uha.user_id = $1
          LEFT JOIN host_group_rel hgr ON h.id = hgr.host_id
-         LEFT JOIN user_host_group_grant uhgg ON hgr.group_id = uhgg.group_id AND uhgg.user_id = $1
-         LEFT JOIN role_host_group_grant rhgg ON hgr.group_id = rhgg.group_id
+         LEFT JOIN host_group hg ON hgr.group_id = hg.id AND hg.deleted = 0
+         LEFT JOIN user_host_group_grant uhgg ON hg.id = uhgg.group_id AND uhgg.user_id = $1
+         LEFT JOIN role_host_group_grant rhgg ON hg.id = rhgg.group_id
          LEFT JOIN sys_user_role ur ON rhgg.role_id = ur.role_id AND ur.user_id = $1
+         LEFT JOIN sys_role r ON ur.role_id = r.id AND r.deleted = 0 AND r.status = 1
          WHERE h.deleted = 0
-           AND ($2 = TRUE OR uha.user_id IS NOT NULL OR uhgg.user_id IS NOT NULL OR ur.user_id IS NOT NULL)
+           AND ($2 = TRUE OR uha.user_id IS NOT NULL OR uhgg.user_id IS NOT NULL OR r.id IS NOT NULL)
          ORDER BY h.id DESC",
     )
     .bind(user_id)

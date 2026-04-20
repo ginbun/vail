@@ -15,11 +15,13 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use encoding_rs::Encoding;
 use futures_util::StreamExt;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use tokio::sync::mpsc;
 
@@ -228,18 +230,19 @@ async fn open_terminal_access_ws(
     Path((protocol, token)): Path<(String, String)>,
     ws: WebSocketUpgrade,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let (user_id, host_id, connect_type) = parse_access_token(&token)?;
+    let (token_user_id, host_id, connect_type) =
+        parse_access_token(&token, &state.config.secrets.data_encryption_key)?;
     let protocol = protocol.to_ascii_lowercase();
     let connect_type = connect_type.to_ascii_lowercase();
 
-    guard::require_host_permission(&state, user_id, host_id).await?;
+    guard::require_host_permission(&state, token_user_id, host_id).await?;
 
     match (protocol.as_str(), connect_type.as_str()) {
         ("ssh", "ssh") => Ok(ws.on_upgrade(move |socket| async move {
-            handle_ssh_socket(state, socket, user_id, host_id).await;
+            handle_ssh_socket(state, socket, token_user_id, host_id).await;
         })),
         ("sftp", "sftp") => Ok(ws.on_upgrade(move |socket| async move {
-            handle_sftp_socket(state, socket, user_id, host_id).await;
+            handle_sftp_socket(state, socket, token_user_id, host_id).await;
         })),
         _ => Err(AppError::BadRequest(
             "unsupported terminal protocol".to_string(),
@@ -252,9 +255,9 @@ async fn open_terminal_transfer_ws(
     Path(token): Path<String>,
     ws: WebSocketUpgrade,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    let user_id = parse_transfer_token(&token)?;
+    let token_user_id = parse_transfer_token(&token, &state.config.secrets.data_encryption_key)?;
     Ok(ws.on_upgrade(move |socket| async move {
-        handle_transfer_socket(state, socket, user_id).await;
+        handle_transfer_socket(state, socket, token_user_id).await;
     }))
 }
 
@@ -1612,30 +1615,69 @@ async fn append_terminal_file_log(
     .await;
 }
 
-fn parse_access_token(token: &str) -> AppResult<(i64, i64, String)> {
+fn parse_access_token(token: &str, signing_key: &str) -> AppResult<(i64, i64, String)> {
     let parts = token.split(':').collect::<Vec<_>>();
-    if parts.len() < 5 || parts[0] != "term" {
+    if parts.len() != 6 || parts[0] != "term" {
         return Err(AppError::BadRequest(
             "invalid terminal access token".to_string(),
         ));
     }
+    let unsigned = parts[0..5].join(":");
+    ensure_token_signature(&unsigned, parts[5], signing_key)?;
     let user_id = parts[1]
         .parse::<i64>()
         .map_err(|_| AppError::BadRequest("invalid user in terminal access token".to_string()))?;
     let host_id = parts[2]
         .parse::<i64>()
         .map_err(|_| AppError::BadRequest("invalid host in terminal access token".to_string()))?;
+    let issued_at_ms = parts[4].parse::<i64>().map_err(|_| {
+        AppError::BadRequest("invalid timestamp in terminal access token".to_string())
+    })?;
+    ensure_token_freshness_ms(issued_at_ms, "terminal access token expired")?;
     Ok((user_id, host_id, parts[3].to_string()))
 }
 
-fn parse_transfer_token(token: &str) -> AppResult<i64> {
+fn parse_transfer_token(token: &str, signing_key: &str) -> AppResult<i64> {
     let parts = token.split(':').collect::<Vec<_>>();
-    if parts.len() < 3 || parts[0] != "transfer" {
+    if parts.len() != 4 || parts[0] != "transfer" {
         return Err(AppError::BadRequest("invalid transfer token".to_string()));
     }
-    parts[1]
+    let unsigned = parts[0..3].join(":");
+    ensure_token_signature(&unsigned, parts[3], signing_key)?;
+    let user_id = parts[1]
         .parse::<i64>()
-        .map_err(|_| AppError::BadRequest("invalid user in transfer token".to_string()))
+        .map_err(|_| AppError::BadRequest("invalid user in transfer token".to_string()))?;
+    let issued_at_ms = parts[2]
+        .parse::<i64>()
+        .map_err(|_| AppError::BadRequest("invalid timestamp in transfer token".to_string()))?;
+    ensure_token_freshness_ms(issued_at_ms, "transfer token expired")?;
+    Ok(user_id)
+}
+
+fn ensure_token_freshness_ms(issued_at_ms: i64, expired_message: &str) -> AppResult<()> {
+    let now = now_ms();
+    if issued_at_ms > now || now - issued_at_ms > TOKEN_EXPIRE_MS {
+        return Err(AppError::BadRequest(expired_message.to_string()));
+    }
+    Ok(())
+}
+
+fn token_signature(payload: &str, signing_key: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(signing_key.as_bytes());
+    hasher.update(b":");
+    hasher.update(payload.as_bytes());
+    URL_SAFE_NO_PAD.encode(hasher.finalize())
+}
+
+fn ensure_token_signature(payload: &str, signature: &str, signing_key: &str) -> AppResult<()> {
+    let expected = token_signature(payload, signing_key);
+    if signature != expected {
+        return Err(AppError::BadRequest(
+            "invalid terminal token signature".to_string(),
+        ));
+    }
+    Ok(())
 }
 
 
@@ -2166,5 +2208,23 @@ mod tests {
             Some("terminal:sftp-download")
         );
         assert_eq!(sftp_operator_audit_type("ls"), None);
+    }
+
+    #[test]
+    fn parse_access_token_rejects_expired_timestamp() {
+        let expired = now_ms() - TOKEN_EXPIRE_MS - 1;
+        let payload = format!("term:1:2:ssh:{expired}");
+        let token = format!("{payload}:{}", token_signature(&payload, "k"));
+        let err = parse_access_token(&token, "k").unwrap_err();
+        assert!(err.to_string().contains("terminal access token expired"));
+    }
+
+    #[test]
+    fn parse_transfer_token_rejects_future_timestamp() {
+        let future = now_ms() + TOKEN_EXPIRE_MS + 1000;
+        let payload = format!("transfer:1:{future}");
+        let token = format!("{payload}:{}", token_signature(&payload, "k"));
+        let err = parse_transfer_token(&token, "k").unwrap_err();
+        assert!(err.to_string().contains("transfer token expired"));
     }
 }

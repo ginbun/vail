@@ -4,7 +4,7 @@ use axum::{
     routing::{any, delete, get, post, put},
     Json, Router,
 };
-use base64::{engine::general_purpose::STANDARD, Engine as _};
+use base64::{engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD}, Engine as _};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use rsa::{
     pkcs1::DecodeRsaPrivateKey,
@@ -7671,13 +7671,16 @@ async fn orion_terminal_access(
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let host_id = parse_required_id(payload.host_id, "hostId")?;
     guard::require_host_permission(&state, user_id, host_id).await?;
-    let token = format!(
+    let issued_at_ms = now_ms();
+    let payload = format!(
         "term:{}:{}:{}:{}",
         user_id,
         host_id,
         payload.connect_type.unwrap_or_else(|| "ssh".to_string()),
-        now_ms()
+        issued_at_ms
     );
+    let signature = terminal_token_signature(&payload, &state.config.secrets.data_encryption_key);
+    let token = format!("{payload}:{signature}");
     Ok(OrionResponse::ok(token))
 }
 
@@ -7686,11 +7689,17 @@ async fn orion_terminal_transfer(
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
-    Ok(OrionResponse::ok(format!(
-        "transfer:{}:{}",
-        user_id,
-        now_ms()
-    )))
+    let payload = format!("transfer:{}:{}", user_id, now_ms());
+    let signature = terminal_token_signature(&payload, &state.config.secrets.data_encryption_key);
+    Ok(OrionResponse::ok(format!("{payload}:{signature}")))
+}
+
+fn terminal_token_signature(payload: &str, signing_key: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(signing_key.as_bytes());
+    hasher.update(b":");
+    hasher.update(payload.as_bytes());
+    URL_SAFE_NO_PAD.encode(hasher.finalize())
 }
 
 #[cfg(test)]

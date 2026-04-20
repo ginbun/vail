@@ -118,7 +118,8 @@ pub async fn check_host_permission(state: &AppState, user_id: i64, host_id: i64)
                     EXISTS(
                         SELECT 1 
                         FROM host_group_rel hgr
-                        JOIN user_host_group_grant uhgg ON hgr.group_id = uhgg.group_id
+                        JOIN host_group hg ON hgr.group_id = hg.id AND hg.deleted = 0
+                        JOIN user_host_group_grant uhgg ON hg.id = uhgg.group_id
                         WHERE hgr.host_id = $2 AND uhgg.user_id = $1
                     )
                     OR
@@ -126,8 +127,10 @@ pub async fn check_host_permission(state: &AppState, user_id: i64, host_id: i64)
                     EXISTS(
                         SELECT 1
                         FROM host_group_rel hgr
-                        JOIN role_host_group_grant rhgg ON hgr.group_id = rhgg.group_id
+                        JOIN host_group hg ON hgr.group_id = hg.id AND hg.deleted = 0
+                        JOIN role_host_group_grant rhgg ON hg.id = rhgg.group_id
                         JOIN sys_user_role ur ON rhgg.role_id = ur.role_id
+                        JOIN sys_role r ON r.id = ur.role_id AND r.deleted = 0 AND r.status = 1
                         WHERE hgr.host_id = $2 AND ur.user_id = $1
                     )
                 )
