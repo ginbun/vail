@@ -14,7 +14,6 @@ use crate::{
     model::*,
 };
 
-
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/iam/users", get(list_users))
@@ -504,11 +503,9 @@ async fn get_me_summary(
     let is_admin = guard::has_host_read_permission(&state, user_id).await?;
 
     let host_access_count = if is_admin {
-        sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM host WHERE deleted = 0",
-        )
-        .fetch_one(&state.db)
-        .await?
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM host WHERE deleted = 0")
+            .fetch_one(&state.db)
+            .await?
     } else {
         sqlx::query_scalar::<_, i64>(
             "SELECT COUNT(DISTINCT h.id)

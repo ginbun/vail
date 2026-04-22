@@ -479,7 +479,7 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
                             }
                             let payload: SshConnectPayload = serde_json::from_str(body)
                                 .unwrap_or(SshConnectPayload { width: None, height: None, terminal_type: None, charset: None });
-                            
+
                             // 获取主机配置中的编码
                             let mut charset = payload.charset;
                             if charset.is_none() {
@@ -646,9 +646,10 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                 Err(err) => {
                     close_error = Some(err.to_string());
                     let _ = socket
-                        .send(Message::Text(
-                            format!("cl|{TERMINAL_CLOSE_FORCE}|{}", safe_field(&err.to_string())))
-                        )
+                        .send(Message::Text(format!(
+                            "cl|{TERMINAL_CLOSE_FORCE}|{}",
+                            safe_field(&err.to_string())
+                        )))
                         .await;
                     break;
                 }
@@ -658,7 +659,9 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
 
         if !connected {
             let _ = socket
-                .send(Message::Text("cl|10000|sftp session not connected".to_string()))
+                .send(Message::Text(
+                    "cl|10000|sftp session not connected".to_string(),
+                ))
                 .await;
             break;
         }
@@ -671,20 +674,16 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                 Ok(list) => {
                     let body = serde_json::to_string(&list).unwrap_or_else(|_| "[]".to_string());
                     socket
-                        .send(Message::Text(
-                            format!("ls|{}|1||{body}", safe_field(path)),
-                        ))
+                        .send(Message::Text(format!("ls|{}|1||{body}", safe_field(path))))
                         .await
                 }
                 Err(err) => {
                     socket
-                        .send(Message::Text(
-                            format!(
-                                "ls|{}|0|{}|[]",
-                                safe_field(path),
-                                safe_field(&err.to_string())
-                            ),
-                        ))
+                        .send(Message::Text(format!(
+                            "ls|{}|0|{}|[]",
+                            safe_field(path),
+                            safe_field(&err.to_string())
+                        )))
                         .await
                 }
             }
@@ -719,9 +718,10 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                         .await;
                     }
                     socket
-                        .send(Message::Text(
-                            format!("mk|0|{}", safe_field(&err.to_string())),
-                        ))
+                        .send(Message::Text(format!(
+                            "mk|0|{}",
+                            safe_field(&err.to_string())
+                        )))
                         .await
                 }
             }
@@ -756,9 +756,10 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                         .await;
                     }
                     socket
-                        .send(Message::Text(
-                            format!("to|0|{}", safe_field(&err.to_string())),
-                        ))
+                        .send(Message::Text(format!(
+                            "to|0|{}",
+                            safe_field(&err.to_string())
+                        )))
                         .await
                 }
             }
@@ -792,9 +793,10 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                     )
                     .await;
                     socket
-                        .send(Message::Text(
-                            format!("mv|0|{}", safe_field(&err.to_string())),
-                        ))
+                        .send(Message::Text(format!(
+                            "mv|0|{}",
+                            safe_field(&err.to_string())
+                        )))
                         .await
                 }
             }
@@ -830,9 +832,10 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                         .await;
                     }
                     socket
-                        .send(Message::Text(
-                            format!("rm|0|{}", safe_field(&err.to_string())),
-                        ))
+                        .send(Message::Text(format!(
+                            "rm|0|{}",
+                            safe_field(&err.to_string())
+                        )))
                         .await
                 }
             }
@@ -869,9 +872,10 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                     )
                     .await;
                     socket
-                        .send(Message::Text(
-                            format!("chm|0|{}", safe_field(&err.to_string())),
-                        ))
+                        .send(Message::Text(format!(
+                            "chm|0|{}",
+                            safe_field(&err.to_string())
+                        )))
                         .await
                 }
             }
@@ -895,9 +899,10 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                     }
                     let body = serde_json::to_string(&list).unwrap_or_else(|_| "[]".to_string());
                     socket
-                        .send(Message::Text(
-                            format!("df|{}|1||{body}", safe_field(current_path)),
-                        ))
+                        .send(Message::Text(format!(
+                            "df|{}|1||{body}",
+                            safe_field(current_path)
+                        )))
                         .await
                 }
                 Err(err) => {
@@ -914,13 +919,11 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                         .await;
                     }
                     socket
-                        .send(Message::Text(
-                            format!(
-                                "df|{}|0|{}|[]",
-                                safe_field(current_path),
-                                safe_field(&err.to_string())
-                            ),
-                        ))
+                        .send(Message::Text(format!(
+                            "df|{}|0|{}|[]",
+                            safe_field(current_path),
+                            safe_field(&err.to_string())
+                        )))
                         .await
                 }
             }
@@ -933,9 +936,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                 expires_at_ms: now_ms() + TOKEN_EXPIRE_MS,
             });
             socket
-                .send(Message::Text(
-                    format!("gc|1||{}", safe_field(&token)),
-                ))
+                .send(Message::Text(format!("gc|1||{}", safe_field(&token))))
                 .await
         } else if let Some(path) = text.strip_prefix("sc|") {
             let token = put_content_token(SftpContentToken {
@@ -946,13 +947,13 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                 expires_at_ms: now_ms() + TOKEN_EXPIRE_MS,
             });
             socket
-                .send(Message::Text(
-                    format!("sc|1||{}", safe_field(&token)),
-                ))
+                .send(Message::Text(format!("sc|1||{}", safe_field(&token))))
                 .await
         } else {
             socket
-                .send(Message::Text("cl|10000|unsupported sftp protocol".to_string()))
+                .send(Message::Text(
+                    "cl|10000|unsupported sftp protocol".to_string(),
+                ))
                 .await
         };
 
@@ -1147,7 +1148,9 @@ async fn handle_transfer_socket(state: AppState, mut socket: WebSocket, user_id:
                             }
                         };
 
-                        let allowed = guard::require_host_permission(&state, user_id, host_id).await.is_ok();
+                        let allowed = guard::require_host_permission(&state, user_id, host_id)
+                            .await
+                            .is_ok();
                         if !allowed {
                             if send_transfer(
                                 &mut socket,
@@ -1694,8 +1697,6 @@ fn ensure_token_signature(payload: &str, signature: &str, signing_key: &str) -> 
     }
     Ok(())
 }
-
-
 
 async fn with_sftp<R, F>(state: &AppState, host_id: i64, action: F) -> AppResult<R>
 where

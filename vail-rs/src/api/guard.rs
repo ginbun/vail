@@ -92,7 +92,11 @@ pub async fn has_host_read_permission(state: &AppState, user_id: i64) -> AppResu
     Ok(allowed)
 }
 
-pub async fn check_host_permission(state: &AppState, user_id: i64, host_id: i64) -> AppResult<bool> {
+pub async fn check_host_permission(
+    state: &AppState,
+    user_id: i64,
+    host_id: i64,
+) -> AppResult<bool> {
     // 1. Check host.read permission
     let allowed = has_host_read_permission(state, user_id).await?;
 
@@ -177,8 +181,7 @@ mod tests {
 
     const TEST_ED25519_PRIVATE_KEY: &str =
         "MC4CAQAwBQYDK2VwBCIEIHCDX8ke/yslwa9SElPghVHhz700q1H6SO9hmUJ6i8Ld";
-    const TEST_ED25519_PUBLIC_KEY: &str =
-        "sA29J+hOVKaDdV0/Ksm2B3zFrbDqFphgTpO79LTQ4zk=";
+    const TEST_ED25519_PUBLIC_KEY: &str = "sA29J+hOVKaDdV0/Ksm2B3zFrbDqFphgTpO79LTQ4zk=";
 
     #[test]
     fn bearer_token_extracts_value() {
@@ -230,13 +233,11 @@ mod tests {
 
         let mut header = Header::new(Algorithm::EdDSA);
         header.typ = Some("JWT".to_string());
-        let private_der = STANDARD.decode(TEST_ED25519_PRIVATE_KEY).expect("base64 der");
-        let token = encode(
-            &header,
-            &claims,
-            &EncodingKey::from_ed_der(&private_der),
-        )
-        .expect("jwt encode");
+        let private_der = STANDARD
+            .decode(TEST_ED25519_PRIVATE_KEY)
+            .expect("base64 der");
+        let token =
+            encode(&header, &claims, &EncodingKey::from_ed_der(&private_der)).expect("jwt encode");
 
         let jwt = JwtConfig {
             algorithm: Algorithm::EdDSA,

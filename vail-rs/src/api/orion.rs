@@ -4,7 +4,10 @@ use axum::{
     routing::{any, delete, get, post, put},
     Json, Router,
 };
-use base64::{engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD}, Engine as _};
+use base64::{
+    engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
+    Engine as _,
+};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use rsa::{
     pkcs1::DecodeRsaPrivateKey,
@@ -20,7 +23,9 @@ use std::net::SocketAddr;
 
 use crate::{
     api::{auth, guard, AppState},
-    application::orion::{asset_service, audit_service, compat_service, host_service, system_user_service},
+    application::orion::{
+        asset_service, audit_service, compat_service, host_service, system_user_service,
+    },
     domain::orion::{
         asset::{OrionHostIdentityAggregate, OrionHostKeyAggregate},
         compat::OrionCompatModule,
@@ -6916,11 +6921,13 @@ async fn orion_system_user_grant_role(
         .await?;
     for role_id in &role_ids {
         if *role_id > 0 {
-            sqlx::query("INSERT INTO sys_user_role (user_id, role_id, create_time) VALUES ($1, $2, NOW())")
-                .bind(user_id)
-                .bind(role_id)
-                .execute(&mut *tx)
-                .await?;
+            sqlx::query(
+                "INSERT INTO sys_user_role (user_id, role_id, create_time) VALUES ($1, $2, NOW())",
+            )
+            .bind(user_id)
+            .bind(role_id)
+            .execute(&mut *tx)
+            .await?;
         }
     }
     tx.commit().await?;
@@ -7229,7 +7236,17 @@ async fn orion_system_user_session_user_list(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
     let user_id = parse_required_id(query.id, "id")?;
-    let rows = sqlx::query_as::<_, (i64, i64, Option<String>, Option<String>, Option<String>, String)>(
+    let rows = sqlx::query_as::<
+        _,
+        (
+            i64,
+            i64,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            String,
+        ),
+    >(
         "SELECT r.id,
                 EXTRACT(EPOCH FROM r.created_at)::bigint * 1000,
                 r.ip,

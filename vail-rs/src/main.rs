@@ -62,7 +62,11 @@ async fn main() {
     let addr_ip = match config.server.host.parse() {
         Ok(ip) => ip,
         Err(e) => {
-            tracing::error!("Failed to parse server host '{}': {}", config.server.host, e);
+            tracing::error!(
+                "Failed to parse server host '{}': {}",
+                config.server.host,
+                e
+            );
             std::process::exit(1);
         }
     };

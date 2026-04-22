@@ -1,6 +1,6 @@
+use crate::error::AppResult;
 use axum::http::HeaderMap;
 use sqlx::PgPool;
-use crate::error::AppResult;
 
 pub struct OperatorLogParams<'a> {
     pub user_id: i64,
