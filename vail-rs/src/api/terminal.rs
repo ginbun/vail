@@ -158,6 +158,18 @@ struct TerminalAuditContext {
     host_address: String,
 }
 
+struct TerminalConnectLogParams<'a> {
+    pub user_id: i64,
+    pub host_id: i64,
+    pub context: &'a TerminalAuditContext,
+    pub connect_type: &'a str,
+    pub session_id: &'a str,
+    pub status: &'a str,
+    pub start_time: i64,
+    pub end_time: i64,
+    pub error_message: Option<&'a str>,
+}
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/terminal/themes", get(get_terminal_themes))
@@ -399,7 +411,7 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
     let mut connect_log_id: Option<i64> = None;
     let mut close_error: Option<String> = None;
     if socket
-        .send(Message::Text(format!("id|{session_id}").into()))
+        .send(Message::Text(format!("id|{session_id}")))
         .await
         .is_err()
     {
@@ -416,28 +428,30 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
                         if connect_log_id.is_none() {
                             connect_log_id = create_terminal_connect_log(
                                 &state,
-                                user_id,
-                                host_id,
-                                &context,
-                                "SSH",
-                                &session_id,
-                                "CONNECTING",
-                                session_start,
-                                0,
-                                None,
+                                TerminalConnectLogParams {
+                                    user_id,
+                                    host_id,
+                                    context: &context,
+                                    connect_type: "SSH",
+                                    session_id: &session_id,
+                                    status: "CONNECTING",
+                                    start_time: session_start,
+                                    end_time: 0,
+                                    error_message: None,
+                                },
                             )
                             .await;
                         }
-                        socket.send(Message::Text("co".into())).await
+                        socket.send(Message::Text("co".to_string())).await
                     }
                     SshWorkerEvent::Output(body) => {
-                        socket.send(Message::Text(format!("o|{body}").into())).await
+                        socket.send(Message::Text(format!("o|{body}"))).await
                     }
                     SshWorkerEvent::Closed { code, msg } => {
                         if code != 0 {
                             close_error = Some(msg.clone());
                         }
-                        socket.send(Message::Text(format!("cl|{code}|{}", safe_field(&msg)).into())).await
+                        socket.send(Message::Text(format!("cl|{code}|{}", safe_field(&msg)))).await
                     }
                 };
                 if send_res.is_err() {
@@ -448,7 +462,7 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
                 match msg {
                     Some(Ok(Message::Text(text))) => {
                         if text == "p" {
-                            if socket.send(Message::Text("p".into())).await.is_err() {
+                            if socket.send(Message::Text("p".to_string())).await.is_err() {
                                 break;
                             }
                             continue;
@@ -493,7 +507,7 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
                             ).await {
                                 Ok(v) => v,
                                 Err(err) => {
-                                    let _ = socket.send(Message::Text(format!("cl|{TERMINAL_CLOSE_FORCE}|{}", safe_field(&err.to_string())).into())).await;
+                                    let _ = socket.send(Message::Text(format!("cl|{TERMINAL_CLOSE_FORCE}|{}", safe_field(&err.to_string())))).await;
                                     break;
                                 }
                             };
@@ -531,15 +545,17 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
     } else {
         let _ = create_terminal_connect_log(
             &state,
-            user_id,
-            host_id,
-            &context,
-            "SSH",
-            &session_id,
-            status,
-            session_start,
-            now_ms(),
-            close_error.as_deref(),
+            TerminalConnectLogParams {
+                user_id,
+                host_id,
+                context: &context,
+                connect_type: "SSH",
+                session_id: &session_id,
+                status,
+                start_time: session_start,
+                end_time: now_ms(),
+                error_message: close_error.as_deref(),
+            },
         )
         .await;
     }
@@ -553,7 +569,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
     let mut connect_log_id: Option<i64> = None;
     let mut close_error: Option<String> = None;
     if socket
-        .send(Message::Text(format!("id|{session_id}").into()))
+        .send(Message::Text(format!("id|{session_id}")))
         .await
         .is_err()
     {
@@ -575,7 +591,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
         };
 
         if text == "p" {
-            if socket.send(Message::Text("p".into())).await.is_err() {
+            if socket.send(Message::Text("p".to_string())).await.is_err() {
                 break;
             }
             continue;
@@ -583,12 +599,12 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
 
         if text == "cl" {
             let _ = socket
-                .send(Message::Text("cl|0|会话已结束...".into()))
+                .send(Message::Text("cl|0|会话已结束...".to_string()))
                 .await;
             break;
         }
 
-        if let Some(_) = text.strip_prefix("co|") {
+        if text.strip_prefix("co|").is_some() {
             if connected {
                 continue;
             }
@@ -609,19 +625,21 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                     if connect_log_id.is_none() {
                         connect_log_id = create_terminal_connect_log(
                             &state,
-                            user_id,
-                            host_id,
-                            &context,
-                            "SFTP",
-                            &session_id,
-                            "CONNECTING",
-                            session_start,
-                            0,
-                            None,
+                            TerminalConnectLogParams {
+                                user_id,
+                                host_id,
+                                context: &context,
+                                connect_type: "SFTP",
+                                session_id: &session_id,
+                                status: "CONNECTING",
+                                start_time: session_start,
+                                end_time: 0,
+                                error_message: None,
+                            },
                         )
                         .await;
                     }
-                    if socket.send(Message::Text("co".into())).await.is_err() {
+                    if socket.send(Message::Text("co".to_string())).await.is_err() {
                         break;
                     }
                 }
@@ -629,9 +647,8 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                     close_error = Some(err.to_string());
                     let _ = socket
                         .send(Message::Text(
-                            format!("cl|{TERMINAL_CLOSE_FORCE}|{}", safe_field(&err.to_string()))
-                                .into(),
-                        ))
+                            format!("cl|{TERMINAL_CLOSE_FORCE}|{}", safe_field(&err.to_string())))
+                        )
                         .await;
                     break;
                 }
@@ -641,7 +658,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
 
         if !connected {
             let _ = socket
-                .send(Message::Text("cl|10000|sftp session not connected".into()))
+                .send(Message::Text("cl|10000|sftp session not connected".to_string()))
                 .await;
             break;
         }
@@ -655,7 +672,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                     let body = serde_json::to_string(&list).unwrap_or_else(|_| "[]".to_string());
                     socket
                         .send(Message::Text(
-                            format!("ls|{}|1||{body}", safe_field(path)).into(),
+                            format!("ls|{}|1||{body}", safe_field(path)),
                         ))
                         .await
                 }
@@ -666,8 +683,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                                 "ls|{}|0|{}|[]",
                                 safe_field(path),
                                 safe_field(&err.to_string())
-                            )
-                            .into(),
+                            ),
                         ))
                         .await
                 }
@@ -687,7 +703,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                         )
                         .await;
                     }
-                    socket.send(Message::Text("mk|1|".into())).await
+                    socket.send(Message::Text("mk|1|".to_string())).await
                 }
                 Err(err) => {
                     if let Some(operator_type) = sftp_operator_audit_type("mk") {
@@ -704,7 +720,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                     }
                     socket
                         .send(Message::Text(
-                            format!("mk|0|{}", safe_field(&err.to_string())).into(),
+                            format!("mk|0|{}", safe_field(&err.to_string())),
                         ))
                         .await
                 }
@@ -724,7 +740,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                         )
                         .await;
                     }
-                    socket.send(Message::Text("to|1|".into())).await
+                    socket.send(Message::Text("to|1|".to_string())).await
                 }
                 Err(err) => {
                     if let Some(operator_type) = sftp_operator_audit_type("to") {
@@ -741,7 +757,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                     }
                     socket
                         .send(Message::Text(
-                            format!("to|0|{}", safe_field(&err.to_string())).into(),
+                            format!("to|0|{}", safe_field(&err.to_string())),
                         ))
                         .await
                 }
@@ -762,7 +778,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                         vec![source.to_string(), target.to_string()],
                     )
                     .await;
-                    socket.send(Message::Text("mv|1|".into())).await
+                    socket.send(Message::Text("mv|1|".to_string())).await
                 }
                 Err(err) => {
                     append_terminal_file_log(
@@ -777,7 +793,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                     .await;
                     socket
                         .send(Message::Text(
-                            format!("mv|0|{}", safe_field(&err.to_string())).into(),
+                            format!("mv|0|{}", safe_field(&err.to_string())),
                         ))
                         .await
                 }
@@ -798,7 +814,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                         )
                         .await;
                     }
-                    socket.send(Message::Text("rm|1|".into())).await
+                    socket.send(Message::Text("rm|1|".to_string())).await
                 }
                 Err(err) => {
                     if let Some(operator_type) = sftp_operator_audit_type("rm") {
@@ -815,7 +831,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                     }
                     socket
                         .send(Message::Text(
-                            format!("rm|0|{}", safe_field(&err.to_string())).into(),
+                            format!("rm|0|{}", safe_field(&err.to_string())),
                         ))
                         .await
                 }
@@ -839,7 +855,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                         vec![path.to_string()],
                     )
                     .await;
-                    socket.send(Message::Text("chm|1|".into())).await
+                    socket.send(Message::Text("chm|1|".to_string())).await
                 }
                 Err(err) => {
                     append_terminal_file_log(
@@ -854,7 +870,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                     .await;
                     socket
                         .send(Message::Text(
-                            format!("chm|0|{}", safe_field(&err.to_string())).into(),
+                            format!("chm|0|{}", safe_field(&err.to_string())),
                         ))
                         .await
                 }
@@ -880,7 +896,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                     let body = serde_json::to_string(&list).unwrap_or_else(|_| "[]".to_string());
                     socket
                         .send(Message::Text(
-                            format!("df|{}|1||{body}", safe_field(current_path)).into(),
+                            format!("df|{}|1||{body}", safe_field(current_path)),
                         ))
                         .await
                 }
@@ -903,8 +919,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
                                 "df|{}|0|{}|[]",
                                 safe_field(current_path),
                                 safe_field(&err.to_string())
-                            )
-                            .into(),
+                            ),
                         ))
                         .await
                 }
@@ -919,7 +934,7 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
             });
             socket
                 .send(Message::Text(
-                    format!("gc|1||{}", safe_field(&token)).into(),
+                    format!("gc|1||{}", safe_field(&token)),
                 ))
                 .await
         } else if let Some(path) = text.strip_prefix("sc|") {
@@ -932,12 +947,12 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
             });
             socket
                 .send(Message::Text(
-                    format!("sc|1||{}", safe_field(&token)).into(),
+                    format!("sc|1||{}", safe_field(&token)),
                 ))
                 .await
         } else {
             socket
-                .send(Message::Text("cl|10000|unsupported sftp protocol".into()))
+                .send(Message::Text("cl|10000|unsupported sftp protocol".to_string()))
                 .await
         };
 
@@ -952,15 +967,17 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
     } else {
         let _ = create_terminal_connect_log(
             &state,
-            user_id,
-            host_id,
-            &context,
-            "SFTP",
-            &session_id,
-            status,
-            session_start,
-            now_ms(),
-            close_error.as_deref(),
+            TerminalConnectLogParams {
+                user_id,
+                host_id,
+                context: &context,
+                connect_type: "SFTP",
+                session_id: &session_id,
+                status,
+                start_time: session_start,
+                end_time: now_ms(),
+                error_message: close_error.as_deref(),
+            },
         )
         .await;
     }
@@ -1468,7 +1485,7 @@ async fn send_transfer(
     socket: &mut WebSocket,
     payload: serde_json::Value,
 ) -> Result<(), axum::Error> {
-    socket.send(Message::Text(payload.to_string().into())).await
+    socket.send(Message::Text(payload.to_string())).await
 }
 
 async fn load_terminal_audit_context(
@@ -1514,36 +1531,28 @@ async fn load_terminal_audit_context(
 
 async fn create_terminal_connect_log(
     state: &AppState,
-    user_id: i64,
-    host_id: i64,
-    context: &TerminalAuditContext,
-    connect_type: &str,
-    session_id: &str,
-    status: &str,
-    start_time: i64,
-    end_time: i64,
-    error_message: Option<&str>,
+    params: TerminalConnectLogParams<'_>,
 ) -> Option<i64> {
     let payload = serde_json::json!({
-        "userId": user_id,
-        "username": context.username,
-        "hostId": host_id,
-        "hostName": context.host_name,
-        "hostAddress": context.host_address,
-        "type": connect_type,
-        "sessionId": session_id,
-        "status": status,
-        "startTime": start_time,
-        "endTime": end_time,
+        "userId": params.user_id,
+        "username": params.context.username,
+        "hostId": params.host_id,
+        "hostName": params.context.host_name,
+        "hostAddress": params.context.host_address,
+        "type": params.connect_type,
+        "sessionId": params.session_id,
+        "status": params.status,
+        "startTime": params.start_time,
+        "endTime": params.end_time,
         "extra": {
             "traceId": uuid::Uuid::new_v4().to_string(),
-            "channel": connect_type,
-            "channelId": session_id,
-            "sessionId": session_id,
+            "channel": params.connect_type,
+            "channelId": params.session_id,
+            "sessionId": params.session_id,
             "address": "",
             "location": "",
             "userAgent": "",
-            "errorMessage": error_message.unwrap_or("")
+            "errorMessage": params.error_message.unwrap_or("")
         }
     });
 
@@ -1551,7 +1560,7 @@ async fn create_terminal_connect_log(
         &state.db,
         OrionCompatModule::TerminalConnectLog,
         payload,
-        &format!("user-{user_id}"),
+        &format!("user-{}", params.user_id),
     )
     .await
     .ok()

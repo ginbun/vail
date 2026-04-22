@@ -233,15 +233,17 @@ async fn assign_user_roles(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "iam",
-        "assign_user_roles",
-        serde_json::json!({
-            "target_user_id": user_id,
-            "role_ids": role_ids,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "iam",
+            operation: "assign_user_roles",
+            params: serde_json::json!({
+                "target_user_id": user_id,
+                "role_ids": role_ids,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -327,15 +329,17 @@ async fn assign_user_hosts(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "iam",
-        "assign_user_hosts",
-        serde_json::json!({
-            "target_user_id": user_id,
-            "host_ids": host_ids,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "iam",
+            operation: "assign_user_hosts",
+            params: serde_json::json!({
+                "target_user_id": user_id,
+                "host_ids": host_ids,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 

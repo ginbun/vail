@@ -2,23 +2,27 @@ use axum::http::HeaderMap;
 use sqlx::PgPool;
 use crate::error::AppResult;
 
+pub struct OperatorLogParams<'a> {
+    pub user_id: i64,
+    pub module: &'a str,
+    pub operation: &'a str,
+    pub params: serde_json::Value,
+    pub result: i16,
+    pub error_message: Option<String>,
+}
+
 pub async fn log_operator_action(
     db: &PgPool,
     headers: &HeaderMap,
-    user_id: i64,
-    module: &str,
-    operation: &str,
-    params: serde_json::Value,
-    result: i16,
-    error_message: Option<String>,
+    params: OperatorLogParams<'_>,
 ) -> AppResult<()> {
     let username = sqlx::query_scalar::<_, Option<String>>(
         "SELECT username FROM sys_user WHERE id = $1 AND deleted = 0",
     )
-    .bind(user_id)
+    .bind(params.user_id)
     .fetch_one(db)
     .await?
-    .unwrap_or_else(|| user_id.to_string());
+    .unwrap_or_else(|| params.user_id.to_string());
 
     let ip = headers
         .get("x-forwarded-for")
@@ -51,13 +55,13 @@ pub async fn log_operator_action(
             create_time
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())",
     )
-    .bind(user_id)
+    .bind(params.user_id)
     .bind(username)
-    .bind(module)
-    .bind(operation)
-    .bind(params)
-    .bind(result)
-    .bind(error_message)
+    .bind(params.module)
+    .bind(params.operation)
+    .bind(params.params)
+    .bind(params.result)
+    .bind(params.error_message)
     .bind(ip)
     .bind(user_agent)
     .execute(db)

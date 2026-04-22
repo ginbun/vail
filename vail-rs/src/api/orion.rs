@@ -1704,17 +1704,19 @@ async fn orion_create_host(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "asset",
-        "create_host",
-        serde_json::json!({
-            "id": new_id,
-            "name": audit_name,
-            "address": audit_address,
-            "groupIdList": audit_group_ids,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "asset",
+            operation: "create_host",
+            params: serde_json::json!({
+                "id": new_id,
+                "name": audit_name,
+                "address": audit_address,
+                "groupIdList": audit_group_ids,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -1789,17 +1791,19 @@ async fn orion_update_host(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "asset",
-        "update_host",
-        serde_json::json!({
-            "id": id,
-            "name": audit_name,
-            "address": audit_address,
-            "groupIdList": audit_group_ids,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "asset",
+            operation: "update_host",
+            params: serde_json::json!({
+                "id": id,
+                "name": audit_name,
+                "address": audit_address,
+                "groupIdList": audit_group_ids,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -1853,15 +1857,17 @@ async fn orion_update_host_status(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "asset",
-        "update_host_status",
-        serde_json::json!({
-            "id": id,
-            "status": status_text,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "asset",
+            operation: "update_host_status",
+            params: serde_json::json!({
+                "id": id,
+                "status": status_text,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -2366,12 +2372,14 @@ async fn orion_delete_host(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "asset",
-        "delete_host",
-        serde_json::json!({ "id": query.id }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "asset",
+            operation: "delete_host",
+            params: serde_json::json!({ "id": query.id }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -2716,16 +2724,18 @@ async fn orion_host_key_create(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "asset",
-        "create_host_key",
-        serde_json::json!({
-            "id": id,
-            "name": audit_name,
-            "description": audit_description,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "asset",
+            operation: "create_host_key",
+            params: serde_json::json!({
+                "id": id,
+                "name": audit_name,
+                "description": audit_description,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -2797,18 +2807,20 @@ async fn orion_host_key_update(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "asset",
-        "update_host_key",
-        serde_json::json!({
-            "id": id,
-            "name": audit_name,
-            "description": audit_description,
-            "useNewPassword": use_new_password,
-            "updatedPrivateKey": private_key_plain.is_some(),
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "asset",
+            operation: "update_host_key",
+            params: serde_json::json!({
+                "id": id,
+                "name": audit_name,
+                "description": audit_description,
+                "useNewPassword": use_new_password,
+                "updatedPrivateKey": private_key_plain.is_some(),
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -2885,12 +2897,14 @@ async fn orion_host_key_delete(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "asset",
-        "delete_host_key",
-        serde_json::json!({ "id": id }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "asset",
+            operation: "delete_host_key",
+            params: serde_json::json!({ "id": id }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -2917,12 +2931,14 @@ async fn orion_host_key_batch_delete(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "asset",
-        "batch_delete_host_key",
-        serde_json::json!({ "ids": audit_ids }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "asset",
+            operation: "batch_delete_host_key",
+            params: serde_json::json!({ "ids": audit_ids }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -3280,7 +3296,7 @@ async fn orion_authorized_data_current_host(
         for group_id in &authorized_groups {
             tree_nodes
                 .entry(group_id.to_string())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(host_id);
         }
 
@@ -4672,12 +4688,14 @@ async fn orion_infra_dispatch(
                 let _ = audit_service::log_operator_action(
                     &state.db,
                     &headers,
-                    user_id,
-                    "tag",
-                    "create",
-                    payload,
-                    1,
-                    None,
+                    audit_service::OperatorLogParams {
+                        user_id,
+                        module: "tag",
+                        operation: "create",
+                        params: payload,
+                        result: 1,
+                        error_message: None,
+                    },
                 )
                 .await;
             }
@@ -4703,12 +4721,14 @@ async fn orion_infra_dispatch(
                 let _ = audit_service::log_operator_action(
                     &state.db,
                     &headers,
-                    user_id,
-                    "tag",
-                    "update",
-                    payload,
-                    1,
-                    None,
+                    audit_service::OperatorLogParams {
+                        user_id,
+                        module: "tag",
+                        operation: "update",
+                        params: payload,
+                        result: 1,
+                        error_message: None,
+                    },
                 )
                 .await;
             }
@@ -4762,12 +4782,14 @@ async fn orion_infra_dispatch(
                 let _ = audit_service::log_operator_action(
                     &state.db,
                     &headers,
-                    user_id,
-                    "tag",
-                    "delete",
-                    serde_json::json!({ "id": id }),
-                    1,
-                    None,
+                    audit_service::OperatorLogParams {
+                        user_id,
+                        module: "tag",
+                        operation: "delete",
+                        params: serde_json::json!({ "id": id }),
+                        result: 1,
+                        error_message: None,
+                    },
                 )
                 .await;
             }
@@ -4797,9 +4819,7 @@ async fn orion_compat_fallback(
         || path.contains("/get-host-identity")
     {
         serde_json::json!([])
-    } else if path.ends_with("/get") {
-        serde_json::json!({})
-    } else if path.ends_with("/status") {
+    } else if path.ends_with("/get") || path.ends_with("/status") {
         serde_json::json!({})
     } else if path.ends_with("/tail") {
         serde_json::json!("")
@@ -5037,9 +5057,9 @@ fn parse_datetime_text(raw: &str) -> AppResult<DateTime<Utc>> {
     )))
 }
 
-fn parse_time_range(
-    values: Option<&Vec<String>>,
-) -> AppResult<(Option<DateTime<Utc>>, Option<DateTime<Utc>>)> {
+type UtcTimeRange = (Option<DateTime<Utc>>, Option<DateTime<Utc>>);
+
+fn parse_time_range(values: Option<&Vec<String>>) -> AppResult<UtcTimeRange> {
     let Some(values) = values else {
         return Ok((None, None));
     };
@@ -6541,12 +6561,14 @@ async fn orion_mine_update_password(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        user_id,
-        "iam",
-        "update_password",
-        serde_json::json!({}),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id,
+            module: "iam",
+            operation: "update_password",
+            params: serde_json::json!({}),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -6767,15 +6789,17 @@ async fn orion_system_user_create(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "iam",
-        "create_user",
-        serde_json::json!({
-            "id": id,
-            "username": username,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "iam",
+            operation: "create_user",
+            params: serde_json::json!({
+                "id": id,
+                "username": username,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -6816,15 +6840,17 @@ async fn orion_system_user_update(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "iam",
-        "update_user",
-        serde_json::json!({
-            "id": id,
-            "username": payload.username,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "iam",
+            operation: "update_user",
+            params: serde_json::json!({
+                "id": id,
+                "username": payload.username,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -6857,15 +6883,17 @@ async fn orion_system_user_update_status(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "iam",
-        "update_user_status",
-        serde_json::json!({
-            "id": id,
-            "status": status,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "iam",
+            operation: "update_user_status",
+            params: serde_json::json!({
+                "id": id,
+                "status": status,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -6900,15 +6928,17 @@ async fn orion_system_user_grant_role(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "iam",
-        "grant_user_role",
-        serde_json::json!({
-            "id": user_id,
-            "role_ids": role_ids,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "iam",
+            operation: "grant_user_role",
+            params: serde_json::json!({
+                "id": user_id,
+                "role_ids": role_ids,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -6938,12 +6968,14 @@ async fn orion_system_user_reset_password(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "iam",
-        "reset_user_password",
-        serde_json::json!({ "id": id }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "iam",
+            operation: "reset_user_password",
+            params: serde_json::json!({ "id": id }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -7059,12 +7091,14 @@ async fn orion_system_user_delete(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "iam",
-        "delete_user",
-        serde_json::json!({ "id": id }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "iam",
+            operation: "delete_user",
+            params: serde_json::json!({ "id": id }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -7088,12 +7122,14 @@ async fn orion_system_user_batch_delete(
         audit_service::log_operator_action(
             &state.db,
             &headers,
-            actor_user_id,
-            "iam",
-            "batch_delete_user",
-            serde_json::json!({ "ids": ids }),
-            1,
-            None,
+            audit_service::OperatorLogParams {
+                user_id: actor_user_id,
+                module: "iam",
+                operation: "batch_delete_user",
+                params: serde_json::json!({ "ids": ids }),
+                result: 1,
+                error_message: None,
+            },
         )
         .await?;
     }
@@ -7278,16 +7314,18 @@ async fn orion_system_role_create(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "iam",
-        "create_role",
-        serde_json::json!({
-            "id": id,
-            "name": name,
-            "code": code,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "iam",
+            operation: "create_role",
+            params: serde_json::json!({
+                "id": id,
+                "name": name,
+                "code": code,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -7320,15 +7358,17 @@ async fn orion_system_role_update(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "iam",
-        "update_role",
-        serde_json::json!({
-            "id": id,
-            "name": payload.name,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "iam",
+            operation: "update_role",
+            params: serde_json::json!({
+                "id": id,
+                "name": payload.name,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
@@ -7355,15 +7395,17 @@ async fn orion_system_role_update_status(
     audit_service::log_operator_action(
         &state.db,
         &headers,
-        actor_user_id,
-        "iam",
-        "update_role_status",
-        serde_json::json!({
-            "id": id,
-            "status": status,
-        }),
-        1,
-        None,
+        audit_service::OperatorLogParams {
+            user_id: actor_user_id,
+            module: "iam",
+            operation: "update_role_status",
+            params: serde_json::json!({
+                "id": id,
+                "status": status,
+            }),
+            result: 1,
+            error_message: None,
+        },
     )
     .await?;
 
