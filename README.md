@@ -149,3 +149,5 @@ First visible feature set:
 - [ ] JIT (Just-In-Time) privilege elevation workflow (request/approve/auto-expire)
 - [ ] Risk-based command control for high-risk production actions
 - [ ] Session replay and richer audit visualization
+- [ ] Vail v2.0: 渐进移除 Orion 兼容路由，落地原生 Vail API (Version 2.0 再迭代)
+- [ ] 采用兼容期双轨（Orion compatibility + Vail native）后逐步下线旧路径 (Version 2.0 再迭代)

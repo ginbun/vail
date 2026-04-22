@@ -4,6 +4,7 @@ pub mod compat_service;
 pub mod dict_key_service;
 pub mod dict_value_service;
 pub mod host_service;
+pub mod iam_service;
 pub mod infra_statistics_service;
 pub mod menu_service;
 pub mod operator_log_service;

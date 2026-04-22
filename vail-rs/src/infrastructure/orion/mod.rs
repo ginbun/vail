@@ -3,6 +3,7 @@ pub mod compat_repository;
 pub mod dict_key_repository;
 pub mod dict_value_repository;
 pub mod host_repository;
+pub mod iam_repository;
 pub mod infra_statistics_repository;
 pub mod menu_repository;
 pub mod operator_log_repository;

@@ -6,6 +6,8 @@ use crate::domain::orion::compat::OrionCompatModule;
 use crate::error::{AppError, AppResult};
 use crate::infrastructure::orion::compat_repository;
 
+const USER_TIPS_CACHE_EXPIRE_DAYS: i64 = 90;
+
 #[derive(Debug, Clone, Copy)]
 pub struct PageQuery {
     pub page: i64,
@@ -34,6 +36,10 @@ fn sanitize_page(page: i64, limit: i64) -> (i64, i64) {
 
 fn object_or_default(value: Value) -> Map<String, Value> {
     value.as_object().cloned().unwrap_or_default()
+}
+
+fn user_tips_cache_key(user_id: i64) -> String {
+    format!("user:tips:{user_id}")
 }
 
 pub async fn list_records(pool: &PgPool, module: OrionCompatModule) -> AppResult<Vec<Value>> {
@@ -176,4 +182,40 @@ pub async fn get_config_map(pool: &PgPool, key: &str) -> AppResult<Map<String, V
 
 pub async fn set_config_map(pool: &PgPool, key: &str, map: &Map<String, Value>) -> AppResult<()> {
     compat_repository::save_cache_json(pool, key, &Value::Object(map.clone())).await
+}
+
+pub async fn get_user_tipped_keys(pool: &PgPool, user_id: i64) -> AppResult<Vec<String>> {
+    let key = user_tips_cache_key(user_id);
+    let raw = compat_repository::load_cache_value(pool, &key).await?;
+    Ok(raw
+        .and_then(|v| serde_json::from_str::<Vec<String>>(&v).ok())
+        .unwrap_or_default())
+}
+
+pub async fn save_user_tipped_keys(
+    pool: &PgPool,
+    user_id: i64,
+    tipped_keys: &[String],
+) -> AppResult<()> {
+    let key = user_tips_cache_key(user_id);
+    let value = serde_json::to_string(tipped_keys)
+        .map_err(|e| AppError::Internal(format!("serialize tipped keys failed: {e}")))?;
+
+    compat_repository::save_cache_value_with_expire_days(
+        pool,
+        &key,
+        &value,
+        USER_TIPS_CACHE_EXPIRE_DAYS,
+    )
+    .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::user_tips_cache_key;
+
+    #[test]
+    fn user_tips_cache_key_uses_legacy_format() {
+        assert_eq!(user_tips_cache_key(42), "user:tips:42");
+    }
 }

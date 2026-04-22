@@ -19,6 +19,13 @@ pub struct OrionHostIdentityAggregate {
     pub update_time_ms: i64,
 }
 
+#[derive(Debug, Clone)]
+pub struct OrionHostGroupAggregate {
+    pub id: i64,
+    pub parent_id: i64,
+    pub name: String,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum OrionGrantScope {
     Role(i64),
