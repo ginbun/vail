@@ -27,3 +27,4 @@ target
 /vail-rs/.local/
 .env*
 !.env.example
+/vail-rs/web-dist/
