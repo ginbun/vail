@@ -3,7 +3,7 @@ use aes_gcm::{
     Aes256Gcm,
 };
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use rand::RngCore;
+use rand::random;
 use sha2::{Digest, Sha256};
 
 use crate::error::AppError;
@@ -20,8 +20,7 @@ pub fn encrypt_secret(plaintext: &str, key_material: &str) -> Result<String, App
     let cipher = Aes256Gcm::new_from_slice(&key_hash)
         .map_err(|_| AppError::Internal("failed to initialize encryption cipher".to_string()))?;
 
-    let mut nonce_bytes = [0u8; 12];
-    rand::rngs::OsRng.fill_bytes(&mut nonce_bytes);
+    let nonce_bytes: [u8; 12] = random();
     let nonce = aes_gcm::Nonce::from_slice(&nonce_bytes);
 
     let encrypted = cipher

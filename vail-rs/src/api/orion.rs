@@ -9,6 +9,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use rsa::{
     pkcs1::DecodeRsaPrivateKey,
     pkcs8::{DecodePrivateKey, EncodePrivateKey, EncodePublicKey, LineEnding},
+    rand_core::OsRng,
     Oaep, RsaPrivateKey, RsaPublicKey,
 };
 use serde::{Deserialize, Serialize};
@@ -4604,7 +4605,7 @@ async fn orion_infra_dispatch(
             serde_json::json!({"version": env!("CARGO_PKG_VERSION")}),
         )),
         (OrionCompatModule::SystemSetting, "generator-keypair") if method == Method::GET => {
-            let mut rng = rand::rngs::OsRng;
+            let mut rng = OsRng;
             let private_key = RsaPrivateKey::new(&mut rng, 2048)
                 .map_err(|e| AppError::Internal(format!("failed to generate rsa keypair: {e}")))?;
             let public_key = RsaPublicKey::from(&private_key);

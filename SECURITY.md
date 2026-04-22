@@ -2,20 +2,37 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+Vail is currently in early-stage development. Security fixes are provided for
+the latest code on `main` and the latest published release tag.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| Version | Supported |
+| ------- | --------- |
+| `main` (latest) | :white_check_mark: |
+| Latest release tag (`v*`) | :white_check_mark: |
+| Older release tags | :x: |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Please do not open public issues for security vulnerabilities.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Use one of the following private channels:
+
+1. GitHub Security Advisories (preferred):
+   `https://github.com/ginbun/vail/security/advisories/new`
+2. If advisories are not available, contact maintainers through a private
+   repository channel and include "Security" in the title.
+
+Include as much detail as possible:
+
+- Affected component(s), version/tag, and environment
+- Reproduction steps or proof of concept
+- Impact assessment (confidentiality/integrity/availability)
+- Suggested mitigation (if known)
+
+### Response Expectations
+
+- Initial triage response: within 3 business days
+- Status updates: at least every 7 days while under investigation
+- Remediation target: critical/high severity issues are prioritized first
+
+When a report is confirmed, we will coordinate a fix and responsible disclosure.
