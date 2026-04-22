@@ -529,39 +529,6 @@ async fn complete_upload(
     }))))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{join_remote_path, normalize_relative_path, normalize_remote_base_path};
-
-    #[test]
-    fn normalize_remote_base_path_rejects_relative() {
-        assert!(normalize_remote_base_path("tmp/files").is_err());
-    }
-
-    #[test]
-    fn normalize_remote_base_path_compacts_segments() {
-        let out = normalize_remote_base_path("/var//log/./app").expect("normalize success");
-        assert_eq!(out, "/var/log/app");
-    }
-
-    #[test]
-    fn normalize_relative_path_rejects_parent_traversal() {
-        assert!(normalize_relative_path("../secret.txt").is_err());
-    }
-
-    #[test]
-    fn normalize_relative_path_keeps_nested_path() {
-        let out = normalize_relative_path("dir/sub/file.txt").expect("normalize success");
-        assert_eq!(out, "dir/sub/file.txt");
-    }
-
-    #[test]
-    fn join_remote_path_handles_root_base() {
-        let out = join_remote_path("/", "dir/file.txt");
-        assert_eq!(out, "/dir/file.txt");
-    }
-}
-
 async fn list_upload_tasks(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -610,4 +577,37 @@ async fn get_upload_task(
     .ok_or_else(|| crate::error::AppError::NotFound("Task not found".to_string()))?;
 
     Ok(axum::Json(ApiResponse::success(task)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{join_remote_path, normalize_relative_path, normalize_remote_base_path};
+
+    #[test]
+    fn normalize_remote_base_path_reject_relative() {
+        assert!(normalize_remote_base_path("tmp/files").is_err());
+    }
+
+    #[test]
+    fn normalize_remote_base_path_compacts_segments() {
+        let out = normalize_remote_base_path("/var//log/./app").expect("normalize success");
+        assert_eq!(out, "/var/log/app");
+    }
+
+    #[test]
+    fn normalize_relative_path_rejects_parent_traversal() {
+        assert!(normalize_relative_path("../secret.txt").is_err());
+    }
+
+    #[test]
+    fn normalize_relative_path_keeps_nested_path() {
+        let out = normalize_relative_path("dir/sub/file.txt").expect("normalize success");
+        assert_eq!(out, "dir/sub/file.txt");
+    }
+
+    #[test]
+    fn join_remote_path_handles_root_base() {
+        let out = join_remote_path("/", "dir/file.txt");
+        assert_eq!(out, "/dir/file.txt");
+    }
 }

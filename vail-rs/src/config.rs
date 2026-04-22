@@ -287,11 +287,16 @@ pub fn load_config() -> Config {
     let path = PathBuf::from(&config_path);
 
     let mut config = if path.exists() {
-        let content = std::fs::read_to_string(&path).unwrap();
-        toml::from_str(&content).unwrap_or_else(|e| {
-            tracing::warn!("Failed to parse config, using defaults: {}", e);
-            Config::default()
-        })
+        match std::fs::read_to_string(&path) {
+            Ok(content) => toml::from_str(&content).unwrap_or_else(|e| {
+                tracing::warn!("Failed to parse config, using defaults: {}", e);
+                Config::default()
+            }),
+            Err(e) => {
+                tracing::warn!("Failed to read config file '{}': {}", config_path, e);
+                Config::default()
+            }
+        }
     } else {
         tracing::warn!("Config file not found, using defaults");
         Config::default()

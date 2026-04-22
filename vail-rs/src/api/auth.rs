@@ -49,7 +49,7 @@ pub fn create_token(
     session_id: &str,
     jwt: &crate::config::JwtConfig,
     expiration: u64,
-) -> String {
+) -> AppResult<String> {
     let now = Utc::now();
     let exp = now + Duration::seconds(expiration as i64);
 
@@ -65,9 +65,9 @@ pub fn create_token(
     header.typ = Some("JWT".to_string());
     let key = jwt
         .signing_key()
-        .unwrap_or_else(|e| panic!("invalid jwt signing key: {e}"));
+        .map_err(|e| AppError::Internal(format!("invalid jwt signing key: {e}")))?;
 
-    encode(&header, &claims, &key).unwrap()
+    encode(&header, &claims, &key).map_err(|e| AppError::Internal(e.to_string()))
 }
 
 fn verify_token(token: &str, jwt: &crate::config::JwtConfig) -> AppResult<Claims> {
@@ -135,7 +135,7 @@ async fn issue_token_pair(
         &session_id,
         &state.config.jwt,
         state.config.jwt.expiration,
-    );
+    )?;
     let refresh_token = generate_refresh_token();
     let refresh_hash = hash_refresh_token(&refresh_token);
 

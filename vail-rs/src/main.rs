@@ -59,14 +59,31 @@ async fn main() {
         .layer(cors)
         .with_state(state);
 
-    let addr = SocketAddr::new(config.server.host.parse().unwrap(), config.server.port);
+    let addr_ip = match config.server.host.parse() {
+        Ok(ip) => ip,
+        Err(e) => {
+            tracing::error!("Failed to parse server host '{}': {}", config.server.host, e);
+            std::process::exit(1);
+        }
+    };
+    let addr = SocketAddr::new(addr_ip, config.server.port);
     tracing::info!("Listening on {}", addr);
 
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(
+    let listener = match tokio::net::TcpListener::bind(addr).await {
+        Ok(l) => l,
+        Err(e) => {
+            tracing::error!("Failed to bind to {}: {}", addr, e);
+            std::process::exit(1);
+        }
+    };
+
+    if let Err(e) = axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
     .await
-    .unwrap();
+    {
+        tracing::error!("Server error: {}", e);
+        std::process::exit(1);
+    }
 }

@@ -1317,7 +1317,7 @@ async fn orion_login(
         &session_id,
         &state.config.jwt,
         state.config.jwt.expiration,
-    );
+    )?;
     let mut token_hasher = Sha256::new();
     token_hasher.update(format!("orion:{}", token).as_bytes());
     let token_hash = format!("{:x}", token_hasher.finalize());
