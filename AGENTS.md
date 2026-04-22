@@ -20,6 +20,22 @@
 - Security Gate Agent signs off every feature PR before merge.
 - Prefer PostgreSQL 18 native partitioned tables for large time-series and audit data to simplify operations and reduce application-side complexity.
 
+## Engineering Paradigms
+
+### DDD (Domain-Driven Design)
+
+- `vail-rs/` should follow layered DDD boundaries where practical: `domain` (entities/value objects/domain services), `application` (use cases), `infrastructure` (DB/external adapters), and `interfaces` (HTTP/API handlers).
+- Keep domain logic independent from transport and persistence details; framework-specific logic stays outside domain types.
+- Prefer explicit bounded-context modules for bastion-critical areas (authn/authz, session proxy, audit, transfer) and avoid cross-context leakage.
+- Repository interfaces should be defined close to domain/application needs, with concrete implementations in infrastructure.
+
+### TDD (Test-Driven Development)
+
+- For new features and bug fixes, default workflow is Red -> Green -> Refactor.
+- Start from executable tests at the nearest useful level (unit first, then integration for boundaries like DB/proxy/auth flows).
+- High-risk modules (auth, crypto, session proxy, file transfer) must include security-focused tests before merge.
+- Refactors are acceptable only after behavior is covered by tests and all checks pass.
+
 ## Bastion Project Security Rules (Mandatory)
 
 ### 1) Identity and Access Control

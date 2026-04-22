@@ -1,4 +1,11 @@
 pub mod asset;
 pub mod compat;
+pub mod dict_key;
+pub mod dict_value;
 pub mod host;
+pub mod infra_statistics;
+pub mod menu;
+pub mod operator_log;
+pub mod role;
+pub mod system_message;
 pub mod system_user;

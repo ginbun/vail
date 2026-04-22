@@ -1,5 +1,12 @@
 pub mod asset_service;
 pub mod audit_service;
 pub mod compat_service;
+pub mod dict_key_service;
+pub mod dict_value_service;
 pub mod host_service;
+pub mod infra_statistics_service;
+pub mod menu_service;
+pub mod operator_log_service;
+pub mod role_service;
+pub mod system_message_service;
 pub mod system_user_service;

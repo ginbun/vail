@@ -5,8 +5,28 @@ use crate::domain::orion::asset::{
 };
 use crate::error::{AppError, AppResult};
 use crate::infrastructure::orion::asset_repository::{
-    self, HostIdentityPatch, OrionHostIdentityQueryFilters, OrionHostKeyQueryFilters,
+    self, HostIdentityPatch, OrionHostIdentityQueryFilters as RepositoryHostIdentityQueryFilters,
+    OrionHostKeyQueryFilters as RepositoryHostKeyQueryFilters,
 };
+
+#[derive(Debug, Default, Clone)]
+pub struct OrionHostKeyQueryFilters {
+    pub id: Option<i64>,
+    pub search_value: Option<String>,
+    pub name: Option<String>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct OrionHostIdentityQueryFilters {
+    pub id: Option<i64>,
+    pub search_value: Option<String>,
+    pub name: Option<String>,
+    pub identity_type: Option<String>,
+    pub username: Option<String>,
+    pub key_id: Option<i64>,
+    pub description: Option<String>,
+}
 
 #[derive(Debug)]
 pub struct OrionHostKeyCreateInput {
@@ -134,8 +154,9 @@ pub async fn query_host_keys(
     offset: i64,
     limit: i64,
 ) -> AppResult<(i64, Vec<OrionHostKeyAggregate>)> {
-    let total = asset_repository::count_host_keys(pool, &filters).await?;
-    let rows = asset_repository::query_host_keys(pool, &filters, offset, limit).await?;
+    let repository_filters = to_repository_host_key_filters(&filters);
+    let total = asset_repository::count_host_keys(pool, &repository_filters).await?;
+    let rows = asset_repository::query_host_keys(pool, &repository_filters, offset, limit).await?;
     Ok((total, rows))
 }
 
@@ -213,8 +234,10 @@ pub async fn query_host_identities(
     offset: i64,
     limit: i64,
 ) -> AppResult<(i64, Vec<OrionHostIdentityAggregate>)> {
-    let total = asset_repository::count_host_identities(pool, &filters).await?;
-    let rows = asset_repository::query_host_identities(pool, &filters, offset, limit).await?;
+    let repository_filters = to_repository_host_identity_filters(&filters);
+    let total = asset_repository::count_host_identities(pool, &repository_filters).await?;
+    let rows =
+        asset_repository::query_host_identities(pool, &repository_filters, offset, limit).await?;
     Ok((total, rows))
 }
 
@@ -250,4 +273,75 @@ pub async fn list_asset_grants(
     resource: &str,
 ) -> AppResult<Vec<i64>> {
     asset_repository::list_asset_grants(pool, scope, resource).await
+}
+
+fn to_repository_host_key_filters(
+    filters: &OrionHostKeyQueryFilters,
+) -> RepositoryHostKeyQueryFilters {
+    RepositoryHostKeyQueryFilters {
+        id: filters.id,
+        search_value: filters.search_value.clone(),
+        name: filters.name.clone(),
+        description: filters.description.clone(),
+    }
+}
+
+fn to_repository_host_identity_filters(
+    filters: &OrionHostIdentityQueryFilters,
+) -> RepositoryHostIdentityQueryFilters {
+    RepositoryHostIdentityQueryFilters {
+        id: filters.id,
+        search_value: filters.search_value.clone(),
+        name: filters.name.clone(),
+        identity_type: filters.identity_type.clone(),
+        username: filters.username.clone(),
+        key_id: filters.key_id,
+        description: filters.description.clone(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        to_repository_host_identity_filters, to_repository_host_key_filters,
+        OrionHostIdentityQueryFilters, OrionHostKeyQueryFilters,
+    };
+
+    #[test]
+    fn converts_host_key_query_filters_to_repository_type() {
+        let filters = OrionHostKeyQueryFilters {
+            id: Some(9),
+            search_value: Some("rsa".to_string()),
+            name: Some("deploy".to_string()),
+            description: Some("ci".to_string()),
+        };
+
+        let mapped = to_repository_host_key_filters(&filters);
+        assert_eq!(mapped.id, Some(9));
+        assert_eq!(mapped.search_value.as_deref(), Some("rsa"));
+        assert_eq!(mapped.name.as_deref(), Some("deploy"));
+        assert_eq!(mapped.description.as_deref(), Some("ci"));
+    }
+
+    #[test]
+    fn converts_host_identity_query_filters_to_repository_type() {
+        let filters = OrionHostIdentityQueryFilters {
+            id: Some(11),
+            search_value: Some("db".to_string()),
+            name: Some("jump".to_string()),
+            identity_type: Some("PASSWORD".to_string()),
+            username: Some("root".to_string()),
+            key_id: Some(3),
+            description: Some("primary".to_string()),
+        };
+
+        let mapped = to_repository_host_identity_filters(&filters);
+        assert_eq!(mapped.id, Some(11));
+        assert_eq!(mapped.search_value.as_deref(), Some("db"));
+        assert_eq!(mapped.name.as_deref(), Some("jump"));
+        assert_eq!(mapped.identity_type.as_deref(), Some("PASSWORD"));
+        assert_eq!(mapped.username.as_deref(), Some("root"));
+        assert_eq!(mapped.key_id, Some(3));
+        assert_eq!(mapped.description.as_deref(), Some("primary"));
+    }
 }

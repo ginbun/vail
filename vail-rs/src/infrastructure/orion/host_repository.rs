@@ -1,6 +1,18 @@
 use sqlx::PgPool;
 
-use crate::domain::orion::host::{OrionHostAggregate, OrionHostRow};
+use crate::domain::orion::host::OrionHostAggregate;
+
+#[derive(sqlx::FromRow)]
+struct OrionHostRow {
+    id: i64,
+    name: String,
+    hostname: String,
+    description: Option<String>,
+    status: i16,
+    create_time_ms: i64,
+    update_time_ms: i64,
+    group_ids: Option<Vec<i64>>,
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct OrionHostQueryFilters {
@@ -21,9 +33,9 @@ pub async fn list_hosts(pool: &PgPool) -> Result<Vec<OrionHostAggregate>, sqlx::
             h.hostname,
             h.description,
             h.status,
-            EXTRACT(EPOCH FROM h.create_time)::bigint * 1000,
-            EXTRACT(EPOCH FROM h.update_time)::bigint * 1000,
-            ARRAY_REMOVE(ARRAY_AGG(hgr.group_id), NULL)
+            EXTRACT(EPOCH FROM h.create_time)::bigint * 1000 AS create_time_ms,
+            EXTRACT(EPOCH FROM h.update_time)::bigint * 1000 AS update_time_ms,
+            ARRAY_REMOVE(ARRAY_AGG(hgr.group_id), NULL) AS group_ids
          FROM host h
          LEFT JOIN host_group_rel hgr ON hgr.host_id = h.id
          WHERE h.deleted = 0
@@ -47,9 +59,9 @@ pub async fn get_host_by_id(
             h.hostname,
             h.description,
             h.status,
-            EXTRACT(EPOCH FROM h.create_time)::bigint * 1000,
-            EXTRACT(EPOCH FROM h.update_time)::bigint * 1000,
-            ARRAY_REMOVE(ARRAY_AGG(hgr.group_id), NULL)
+            EXTRACT(EPOCH FROM h.create_time)::bigint * 1000 AS create_time_ms,
+            EXTRACT(EPOCH FROM h.update_time)::bigint * 1000 AS update_time_ms,
+            ARRAY_REMOVE(ARRAY_AGG(hgr.group_id), NULL) AS group_ids
          FROM host h
          LEFT JOIN host_group_rel hgr ON hgr.host_id = h.id
          WHERE h.deleted = 0 AND h.id = $1
@@ -74,9 +86,9 @@ pub async fn query_hosts(
             h.hostname,
             h.description,
             h.status,
-            EXTRACT(EPOCH FROM h.create_time)::bigint * 1000,
-            EXTRACT(EPOCH FROM h.update_time)::bigint * 1000,
-            ARRAY_REMOVE(ARRAY_AGG(hgr.group_id), NULL)
+            EXTRACT(EPOCH FROM h.create_time)::bigint * 1000 AS create_time_ms,
+            EXTRACT(EPOCH FROM h.update_time)::bigint * 1000 AS update_time_ms,
+            ARRAY_REMOVE(ARRAY_AGG(hgr.group_id), NULL) AS group_ids
          FROM host h
          LEFT JOIN host_group_rel hgr ON hgr.host_id = h.id
          WHERE h.deleted = 0
@@ -133,4 +145,19 @@ pub async fn count_hosts(
     .await?;
 
     Ok(total)
+}
+
+impl From<OrionHostRow> for OrionHostAggregate {
+    fn from(value: OrionHostRow) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            hostname: value.hostname,
+            description: value.description,
+            status: value.status,
+            create_time_ms: value.create_time_ms,
+            update_time_ms: value.update_time_ms,
+            group_ids: value.group_ids.unwrap_or_default(),
+        }
+    }
 }

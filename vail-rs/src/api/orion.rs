@@ -24,20 +24,29 @@ use std::net::SocketAddr;
 use crate::{
     api::{auth, guard, AppState},
     application::orion::{
-        asset_service, audit_service, compat_service, host_service, system_user_service,
+        asset_service, audit_service, compat_service, dict_key_service, dict_value_service,
+        host_service, infra_statistics_service, menu_service, operator_log_service, role_service,
+        system_message_service, system_user_service,
     },
     domain::orion::{
         asset::{OrionHostIdentityAggregate, OrionHostKeyAggregate},
         compat::OrionCompatModule,
+        dict_key::{OrionDictKeyAggregate, OrionDictKeyQueryFilters},
+        dict_value::{
+            OrionDictValueAggregate, OrionDictValueOptionAggregate, OrionDictValueQueryFilters,
+        },
         host::OrionHostAggregate,
+        infra_statistics::{OrionInfraWorkplaceAggregate, OrionLoginHistoryAggregate},
+        menu::OrionMenuAggregate,
+        operator_log::OrionOperatorLogAggregate,
+        role::OrionRoleAggregate,
+        system_message::{
+            OrionSystemMessageAggregate, OrionSystemMessageCountFilters,
+            OrionSystemMessageListFilters,
+        },
         system_user::OrionSystemUserAggregate,
     },
     error::{AppError, AppResult},
-    infrastructure::orion::{
-        asset_repository::{OrionHostIdentityQueryFilters, OrionHostKeyQueryFilters},
-        host_repository::OrionHostQueryFilters,
-        system_user_repository::OrionSystemUserQueryFilters,
-    },
     security,
 };
 
@@ -1604,7 +1613,7 @@ async fn orion_query_hosts(
     let status = sanitize_search(payload.status);
     let (page, limit, offset) = normalize_pagination(payload.page, payload.limit);
 
-    let filters = OrionHostQueryFilters {
+    let filters = host_service::OrionHostQueryFilters {
         id: payload.id,
         name,
         address,
@@ -1641,7 +1650,7 @@ async fn orion_count_hosts(
 
     let total = host_service::count_hosts(
         &state.db,
-        OrionHostQueryFilters {
+        host_service::OrionHostQueryFilters {
             id: payload.id,
             name,
             address,
@@ -2868,7 +2877,7 @@ async fn orion_host_key_query(
     let (page, limit, offset) = normalize_pagination(payload.page, payload.limit);
     let (total, rows) = asset_service::query_host_keys(
         &state.db,
-        OrionHostKeyQueryFilters {
+        asset_service::OrionHostKeyQueryFilters {
             id: payload.id,
             search_value: sanitize_search(payload.search_value),
             name: sanitize_search(payload.name),
@@ -3086,7 +3095,7 @@ async fn orion_host_identity_query(
 
     let (total, rows) = asset_service::query_host_identities(
         &state.db,
-        OrionHostIdentityQueryFilters {
+        asset_service::OrionHostIdentityQueryFilters {
             id: payload.id,
             search_value: sanitize_search(payload.search_value),
             name: sanitize_search(payload.name),
@@ -5306,17 +5315,16 @@ async fn orion_dict_key_create(
     let extra_schema = payload.extra_schema.unwrap_or_default();
     let (_, username, _, _, _) = current_user_tuple(&state, &headers).await?;
 
-    let id = sqlx::query_scalar::<_, i64>(
-        "INSERT INTO sys_dict_key (key_name, value_type, extra_schema, description, creator, updater, create_time, update_time)
-         VALUES ($1, $2, $3, $4, $5, $5, NOW(), NOW())
-         RETURNING id",
+    let id = dict_key_service::create_dict_key(
+        &state.db,
+        dict_key_service::OrionDictKeyCreateInput {
+            key_name,
+            value_type,
+            extra_schema,
+            description,
+            username,
+        },
     )
-    .bind(key_name)
-    .bind(value_type)
-    .bind(extra_schema)
-    .bind(description)
-    .bind(username)
-    .fetch_one(&state.db)
     .await?;
 
     Ok(OrionResponse::ok(id))
@@ -5330,25 +5338,18 @@ async fn orion_dict_key_update(
     guard::require_permission(&state, &headers, "infra:dict-key:update").await?;
     let id = parse_required_id(payload.id, "id")?;
     let (_, username, _, _, _) = current_user_tuple(&state, &headers).await?;
-    let rows = sqlx::query(
-        "UPDATE sys_dict_key SET
-            key_name = COALESCE(NULLIF($1, ''), key_name),
-            value_type = COALESCE(NULLIF($2, ''), value_type),
-            extra_schema = COALESCE($3, extra_schema),
-            description = COALESCE($4, description),
-            updater = $5,
-            update_time = NOW()
-         WHERE id = $6",
+    let rows = dict_key_service::update_dict_key(
+        &state.db,
+        dict_key_service::OrionDictKeyUpdateInput {
+            id,
+            key_name: payload.key_name.map(|v| v.trim().to_string()),
+            value_type: payload.value_type.map(|v| v.trim().to_string()),
+            extra_schema: payload.extra_schema,
+            description: payload.description,
+            username,
+        },
     )
-    .bind(payload.key_name.map(|v| v.trim().to_string()))
-    .bind(payload.value_type.map(|v| v.trim().to_string()))
-    .bind(payload.extra_schema)
-    .bind(payload.description)
-    .bind(username)
-    .bind(id)
-    .execute(&state.db)
-    .await?
-    .rows_affected();
+    .await?;
 
     if rows == 0 {
         return Err(AppError::NotFound("Dict key not found".to_string()));
@@ -5362,49 +5363,8 @@ async fn orion_dict_key_list(
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "infra:dict-key:query").await?;
-    let rows = sqlx::query_as::<
-        _,
-        (
-            i64,
-            String,
-            String,
-            Option<String>,
-            Option<String>,
-            i64,
-            i64,
-            Option<String>,
-            Option<String>,
-        ),
-    >(
-        "SELECT id,
-                key_name,
-                value_type,
-                extra_schema,
-                description,
-                EXTRACT(EPOCH FROM create_time)::bigint * 1000,
-                EXTRACT(EPOCH FROM update_time)::bigint * 1000,
-                creator,
-                updater
-         FROM sys_dict_key
-         ORDER BY id DESC",
-    )
-    .fetch_all(&state.db)
-    .await?;
-
-    let data = rows
-        .into_iter()
-        .map(|r| OrionDictKeyItem {
-            id: r.0,
-            key_name: r.1,
-            value_type: r.2,
-            extra_schema: r.3.unwrap_or_default(),
-            description: r.4.unwrap_or_default(),
-            create_time: r.5,
-            update_time: r.6,
-            creator: r.7.unwrap_or_else(|| "system".to_string()),
-            updater: r.8.unwrap_or_else(|| "system".to_string()),
-        })
-        .collect::<Vec<_>>();
+    let rows = dict_key_service::list_dict_keys(&state.db).await?;
+    let data = rows.into_iter().map(map_dict_key_row).collect::<Vec<_>>();
 
     Ok(OrionResponse::ok(data))
 }
@@ -5420,62 +5380,18 @@ async fn orion_dict_key_query(
     let key_name = sanitize_search(payload.key_name);
     let description = sanitize_search(payload.description);
 
-    let rows = sqlx::query_as::<_, (i64, String, String, Option<String>, Option<String>, i64, i64, Option<String>, Option<String>)>(
-        "SELECT id,
-                key_name,
-                value_type,
-                extra_schema,
-                description,
-                EXTRACT(EPOCH FROM create_time)::bigint * 1000,
-                EXTRACT(EPOCH FROM update_time)::bigint * 1000,
-                creator,
-                updater
-         FROM sys_dict_key
-         WHERE ($1::bigint IS NULL OR id = $1)
-           AND ($2::text IS NULL OR key_name ILIKE '%' || $2 || '%')
-           AND ($3::text IS NULL OR description ILIKE '%' || $3 || '%')
-           AND ($4::text IS NULL OR key_name ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%')
-         ORDER BY id DESC
-         LIMIT $5 OFFSET $6",
-    )
-    .bind(payload.id)
-    .bind(key_name.clone())
-    .bind(description.clone())
-    .bind(search_value.clone())
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&state.db)
-    .await?;
+    let filters = OrionDictKeyQueryFilters {
+        id: payload.id,
+        key_name,
+        description,
+        search_value,
+        limit,
+        offset,
+    };
 
-    let total = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(1)
-         FROM sys_dict_key
-         WHERE ($1::bigint IS NULL OR id = $1)
-           AND ($2::text IS NULL OR key_name ILIKE '%' || $2 || '%')
-           AND ($3::text IS NULL OR description ILIKE '%' || $3 || '%')
-           AND ($4::text IS NULL OR key_name ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%')",
-    )
-    .bind(payload.id)
-    .bind(key_name)
-    .bind(description)
-    .bind(search_value)
-    .fetch_one(&state.db)
-    .await?;
-
-    let items = rows
-        .into_iter()
-        .map(|r| OrionDictKeyItem {
-            id: r.0,
-            key_name: r.1,
-            value_type: r.2,
-            extra_schema: r.3.unwrap_or_default(),
-            description: r.4.unwrap_or_default(),
-            create_time: r.5,
-            update_time: r.6,
-            creator: r.7.unwrap_or_else(|| "system".to_string()),
-            updater: r.8.unwrap_or_else(|| "system".to_string()),
-        })
-        .collect::<Vec<_>>();
+    let rows = dict_key_service::query_dict_keys(&state.db, filters.clone()).await?;
+    let total = dict_key_service::count_dict_keys(&state.db, filters).await?;
+    let items = rows.into_iter().map(map_dict_key_row).collect::<Vec<_>>();
 
     Ok(OrionResponse::ok(OrionDataGrid {
         page,
@@ -5500,10 +5416,7 @@ async fn orion_dict_key_delete(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "infra:dict-key:delete").await?;
     let id = parse_required_id(query.id, "id")?;
-    sqlx::query("DELETE FROM sys_dict_key WHERE id = $1")
-        .bind(id)
-        .execute(&state.db)
-        .await?;
+    dict_key_service::delete_dict_key(&state.db, id).await?;
     Ok(OrionResponse::ok(true))
 }
 
@@ -5515,10 +5428,7 @@ async fn orion_dict_key_batch_delete(
     guard::require_permission(&state, &headers, "infra:dict-key:delete").await?;
     let ids = parse_csv_ids(query.id_list);
     if !ids.is_empty() {
-        sqlx::query("DELETE FROM sys_dict_key WHERE id = ANY($1::bigint[])")
-            .bind(ids)
-            .execute(&state.db)
-            .await?;
+        dict_key_service::batch_delete_dict_keys(&state.db, ids).await?;
     }
     Ok(OrionResponse::ok(true))
 }
@@ -5540,29 +5450,18 @@ async fn orion_dict_value_create(
     let sort = payload.sort.unwrap_or(0);
     let (_, username, _, _, _) = current_user_tuple(&state, &headers).await?;
 
-    let id = sqlx::query_scalar::<_, i64>(
-        "INSERT INTO sys_dict_value (key_id, name, value, label, extra, sort, creator, updater, create_time, update_time, deleted)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $7, NOW(), NOW(), 0)
-         RETURNING id",
+    let id = dict_value_service::create_dict_value(
+        &state.db,
+        dict_value_service::OrionDictValueCreateInput {
+            key_id,
+            name,
+            value,
+            label,
+            extra,
+            sort,
+            username,
+        },
     )
-    .bind(key_id)
-    .bind(name)
-    .bind(&value)
-    .bind(label)
-    .bind(extra)
-    .bind(sort)
-    .bind(username)
-    .fetch_one(&state.db)
-    .await?;
-
-    sqlx::query(
-        "INSERT INTO sys_dict_value_history (rel_id, before_value, after_value, create_time)
-         VALUES ($1, $2, $3, NOW())",
-    )
-    .bind(id)
-    .bind("")
-    .bind(value)
-    .execute(&state.db)
     .await?;
 
     Ok(OrionResponse::ok(id))
@@ -5575,60 +5474,25 @@ async fn orion_dict_value_update(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "infra:dict-value:update").await?;
     let id = parse_required_id(payload.id, "id")?;
-    let before_value = sqlx::query_scalar::<_, String>(
-        "SELECT value FROM sys_dict_value WHERE id = $1 AND deleted = 0",
-    )
-    .bind(id)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or_else(|| AppError::NotFound("Dict value not found".to_string()))?;
-
     let (_, username, _, _, _) = current_user_tuple(&state, &headers).await?;
-    let rows = sqlx::query(
-        "UPDATE sys_dict_value SET
-            key_id = COALESCE($1, key_id),
-            name = COALESCE($2, name),
-            value = COALESCE($3, value),
-            label = COALESCE($4, label),
-            extra = COALESCE($5, extra),
-            sort = COALESCE($6, sort),
-            updater = $7,
-            update_time = NOW()
-         WHERE id = $8 AND deleted = 0",
-    )
-    .bind(payload.key_id)
-    .bind(payload.name)
-    .bind(payload.value)
-    .bind(payload.label)
-    .bind(payload.extra)
-    .bind(payload.sort)
-    .bind(username)
-    .bind(id)
-    .execute(&state.db)
-    .await?
-    .rows_affected();
 
-    if rows == 0 {
-        return Err(AppError::NotFound("Dict value not found".to_string()));
-    }
-
-    let after_value = sqlx::query_scalar::<_, String>(
-        "SELECT value FROM sys_dict_value WHERE id = $1 AND deleted = 0",
+    let outcome = dict_value_service::update_dict_value(
+        &state.db,
+        dict_value_service::OrionDictValueUpdateInput {
+            id,
+            key_id: payload.key_id,
+            name: payload.name,
+            value: payload.value,
+            label: payload.label,
+            extra: payload.extra,
+            sort: payload.sort,
+            username,
+        },
     )
-    .bind(id)
-    .fetch_one(&state.db)
     .await?;
 
-    if before_value != after_value {
-        sqlx::query(
-            "INSERT INTO sys_dict_value_history (rel_id, before_value, after_value, create_time)
-             VALUES ($1, $2, $3, NOW())",
-        )
-        .bind(id)
-        .bind(before_value)
-        .bind(after_value)
-        .execute(&state.db)
-        .await?;
+    if outcome == dict_value_service::OrionDictValueUpdateOutcome::NotFound {
+        return Err(AppError::NotFound("Dict value not found".to_string()));
     }
 
     Ok(OrionResponse::ok(true))
@@ -5643,40 +5507,21 @@ async fn orion_dict_value_rollback(
     let id = parse_required_id(payload.id, "id")?;
     let history_id = parse_required_id(payload.value_id, "valueId")?;
 
-    let rollback_to = sqlx::query_scalar::<_, String>(
-        "SELECT before_value FROM sys_dict_value_history WHERE id = $1 AND rel_id = $2",
+    let outcome = dict_value_service::rollback_dict_value(
+        &state.db,
+        dict_value_service::OrionDictValueRollbackInput { id, history_id },
     )
-    .bind(history_id)
-    .bind(id)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or_else(|| AppError::NotFound("History value not found".to_string()))?;
-
-    let current_value = sqlx::query_scalar::<_, String>(
-        "SELECT value FROM sys_dict_value WHERE id = $1 AND deleted = 0",
-    )
-    .bind(id)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or_else(|| AppError::NotFound("Dict value not found".to_string()))?;
-
-    sqlx::query(
-        "UPDATE sys_dict_value SET value = $1, update_time = NOW() WHERE id = $2 AND deleted = 0",
-    )
-    .bind(&rollback_to)
-    .bind(id)
-    .execute(&state.db)
     .await?;
 
-    sqlx::query(
-        "INSERT INTO sys_dict_value_history (rel_id, before_value, after_value, create_time)
-         VALUES ($1, $2, $3, NOW())",
-    )
-    .bind(id)
-    .bind(current_value)
-    .bind(rollback_to)
-    .execute(&state.db)
-    .await?;
+    match outcome {
+        dict_value_service::OrionDictValueRollbackOutcome::RolledBack => {}
+        dict_value_service::OrionDictValueRollbackOutcome::HistoryNotFound => {
+            return Err(AppError::NotFound("History value not found".to_string()));
+        }
+        dict_value_service::OrionDictValueRollbackOutcome::DictValueNotFound => {
+            return Err(AppError::NotFound("Dict value not found".to_string()));
+        }
+    }
 
     Ok(OrionResponse::ok(true))
 }
@@ -5692,21 +5537,9 @@ async fn orion_dict_value_list(
         ));
     }
 
-    let rows = sqlx::query_as::<_, (String, String, String, String, Option<String>)>(
-        "SELECT dk.key_name,
-                dk.value_type,
-                dv.label,
-                dv.value,
-                dv.extra
-         FROM sys_dict_key dk
-         JOIN sys_dict_value dv ON dv.key_id = dk.id AND dv.deleted = 0
-         WHERE dk.key_name = ANY($1::text[])
-         ORDER BY dk.id ASC, dv.sort ASC, dv.id ASC",
-    )
-    .bind(keys.clone())
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default();
+    let rows = dict_value_service::list_dict_values_by_keys(&state.db, &keys)
+        .await
+        .unwrap_or_default();
 
     let mut data = HashMap::<String, Vec<OrionDictOption>>::new();
     for key in &keys {
@@ -5714,20 +5547,20 @@ async fn orion_dict_value_list(
     }
 
     for row in rows {
-        let mut extra = parse_extra_fields(row.4.as_deref().unwrap_or(""));
-        if !extra.contains_key("color") && row.0.ends_with("Status") {
-            if row.3 == "1" {
+        let mut extra = parse_extra_fields(row.extra.as_deref().unwrap_or(""));
+        if !extra.contains_key("color") && row.key_name.ends_with("Status") {
+            if row.value == "1" {
                 extra.insert("color".to_string(), serde_json::json!("green"));
-            } else if row.3 == "0" {
+            } else if row.value == "0" {
                 extra.insert("color".to_string(), serde_json::json!("orangered"));
             }
         }
         let option = OrionDictOption {
-            label: row.2,
-            value: parse_dict_option_value(&row.1, &row.3),
+            label: row.label,
+            value: parse_dict_option_value(&row.value_type, &row.value),
             extra,
         };
-        data.entry(row.0).or_default().push(option);
+        data.entry(row.key_name).or_default().push(option);
     }
 
     for key in &keys {
@@ -5751,92 +5584,20 @@ async fn orion_dict_value_query(
     let label = sanitize_search(payload.label);
     let extra = sanitize_search(payload.extra);
 
-    let rows = sqlx::query_as::<
-        _,
-        (
-            i64,
-            i64,
-            String,
-            Option<String>,
-            String,
-            String,
-            Option<String>,
-            i32,
-            i64,
-            i64,
-            Option<String>,
-            Option<String>,
-        ),
-    >(
-        "SELECT dv.id,
-                dv.key_id,
-                dk.key_name,
-                dk.description,
-                dv.value,
-                dv.label,
-                dv.extra,
-                dv.sort,
-                EXTRACT(EPOCH FROM dv.create_time)::bigint * 1000,
-                EXTRACT(EPOCH FROM dv.update_time)::bigint * 1000,
-                dv.creator,
-                dv.updater
-         FROM sys_dict_value dv
-         JOIN sys_dict_key dk ON dk.id = dv.key_id
-         WHERE dv.deleted = 0
-           AND ($1::bigint IS NULL OR dv.key_id = $1)
-           AND ($2::text IS NULL OR dk.key_name ILIKE '%' || $2 || '%')
-           AND ($3::text IS NULL OR dv.value ILIKE '%' || $3 || '%')
-           AND ($4::text IS NULL OR dv.label ILIKE '%' || $4 || '%')
-           AND ($5::text IS NULL OR dv.extra ILIKE '%' || $5 || '%')
-         ORDER BY dv.id DESC
-         LIMIT $6 OFFSET $7",
-    )
-    .bind(payload.key_id)
-    .bind(key_name.clone())
-    .bind(value.clone())
-    .bind(label.clone())
-    .bind(extra.clone())
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&state.db)
-    .await?;
+    let filters = OrionDictValueQueryFilters {
+        key_id: payload.key_id,
+        key_name,
+        value,
+        label,
+        extra,
+        limit,
+        offset,
+    };
 
-    let total = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(1)
-         FROM sys_dict_value dv
-         JOIN sys_dict_key dk ON dk.id = dv.key_id
-         WHERE dv.deleted = 0
-           AND ($1::bigint IS NULL OR dv.key_id = $1)
-           AND ($2::text IS NULL OR dk.key_name ILIKE '%' || $2 || '%')
-           AND ($3::text IS NULL OR dv.value ILIKE '%' || $3 || '%')
-           AND ($4::text IS NULL OR dv.label ILIKE '%' || $4 || '%')
-           AND ($5::text IS NULL OR dv.extra ILIKE '%' || $5 || '%')",
-    )
-    .bind(payload.key_id)
-    .bind(key_name)
-    .bind(value)
-    .bind(label)
-    .bind(extra)
-    .fetch_one(&state.db)
-    .await?;
+    let rows = dict_value_service::query_dict_values(&state.db, filters.clone()).await?;
+    let total = dict_value_service::count_dict_values(&state.db, filters).await?;
 
-    let items = rows
-        .into_iter()
-        .map(|r| OrionDictValueItem {
-            id: r.0,
-            key_id: r.1,
-            key_name: r.2,
-            key_description: r.3.unwrap_or_default(),
-            value: r.4,
-            label: r.5,
-            extra: r.6.unwrap_or_default(),
-            sort: r.7,
-            create_time: r.8,
-            update_time: r.9,
-            creator: r.10.unwrap_or_else(|| "system".to_string()),
-            updater: r.11.unwrap_or_else(|| "system".to_string()),
-        })
-        .collect::<Vec<_>>();
+    let items = rows.into_iter().map(map_dict_value_row).collect::<Vec<_>>();
 
     Ok(OrionResponse::ok(OrionDataGrid {
         page,
@@ -5853,10 +5614,7 @@ async fn orion_dict_value_delete(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "infra:dict-value:delete").await?;
     let id = parse_required_id(query.id, "id")?;
-    sqlx::query("UPDATE sys_dict_value SET deleted = 1, update_time = NOW() WHERE id = $1")
-        .bind(id)
-        .execute(&state.db)
-        .await?;
+    dict_value_service::soft_delete_dict_value(&state.db, id).await?;
     Ok(OrionResponse::ok(true))
 }
 
@@ -5867,14 +5625,7 @@ async fn orion_dict_value_batch_delete(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "infra:dict-value:delete").await?;
     let ids = parse_csv_ids(query.id_list);
-    if !ids.is_empty() {
-        sqlx::query(
-            "UPDATE sys_dict_value SET deleted = 1, update_time = NOW() WHERE id = ANY($1::bigint[])",
-        )
-        .bind(ids)
-        .execute(&state.db)
-        .await?;
-    }
+    dict_value_service::soft_delete_dict_values(&state.db, ids).await?;
     Ok(OrionResponse::ok(true))
 }
 
@@ -5885,63 +5636,26 @@ async fn orion_system_message_list(
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let (_page, limit, offset) = normalize_pagination(payload.page, payload.limit);
-    let effective_offset = if payload.max_id.is_some() { 0 } else { offset };
+    let effective_offset = system_message_service::effective_offset(offset, payload.max_id);
     let classify = sanitize_search(payload.classify);
     let query_unread = payload.query_unread.unwrap_or(false);
 
-    let rows = sqlx::query_as::<
-        _,
-        (
-            i64,
-            String,
-            String,
-            i16,
-            Option<String>,
-            String,
-            String,
-            Option<String>,
-            i64,
-        ),
-    >(
-        "SELECT id,
-                classify,
-                type,
-                status,
-                rel_key,
-                title,
-                content,
-                content_html,
-                EXTRACT(EPOCH FROM create_time)::bigint * 1000
-         FROM sys_system_message
-         WHERE (user_id IS NULL OR user_id = $1)
-           AND ($2::text IS NULL OR classify = $2)
-           AND ($3::boolean = FALSE OR status = 0)
-           AND ($4::bigint IS NULL OR id < $4)
-         ORDER BY id DESC
-         LIMIT $5 OFFSET $6",
+    let rows = system_message_service::list_system_messages(
+        &state.db,
+        OrionSystemMessageListFilters {
+            user_id,
+            classify,
+            query_unread,
+            max_id: payload.max_id,
+            limit,
+            offset: effective_offset,
+        },
     )
-    .bind(user_id)
-    .bind(classify)
-    .bind(query_unread)
-    .bind(payload.max_id)
-    .bind(limit)
-    .bind(effective_offset)
-    .fetch_all(&state.db)
     .await?;
 
     let data = rows
         .into_iter()
-        .map(|r| OrionSystemMessageItem {
-            id: r.0,
-            classify: r.1,
-            r#type: r.2,
-            status: r.3,
-            rel_key: r.4.unwrap_or_default(),
-            title: r.5,
-            content: r.6,
-            content_html: r.7.unwrap_or_default(),
-            create_time: r.8,
-        })
+        .map(map_system_message_row)
         .collect::<Vec<_>>();
 
     Ok(OrionResponse::ok(data))
@@ -5955,19 +5669,14 @@ async fn orion_system_message_count(
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let query_unread = query.query_unread.unwrap_or(false);
 
-    let rows = sqlx::query_as::<_, (String, i64)>(
-        "SELECT classify, COUNT(1)::bigint
-         FROM sys_system_message
-         WHERE (user_id IS NULL OR user_id = $1)
-           AND ($2::boolean = FALSE OR status = 0)
-         GROUP BY classify",
+    let data = system_message_service::count_system_messages_by_classify(
+        &state.db,
+        OrionSystemMessageCountFilters {
+            user_id,
+            query_unread,
+        },
     )
-    .bind(user_id)
-    .bind(query_unread)
-    .fetch_all(&state.db)
     .await?;
-
-    let data = rows.into_iter().collect::<HashMap<_, _>>();
     Ok(OrionResponse::ok(data))
 }
 
@@ -5976,15 +5685,7 @@ async fn orion_system_message_has_unread(
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
-    let has_unread = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(
-            SELECT 1 FROM sys_system_message
-            WHERE (user_id IS NULL OR user_id = $1) AND status = 0
-        )",
-    )
-    .bind(user_id)
-    .fetch_one(&state.db)
-    .await?;
+    let has_unread = system_message_service::has_unread_system_messages(&state.db, user_id).await?;
     Ok(OrionResponse::ok(has_unread))
 }
 
@@ -5995,17 +5696,7 @@ async fn orion_system_message_read(
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(query.id, "id")?;
-    sqlx::query(
-        "UPDATE sys_system_message
-         SET status = 1, read_time = NOW()
-         WHERE id = $1
-           AND status = 0
-           AND (user_id IS NULL OR user_id = $2)",
-    )
-    .bind(id)
-    .bind(user_id)
-    .execute(&state.db)
-    .await?;
+    system_message_service::mark_system_message_read(&state.db, id, user_id).await?;
     Ok(OrionResponse::ok(true))
 }
 
@@ -6016,17 +5707,7 @@ async fn orion_system_message_read_all(
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let classify = sanitize_search(query.classify);
-    sqlx::query(
-        "UPDATE sys_system_message
-         SET status = 1, read_time = NOW()
-         WHERE status = 0
-           AND (user_id IS NULL OR user_id = $1)
-           AND ($2::text IS NULL OR classify = $2)",
-    )
-    .bind(user_id)
-    .bind(classify)
-    .execute(&state.db)
-    .await?;
+    system_message_service::mark_system_messages_read_all(&state.db, user_id, classify).await?;
     Ok(OrionResponse::ok(true))
 }
 
@@ -6037,13 +5718,7 @@ async fn orion_system_message_delete(
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(query.id, "id")?;
-    sqlx::query(
-        "DELETE FROM sys_system_message WHERE id = $1 AND (user_id IS NULL OR user_id = $2)",
-    )
-    .bind(id)
-    .bind(user_id)
-    .execute(&state.db)
-    .await?;
+    system_message_service::delete_system_message(&state.db, id, user_id).await?;
     Ok(OrionResponse::ok(true))
 }
 
@@ -6054,16 +5729,7 @@ async fn orion_system_message_clear(
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let classify = sanitize_search(query.classify);
-    sqlx::query(
-        "DELETE FROM sys_system_message
-         WHERE status = 1
-           AND (user_id IS NULL OR user_id = $1)
-           AND ($2::text IS NULL OR classify = $2)",
-    )
-    .bind(user_id)
-    .bind(classify)
-    .execute(&state.db)
-    .await?;
+    system_message_service::clear_system_messages(&state.db, user_id, classify).await?;
     Ok(OrionResponse::ok(true))
 }
 
@@ -6073,112 +5739,18 @@ async fn orion_infra_statistics_get_workplace(
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
 
-    let user = sqlx::query_as::<_, (String, Option<String>, Option<i64>)>(
-        "SELECT username, nickname,
-                (EXTRACT(EPOCH FROM last_login_time) * 1000)::BIGINT
-         FROM sys_user
-         WHERE id = $1 AND deleted = 0",
-    )
-    .bind(user_id)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or_else(|| AppError::Auth("User not found".to_string()))?;
-
-    let unread_message_count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(1)::bigint
-         FROM sys_system_message
-         WHERE (user_id IS NULL OR user_id = $1) AND status = 0",
-    )
-    .bind(user_id)
-    .fetch_one(&state.db)
-    .await
-    .unwrap_or(0);
-
-    let user_session_count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*)::BIGINT FROM ssh_session WHERE user_id = $1 AND end_time IS NULL",
-    )
-    .bind(user_id)
-    .fetch_one(&state.db)
-    .await
-    .unwrap_or(0);
-
-    let chart_rows = sqlx::query_as::<_, (String, i64)>(
-        "SELECT to_char(day_list.day, 'MM-DD') AS day_label,
-                COALESCE(day_count.cnt, 0)::bigint AS cnt
-         FROM generate_series(
-                (date_trunc('day', NOW()) - INTERVAL '6 day')::timestamp,
-                date_trunc('day', NOW())::timestamp,
-                INTERVAL '1 day'
-              ) AS day_list(day)
-         LEFT JOIN (
-            SELECT date_trunc('day', create_time) AS day, COUNT(1) AS cnt
-            FROM operator_log
-            WHERE user_id = $1 AND deleted = 0
-            GROUP BY date_trunc('day', create_time)
-         ) AS day_count
-           ON day_count.day = day_list.day
-         ORDER BY day_list.day ASC",
-    )
-    .bind(user_id)
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default();
-
-    let operator_chart = OrionLineSingleChartData {
-        x: chart_rows.iter().map(|r| r.0.clone()).collect(),
-        data: chart_rows.iter().map(|r| r.1).collect(),
-    };
-
-    let login_history_list = sqlx::query_as::<
-        _,
-        (
-            i64,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            Option<i16>,
-            Option<String>,
-            i64,
-        ),
-    >(
-        "SELECT id,
-                ip,
-                location,
-                user_agent,
-                result,
-                error_message,
-                COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0)
-         FROM login_log
-         WHERE user_id = $1
-         ORDER BY create_time DESC
-         LIMIT 10",
-    )
-    .bind(user_id)
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default()
-    .into_iter()
-    .map(|item| OrionLoginHistoryItem {
-        id: item.0,
-        address: item.1.unwrap_or_default(),
-        location: item.2.unwrap_or_default(),
-        user_agent: item.3.unwrap_or_default(),
-        result: item.4.unwrap_or(0),
-        error_message: item.5.unwrap_or_default(),
-        create_time: item.6,
-    })
-    .collect::<Vec<_>>();
-
-    let data = OrionInfraWorkplaceStatisticsResponse {
+    let unread_message_count =
+        system_message_service::count_unread_system_messages(&state.db, user_id)
+            .await
+            .unwrap_or(0);
+    let data = infra_statistics_service::get_infra_workplace_statistics(
+        &state.db,
         user_id,
-        username: user.0,
-        nickname: user.1.unwrap_or_default(),
         unread_message_count,
-        last_login_time: user.2.unwrap_or(0),
-        user_session_count,
-        operator_chart,
-        login_history_list,
-    };
+    )
+    .await?
+    .map(map_infra_workplace_stats)
+    .ok_or_else(|| AppError::Auth("User not found".to_string()))?;
 
     Ok(OrionResponse::ok(data))
 }
@@ -6302,29 +5874,19 @@ async fn orion_mine_login_history(
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let limit = query.count.unwrap_or(10).clamp(1, 100);
-    let rows = sqlx::query_as::<_, (i64, Option<String>, Option<String>, Option<String>, i16, Option<String>, i64)>(
-        "SELECT id, ip, location, user_agent, result, error_message, EXTRACT(EPOCH FROM create_time)::bigint * 1000
-         FROM login_log
-         WHERE user_id = $1
-         ORDER BY create_time DESC
-         LIMIT $2",
-    )
-    .bind(user_id)
-    .bind(limit)
-    .fetch_all(&state.db)
-    .await?;
-
+    let rows =
+        system_user_service::list_login_history_by_user_id(&state.db, user_id, limit).await?;
     let data = rows
         .into_iter()
         .map(|r| {
             serde_json::json!({
-                "id": r.0,
-                "address": r.1.unwrap_or_default(),
-                "location": r.2.unwrap_or_default(),
-                "userAgent": r.3.unwrap_or_default(),
-                "result": r.4,
-                "errorMessage": r.5.unwrap_or_default(),
-                "createTime": r.6
+                "id": r.id,
+                "address": r.address,
+                "location": r.location,
+                "userAgent": r.user_agent,
+                "result": r.result,
+                "errorMessage": r.error_message,
+                "createTime": r.create_time
             })
         })
         .collect::<Vec<_>>();
@@ -6336,30 +5898,20 @@ async fn orion_mine_user_session(
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
-    let rows = sqlx::query_as::<_, (i64, String, Option<String>, i64, Option<String>, Option<String>, Option<String>)>(
-        "SELECT id, session_id::text, NULLIF(revoked_at::text, ''), EXTRACT(EPOCH FROM created_at)::bigint * 1000, ip, location, user_agent
-         FROM auth_refresh_token
-         WHERE user_id = $1
-         ORDER BY created_at DESC
-         LIMIT 100",
-    )
-    .bind(user_id)
-    .fetch_all(&state.db)
-    .await?;
-
+    let rows = system_user_service::list_mine_sessions(&state.db, user_id, 100).await?;
     let data = rows
         .into_iter()
         .map(|r| {
             serde_json::json!({
-                "id": r.0,
-                "username": user_id.to_string(),
-                "visible": true,
-                "current": r.1.contains('-'),
-                "address": r.4.unwrap_or_default(),
-                "location": r.5.unwrap_or_default(),
-                "userAgent": r.6.unwrap_or_default(),
-                "loginTime": r.3,
-                "offline": r.2.is_some()
+                "id": r.id,
+                "username": r.username,
+                "visible": r.visible,
+                "current": r.current,
+                "address": r.address,
+                "location": r.location,
+                "userAgent": r.user_agent,
+                "loginTime": r.login_time,
+                "offline": r.offline
             })
         })
         .collect::<Vec<_>>();
@@ -6373,12 +5925,11 @@ async fn orion_mine_offline_session(
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let _ = payload.user_id;
-    sqlx::query(
-        "UPDATE auth_refresh_token SET revoked_at = NOW() WHERE user_id = $1 AND EXTRACT(EPOCH FROM created_at)::bigint * 1000 = $2 AND revoked_at IS NULL",
+    system_user_service::revoke_active_refresh_tokens_by_user_and_timestamp(
+        &state.db,
+        user_id,
+        payload.timestamp,
     )
-    .bind(user_id)
-    .bind(payload.timestamp)
-    .execute(&state.db)
     .await?;
     Ok(OrionResponse::ok(true))
 }
@@ -6395,118 +5946,26 @@ async fn query_operator_logs(
     let (start_time, end_time) = parse_time_range(payload.start_time_range.as_ref())?;
     let (page, limit, offset) = normalize_pagination(payload.page, payload.limit);
 
-    let rows = sqlx::query_as::<_, (i64, Option<i64>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<serde_json::Value>, Option<String>, Option<String>, Option<String>, Option<i16>, Option<String>, Option<i32>, i64)>(
-        "SELECT id, user_id, username, module, operation, method, path, params, trace_id, ip, user_agent, result, error_message, duration, EXTRACT(EPOCH FROM create_time)::bigint * 1000
-         FROM operator_log
-         WHERE deleted = 0
-           AND ($1::bigint IS NULL OR user_id = $1)
-           AND ($2::bigint IS NULL OR user_id = $2)
-           AND ($3::text IS NULL OR username ILIKE '%' || $3 || '%')
-           AND ($4::text IS NULL OR module ILIKE '%' || $4 || '%')
-           AND ($5::text IS NULL OR operation ILIKE '%' || $5 || '%')
-           AND ($6::text IS NULL OR (CASE
-                WHEN result = 0 THEN 'HIGH'
-                WHEN result = 1 THEN 'LOW'
-                ELSE 'MEDIUM'
-              END) = $6)
-           AND ($7::smallint IS NULL OR result = $7)
-           AND ($8::timestamptz IS NULL OR create_time >= $8)
-           AND ($9::timestamptz IS NULL OR create_time <= $9)
-         ORDER BY create_time DESC, id DESC
-         LIMIT $10 OFFSET $11",
-    )
-    .bind(scope_user_id)
-    .bind(payload.user_id)
-    .bind(username)
-    .bind(module)
-    .bind(operation)
-    .bind(risk_level)
-    .bind(payload.result)
-    .bind(start_time)
-    .bind(end_time)
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&state.db)
-    .await?;
+    let query = operator_log_service::OrionOperatorLogQueryInput {
+        scope_user_id,
+        user_id: payload.user_id,
+        username,
+        module,
+        operation,
+        risk_level,
+        result: payload.result,
+        start_time,
+        end_time,
+        limit,
+        offset,
+    };
 
-    let total = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(1)
-         FROM operator_log
-         WHERE deleted = 0
-           AND ($1::bigint IS NULL OR user_id = $1)
-           AND ($2::bigint IS NULL OR user_id = $2)
-           AND ($3::text IS NULL OR username ILIKE '%' || $3 || '%')
-           AND ($4::text IS NULL OR module ILIKE '%' || $4 || '%')
-           AND ($5::text IS NULL OR operation ILIKE '%' || $5 || '%')
-           AND ($6::text IS NULL OR (CASE
-                WHEN result = 0 THEN 'HIGH'
-                WHEN result = 1 THEN 'LOW'
-                ELSE 'MEDIUM'
-              END) = $6)
-           AND ($7::smallint IS NULL OR result = $7)
-           AND ($8::timestamptz IS NULL OR create_time >= $8)
-           AND ($9::timestamptz IS NULL OR create_time <= $9)",
-    )
-    .bind(scope_user_id)
-    .bind(payload.user_id)
-    .bind(sanitize_search(payload.username.clone()))
-    .bind(sanitize_search(payload.module.clone()))
-    .bind(sanitize_search(payload.r#type.clone()))
-    .bind(sanitize_search(payload.risk_level.clone()).map(|v| v.to_ascii_uppercase()))
-    .bind(payload.result)
-    .bind(start_time)
-    .bind(end_time)
-    .fetch_one(&state.db)
-    .await?;
+    let rows = operator_log_service::query_operator_logs(&state.db, query.clone()).await?;
+    let total = operator_log_service::count_operator_logs(&state.db, query).await?;
 
     let items = rows
         .into_iter()
-        .map(|r| {
-            let operation = r.4.clone().unwrap_or_default();
-            let log_info = {
-                let text = format!(
-                    "{} {}",
-                    r.5.as_deref().unwrap_or(""),
-                    r.6.as_deref().unwrap_or("")
-                )
-                .trim()
-                .to_string();
-                if text.is_empty() {
-                    operation.clone()
-                } else {
-                    text
-                }
-            };
-            OrionOperatorLogItem {
-                id: r.0,
-                user_id: r.1.unwrap_or_default(),
-                username: r.2.unwrap_or_default(),
-                trace_id: r.8.unwrap_or_default(),
-                address: r.9.unwrap_or_default(),
-                location: String::new(),
-                user_agent: r.10.unwrap_or_default(),
-                risk_level: if r.11.unwrap_or_default() == 0 {
-                    "HIGH".to_string()
-                } else {
-                    "LOW".to_string()
-                },
-                module: r.3.unwrap_or_default(),
-                r#type: operation.clone(),
-                log_info,
-                origin_log_info: r.6.clone().unwrap_or(operation),
-                extra: r
-                    .7
-                    .and_then(|v| serde_json::to_string(&v).ok())
-                    .unwrap_or_else(|| "{}".to_string()),
-                result: r.11.unwrap_or_default(),
-                error_message: r.12.unwrap_or_default(),
-                return_value: String::new(),
-                duration: r.13.unwrap_or_default(),
-                start_time: r.14,
-                end_time: r.14,
-                create_time: r.14,
-            }
-        })
+        .map(map_operator_log_row)
         .collect::<Vec<_>>();
 
     Ok(OrionDataGrid {
@@ -6534,13 +5993,9 @@ async fn orion_mine_update_password(
     Json(payload): Json<OrionMineUpdatePasswordRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
-    let old_hash = sqlx::query_scalar::<_, String>(
-        "SELECT password FROM sys_user WHERE id = $1 AND deleted = 0",
-    )
-    .bind(user_id)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or_else(|| AppError::Auth("User not found".to_string()))?;
+    let old_hash = system_user_service::get_system_user_password_hash(&state.db, user_id)
+        .await?
+        .ok_or_else(|| AppError::Auth("User not found".to_string()))?;
 
     let before = payload
         .before_password
@@ -6557,11 +6012,7 @@ async fn orion_mine_update_password(
     }
     let new_hash = bcrypt::hash(new_password, bcrypt::DEFAULT_COST)
         .map_err(|e| AppError::Internal(e.to_string()))?;
-    sqlx::query("UPDATE sys_user SET password = $1, update_time = NOW() WHERE id = $2")
-        .bind(new_hash)
-        .bind(user_id)
-        .execute(&state.db)
-        .await?;
+    system_user_service::update_system_user_password(&state.db, user_id, &new_hash).await?;
 
     audit_service::log_operator_action(
         &state.db,
@@ -6623,19 +6074,7 @@ async fn orion_operator_log_delete(
     )
     .await?;
     let ids = parse_csv_ids(query.id_list);
-    let mut affected = 0_i64;
-    if !ids.is_empty() {
-        let result = sqlx::query(
-            "UPDATE operator_log
-             SET deleted = 1
-             WHERE deleted = 0
-               AND id = ANY($1::bigint[])",
-        )
-        .bind(ids)
-        .execute(&state.db)
-        .await?;
-        affected = result.rows_affected() as i64;
-    }
+    let affected = operator_log_service::soft_delete_operator_logs(&state.db, ids).await? as i64;
     Ok(OrionResponse::ok(affected))
 }
 
@@ -6661,45 +6100,22 @@ async fn orion_operator_log_clear(
     let (start_time, end_time) = parse_time_range(payload.start_time_range.as_ref())?;
     let limit = payload.limit.unwrap_or(2000).clamp(1, 20_000);
 
-    let result = sqlx::query(
-        "WITH target AS (
-             SELECT id, create_time
-             FROM operator_log
-             WHERE deleted = 0
-               AND ($1::bigint IS NULL OR user_id = $1)
-               AND ($2::text IS NULL OR username ILIKE '%' || $2 || '%')
-               AND ($3::text IS NULL OR module ILIKE '%' || $3 || '%')
-               AND ($4::text IS NULL OR operation ILIKE '%' || $4 || '%')
-               AND ($5::text IS NULL OR (CASE
-                    WHEN result = 0 THEN 'HIGH'
-                    WHEN result = 1 THEN 'LOW'
-                    ELSE 'MEDIUM'
-                  END) = $5)
-               AND ($6::smallint IS NULL OR result = $6)
-               AND ($7::timestamptz IS NULL OR create_time >= $7)
-               AND ($8::timestamptz IS NULL OR create_time <= $8)
-             ORDER BY create_time DESC, id DESC
-             LIMIT $9
-         )
-         UPDATE operator_log src
-         SET deleted = 1
-         FROM target
-         WHERE src.id = target.id
-           AND src.create_time = target.create_time
-           AND src.deleted = 0",
+    let affected = operator_log_service::clear_operator_logs(
+        &state.db,
+        operator_log_service::OrionOperatorLogClearInput {
+            user_id: payload.user_id,
+            username,
+            module,
+            operation,
+            risk_level,
+            result: payload.result,
+            start_time,
+            end_time,
+            limit,
+        },
     )
-    .bind(payload.user_id)
-    .bind(username)
-    .bind(module)
-    .bind(operation)
-    .bind(risk_level)
-    .bind(payload.result)
-    .bind(start_time)
-    .bind(end_time)
-    .bind(limit)
-    .execute(&state.db)
     .await?;
-    Ok(OrionResponse::ok(result.rows_affected() as i64))
+    Ok(OrionResponse::ok(affected as i64))
 }
 
 fn parse_required_id(v: Option<i64>, field: &str) -> AppResult<i64> {
@@ -6713,25 +6129,16 @@ fn parse_required_id(v: Option<i64>, field: &str) -> AppResult<i64> {
 }
 
 async fn load_user_roles(state: &AppState, user_id: i64) -> AppResult<Vec<OrionRoleQueryResponse>> {
-    let rows = sqlx::query_as::<_, (i64, String, String, i16, Option<String>)>(
-        "SELECT r.id, r.name, r.code, r.status, r.description
-         FROM sys_user_role ur
-         JOIN sys_role r ON r.id = ur.role_id
-         WHERE ur.user_id = $1 AND r.deleted = 0
-         ORDER BY r.id ASC",
-    )
-    .bind(user_id)
-    .fetch_all(&state.db)
-    .await?;
+    let rows = role_service::list_roles_by_user_id(&state.db, user_id).await?;
 
     Ok(rows
         .into_iter()
         .map(|r| OrionRoleQueryResponse {
-            id: r.0,
-            name: r.1,
-            code: r.2,
-            status: r.3,
-            description: r.4.unwrap_or_default(),
+            id: r.id,
+            name: r.name,
+            code: r.code,
+            status: r.status,
+            description: r.description.unwrap_or_default(),
             create_time: 0,
             update_time: 0,
             creator: "system".to_string(),
@@ -6777,18 +6184,17 @@ async fn orion_system_user_create(
         .ok_or_else(|| AppError::BadRequest("password is required".to_string()))?;
     let pass_hash = bcrypt::hash(password, bcrypt::DEFAULT_COST)
         .map_err(|e| AppError::Internal(e.to_string()))?;
-    let id = sqlx::query_scalar::<_, i64>(
-        "INSERT INTO sys_user (username, password, nickname, avatar, phone, email, status, create_time, update_time, deleted)
-         VALUES ($1, $2, $3, $4, $5, $6, 1, NOW(), NOW(), 0)
-         RETURNING id",
+    let id = system_user_service::create_system_user(
+        &state.db,
+        system_user_service::OrionSystemUserCreateInput {
+            username: username.clone(),
+            password_hash: pass_hash,
+            nickname: payload.nickname.clone(),
+            avatar: payload.avatar.clone(),
+            mobile: payload.mobile.clone(),
+            email: payload.email.clone(),
+        },
     )
-    .bind(&username)
-    .bind(pass_hash)
-    .bind(&payload.nickname)
-    .bind(&payload.avatar)
-    .bind(&payload.mobile)
-    .bind(&payload.email)
-    .fetch_one(&state.db)
     .await?;
 
     audit_service::log_operator_action(
@@ -6819,25 +6225,18 @@ async fn orion_system_user_update(
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
     let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(payload.id, "id")?;
-    let rows = sqlx::query(
-        "UPDATE sys_user SET
-            username = COALESCE(NULLIF($1, ''), username),
-            nickname = COALESCE($2, nickname),
-            avatar = COALESCE($3, avatar),
-            phone = COALESCE($4, phone),
-            email = COALESCE($5, email),
-            update_time = NOW()
-         WHERE id = $6 AND deleted = 0",
+    let rows = system_user_service::update_system_user(
+        &state.db,
+        system_user_service::OrionSystemUserUpdateInput {
+            id,
+            username: payload.username.as_ref().map(|v| v.trim().to_string()),
+            nickname: payload.nickname.clone(),
+            avatar: payload.avatar.clone(),
+            mobile: payload.mobile.clone(),
+            email: payload.email.clone(),
+        },
     )
-    .bind(payload.username.as_ref().map(|v| v.trim().to_string()))
-    .bind(&payload.nickname)
-    .bind(&payload.avatar)
-    .bind(&payload.mobile)
-    .bind(&payload.email)
-    .bind(id)
-    .execute(&state.db)
-    .await?
-    .rows_affected();
+    .await?;
     if rows == 0 {
         return Err(AppError::NotFound("User not found".to_string()));
     }
@@ -6873,14 +6272,7 @@ async fn orion_system_user_update_status(
     let status = payload
         .status
         .ok_or_else(|| AppError::BadRequest("status is required".to_string()))?;
-    let rows = sqlx::query(
-        "UPDATE sys_user SET status = $1, update_time = NOW() WHERE id = $2 AND deleted = 0",
-    )
-    .bind(status)
-    .bind(id)
-    .execute(&state.db)
-    .await?
-    .rows_affected();
+    let rows = system_user_service::update_system_user_status(&state.db, id, status).await?;
     if rows == 0 {
         return Err(AppError::NotFound("User not found".to_string()));
     }
@@ -6914,23 +6306,7 @@ async fn orion_system_user_grant_role(
     let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let user_id = parse_required_id(payload.id, "id")?;
     let role_ids = payload.role_id_list.clone().unwrap_or_default();
-    let mut tx = state.db.begin().await?;
-    sqlx::query("DELETE FROM sys_user_role WHERE user_id = $1")
-        .bind(user_id)
-        .execute(&mut *tx)
-        .await?;
-    for role_id in &role_ids {
-        if *role_id > 0 {
-            sqlx::query(
-                "INSERT INTO sys_user_role (user_id, role_id, create_time) VALUES ($1, $2, NOW())",
-            )
-            .bind(user_id)
-            .bind(role_id)
-            .execute(&mut *tx)
-            .await?;
-        }
-    }
-    tx.commit().await?;
+    system_user_service::replace_system_user_roles(&state.db, user_id, role_ids.clone()).await?;
 
     audit_service::log_operator_action(
         &state.db,
@@ -6964,13 +6340,7 @@ async fn orion_system_user_reset_password(
         .ok_or_else(|| AppError::BadRequest("password is required".to_string()))?;
     let pass_hash = bcrypt::hash(password, bcrypt::DEFAULT_COST)
         .map_err(|e| AppError::Internal(e.to_string()))?;
-    sqlx::query(
-        "UPDATE sys_user SET password = $1, update_time = NOW() WHERE id = $2 AND deleted = 0",
-    )
-    .bind(pass_hash)
-    .bind(id)
-    .execute(&state.db)
-    .await?;
+    system_user_service::update_system_user_password(&state.db, id, &pass_hash).await?;
 
     audit_service::log_operator_action(
         &state.db,
@@ -7026,7 +6396,7 @@ async fn orion_system_user_query(
     let nickname = sanitize_search(payload.nickname.clone());
     let mobile = sanitize_search(payload.mobile.clone());
     let email = sanitize_search(payload.email.clone());
-    let filters = OrionSystemUserQueryFilters {
+    let filters = system_user_service::OrionSystemUserQueryFilters {
         id: payload.id,
         username,
         nickname,
@@ -7065,7 +6435,7 @@ async fn orion_system_user_count(
     let email = sanitize_search(payload.email.clone());
     let total = system_user_service::count_system_users(
         &state.db,
-        OrionSystemUserQueryFilters {
+        system_user_service::OrionSystemUserQueryFilters {
             id: payload.id,
             username,
             nickname,
@@ -7088,12 +6458,7 @@ async fn orion_system_user_delete(
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
     let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(query.id, "id")?;
-    sqlx::query(
-        "UPDATE sys_user SET deleted = 1, update_time = NOW() WHERE id = $1 AND deleted = 0",
-    )
-    .bind(id)
-    .execute(&state.db)
-    .await?;
+    system_user_service::soft_delete_system_user(&state.db, id).await?;
 
     audit_service::log_operator_action(
         &state.db,
@@ -7121,10 +6486,7 @@ async fn orion_system_user_batch_delete(
     let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let ids = parse_csv_ids(query.id_list);
     if !ids.is_empty() {
-        sqlx::query("UPDATE sys_user SET deleted = 1, update_time = NOW() WHERE id = ANY($1::bigint[]) AND deleted = 0")
-            .bind(&ids)
-            .execute(&state.db)
-            .await?;
+        system_user_service::soft_delete_system_users(&state.db, ids.clone()).await?;
 
         audit_service::log_operator_action(
             &state.db,
@@ -7150,12 +6512,7 @@ async fn orion_system_user_get_roles(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
     let user_id = parse_required_id(query.user_id, "userId")?;
-    let ids = sqlx::query_scalar::<_, i64>(
-        "SELECT role_id FROM sys_user_role WHERE user_id = $1 ORDER BY role_id ASC",
-    )
-    .bind(user_id)
-    .fetch_all(&state.db)
-    .await?;
+    let ids = system_user_service::list_system_user_role_ids(&state.db, user_id).await?;
     Ok(OrionResponse::ok(ids))
 }
 
@@ -7168,29 +6525,19 @@ async fn orion_system_user_login_history(
     let username = query
         .username
         .ok_or_else(|| AppError::BadRequest("username is required".to_string()))?;
-    let count = 20_i64;
-    let rows = sqlx::query_as::<_, (i64, Option<String>, Option<String>, Option<String>, i16, Option<String>, i64)>(
-        "SELECT id, ip, location, user_agent, result, error_message, EXTRACT(EPOCH FROM create_time)::bigint * 1000
-         FROM login_log
-         WHERE username = $1
-         ORDER BY create_time DESC
-         LIMIT $2",
-    )
-    .bind(username)
-    .bind(count)
-    .fetch_all(&state.db)
-    .await?;
+    let rows =
+        system_user_service::list_login_history_by_username(&state.db, &username, 20).await?;
     let data = rows
         .into_iter()
         .map(|r| {
             serde_json::json!({
-                "id": r.0,
-                "address": r.1.unwrap_or_default(),
-                "location": r.2.unwrap_or_default(),
-                "userAgent": r.3.unwrap_or_default(),
-                "result": r.4,
-                "errorMessage": r.5.unwrap_or_default(),
-                "createTime": r.6
+                "id": r.id,
+                "address": r.address,
+                "location": r.location,
+                "userAgent": r.user_agent,
+                "result": r.result,
+                "errorMessage": r.error_message,
+                "createTime": r.create_time
             })
         })
         .collect::<Vec<_>>();
@@ -7202,27 +6549,19 @@ async fn orion_system_user_session_users_list(
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
-    let rows = sqlx::query_as::<_, (i64, i64, i64, Option<String>, Option<String>, Option<String>, String)>(
-        "SELECT r.id, r.user_id, EXTRACT(EPOCH FROM r.created_at)::bigint * 1000, r.ip, r.location, r.user_agent, u.username
-         FROM auth_refresh_token r
-         JOIN sys_user u ON u.id = r.user_id
-         WHERE r.revoked_at IS NULL
-         ORDER BY r.created_at DESC LIMIT 200",
-    )
-    .fetch_all(&state.db)
-    .await?;
+    let rows = system_user_service::list_active_sessions(&state.db, 200).await?;
     let data = rows
         .into_iter()
         .map(|r| {
             serde_json::json!({
-                "id": r.0,
-                "username": r.6,
+                "id": r.id,
+                "username": r.username,
                 "visible": true,
                 "current": false,
-                "address": r.3.unwrap_or_default(),
-                "location": r.4.unwrap_or_default(),
-                "userAgent": r.5.unwrap_or_default(),
-                "loginTime": r.2
+                "address": r.address,
+                "location": r.location,
+                "userAgent": r.user_agent,
+                "loginTime": r.login_time
             })
         })
         .collect::<Vec<_>>();
@@ -7236,44 +6575,19 @@ async fn orion_system_user_session_user_list(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
     let user_id = parse_required_id(query.id, "id")?;
-    let rows = sqlx::query_as::<
-        _,
-        (
-            i64,
-            i64,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            String,
-        ),
-    >(
-        "SELECT r.id,
-                EXTRACT(EPOCH FROM r.created_at)::bigint * 1000,
-                r.ip,
-                r.location,
-                r.user_agent,
-                u.username
-         FROM auth_refresh_token r
-         JOIN sys_user u ON u.id = r.user_id
-         WHERE r.user_id = $1
-         ORDER BY r.created_at DESC
-         LIMIT 200",
-    )
-    .bind(user_id)
-    .fetch_all(&state.db)
-    .await?;
+    let rows = system_user_service::list_active_sessions_by_user(&state.db, user_id, 200).await?;
     let data = rows
         .into_iter()
         .map(|r| {
             serde_json::json!({
-                "id": r.0,
-                "username": r.5,
+                "id": r.id,
+                "username": r.username,
                 "visible": true,
                 "current": false,
-                "address": r.2.unwrap_or_default(),
-                "location": r.3.unwrap_or_default(),
-                "userAgent": r.4.unwrap_or_default(),
-                "loginTime": r.1
+                "address": r.address,
+                "location": r.location,
+                "userAgent": r.user_agent,
+                "loginTime": r.login_time
             })
         })
         .collect::<Vec<_>>();
@@ -7287,12 +6601,11 @@ async fn orion_system_user_session_offline(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-permission.view").await?;
     let user_id = parse_required_id(payload.user_id, "userId")?;
-    sqlx::query(
-        "UPDATE auth_refresh_token SET revoked_at = NOW() WHERE user_id = $1 AND EXTRACT(EPOCH FROM created_at)::bigint * 1000 = $2",
+    system_user_service::revoke_refresh_tokens_by_user_and_timestamp(
+        &state.db,
+        user_id,
+        payload.timestamp,
     )
-    .bind(user_id)
-    .bind(payload.timestamp)
-    .execute(&state.db)
     .await?;
     Ok(OrionResponse::ok(true))
 }
@@ -7316,16 +6629,15 @@ async fn orion_system_role_create(
         .ok_or_else(|| AppError::BadRequest("name is required".to_string()))?;
     let code = sanitize_search(payload.code)
         .ok_or_else(|| AppError::BadRequest("code is required".to_string()))?;
-    let id = sqlx::query_scalar::<_, i64>(
-        "INSERT INTO sys_role (name, code, description, status, create_time, deleted)
-         VALUES ($1, $2, $3, COALESCE($4, 1), NOW(), 0)
-         RETURNING id",
+    let id = role_service::create_role(
+        &state.db,
+        role_service::OrionRoleCreateInput {
+            name: name.clone(),
+            code: code.clone(),
+            description: payload.description.clone(),
+            status: payload.status,
+        },
     )
-    .bind(&name)
-    .bind(&code)
-    .bind(payload.description)
-    .bind(payload.status)
-    .fetch_one(&state.db)
     .await?;
 
     audit_service::log_operator_action(
@@ -7357,17 +6669,17 @@ async fn orion_system_role_update(
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
     let actor_user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let id = parse_required_id(payload.id, "id")?;
-    let rows = sqlx::query(
-        "UPDATE sys_role SET name = COALESCE(NULLIF($1, ''), name), code = COALESCE(NULLIF($2, ''), code), description = COALESCE($3, description), status = COALESCE($4, status) WHERE id = $5 AND deleted = 0",
+    let rows = role_service::update_role(
+        &state.db,
+        role_service::OrionRoleUpdateInput {
+            id,
+            name: payload.name.as_ref().map(|v| v.trim().to_string()),
+            code: payload.code.as_ref().map(|v| v.trim().to_string()),
+            description: payload.description.clone(),
+            status: payload.status,
+        },
     )
-    .bind(payload.name.as_ref().map(|v| v.trim().to_string()))
-    .bind(payload.code.as_ref().map(|v| v.trim().to_string()))
-    .bind(payload.description)
-    .bind(payload.status)
-    .bind(id)
-    .execute(&state.db)
-    .await?
-    .rows_affected();
+    .await?;
     if rows == 0 {
         return Err(AppError::NotFound("Role not found".to_string()));
     }
@@ -7403,11 +6715,10 @@ async fn orion_system_role_update_status(
     let status = payload
         .status
         .ok_or_else(|| AppError::BadRequest("status is required".to_string()))?;
-    sqlx::query("UPDATE sys_role SET status = $1 WHERE id = $2 AND deleted = 0")
-        .bind(status)
-        .bind(id)
-        .execute(&state.db)
-        .await?;
+    let rows = role_service::update_role_status(&state.db, id, status).await?;
+    if rows == 0 {
+        return Err(AppError::NotFound("Role not found".to_string()));
+    }
 
     audit_service::log_operator_action(
         &state.db,
@@ -7429,17 +6740,163 @@ async fn orion_system_role_update_status(
     Ok(OrionResponse::ok(true))
 }
 
-fn map_role_row(row: (i64, String, String, i16, Option<String>, i64)) -> OrionRoleQueryResponse {
+fn map_role_row(row: OrionRoleAggregate) -> OrionRoleQueryResponse {
     OrionRoleQueryResponse {
-        id: row.0,
-        name: row.1,
-        code: row.2,
-        status: row.3,
-        description: row.4.unwrap_or_default(),
-        create_time: row.5,
-        update_time: row.5,
+        id: row.id,
+        name: row.name,
+        code: row.code,
+        status: row.status,
+        description: row.description.unwrap_or_default(),
+        create_time: row.create_time_ms,
+        update_time: row.create_time_ms,
         creator: "system".to_string(),
         updater: "system".to_string(),
+    }
+}
+
+fn map_menu_row(menu: OrionMenuAggregate) -> OrionMenuItem {
+    OrionMenuItem {
+        id: menu.id,
+        parent_id: menu.parent_id,
+        name: menu.name,
+        permission: menu.permission.unwrap_or_default(),
+        r#type: menu.menu_type,
+        sort: menu.sort,
+        visible: menu.visible,
+        status: 1,
+        cache: 1,
+        new_window: 0,
+        icon: menu.icon.unwrap_or_default(),
+        path: menu.path.unwrap_or_default(),
+        component: menu.component.unwrap_or_default(),
+        children: Vec::new(),
+    }
+}
+
+fn map_dict_key_row(row: OrionDictKeyAggregate) -> OrionDictKeyItem {
+    OrionDictKeyItem {
+        id: row.id,
+        key_name: row.key_name,
+        value_type: row.value_type,
+        extra_schema: row.extra_schema.unwrap_or_default(),
+        description: row.description.unwrap_or_default(),
+        create_time: row.create_time,
+        update_time: row.update_time,
+        creator: row.creator.unwrap_or_else(|| "system".to_string()),
+        updater: row.updater.unwrap_or_else(|| "system".to_string()),
+    }
+}
+
+fn map_dict_value_row(row: OrionDictValueAggregate) -> OrionDictValueItem {
+    OrionDictValueItem {
+        id: row.id,
+        key_id: row.key_id,
+        key_name: row.key_name,
+        key_description: row.key_description.unwrap_or_default(),
+        value: row.value,
+        label: row.label,
+        extra: row.extra.unwrap_or_default(),
+        sort: row.sort,
+        create_time: row.create_time,
+        update_time: row.update_time,
+        creator: row.creator.unwrap_or_else(|| "system".to_string()),
+        updater: row.updater.unwrap_or_else(|| "system".to_string()),
+    }
+}
+
+fn map_system_message_row(row: OrionSystemMessageAggregate) -> OrionSystemMessageItem {
+    OrionSystemMessageItem {
+        id: row.id,
+        classify: row.classify,
+        r#type: row.message_type,
+        status: row.status,
+        rel_key: row.rel_key.unwrap_or_default(),
+        title: row.title,
+        content: row.content,
+        content_html: row.content_html.unwrap_or_default(),
+        create_time: row.create_time,
+    }
+}
+
+fn build_operator_log_info(operation: &str, method: Option<&str>, path: Option<&str>) -> String {
+    let text = format!("{} {}", method.unwrap_or(""), path.unwrap_or(""))
+        .trim()
+        .to_string();
+    if text.is_empty() {
+        operation.to_string()
+    } else {
+        text
+    }
+}
+
+fn map_operator_log_row(row: OrionOperatorLogAggregate) -> OrionOperatorLogItem {
+    let operation = row.operation.unwrap_or_default();
+    let log_info = build_operator_log_info(&operation, row.method.as_deref(), row.path.as_deref());
+    let result = row.result.unwrap_or_default();
+
+    OrionOperatorLogItem {
+        id: row.id,
+        user_id: row.user_id.unwrap_or_default(),
+        username: row.username.unwrap_or_default(),
+        trace_id: row.trace_id.unwrap_or_default(),
+        address: row.ip.unwrap_or_default(),
+        location: String::new(),
+        user_agent: row.user_agent.unwrap_or_default(),
+        risk_level: if result == 0 {
+            "HIGH".to_string()
+        } else {
+            "LOW".to_string()
+        },
+        module: row.module.unwrap_or_default(),
+        r#type: operation.clone(),
+        log_info,
+        origin_log_info: row.path.unwrap_or(operation),
+        extra: row
+            .params
+            .and_then(|v| serde_json::to_string(&v).ok())
+            .unwrap_or_else(|| "{}".to_string()),
+        result,
+        error_message: row.error_message.unwrap_or_default(),
+        return_value: String::new(),
+        duration: row.duration.unwrap_or_default(),
+        start_time: row.create_time,
+        end_time: row.create_time,
+        create_time: row.create_time,
+    }
+}
+
+fn map_login_history_row(row: OrionLoginHistoryAggregate) -> OrionLoginHistoryItem {
+    let row = infra_statistics_service::fill_login_history_defaults(row);
+    OrionLoginHistoryItem {
+        id: row.id,
+        address: row.address.unwrap_or_default(),
+        location: row.location.unwrap_or_default(),
+        user_agent: row.user_agent.unwrap_or_default(),
+        result: row.result.unwrap_or(0),
+        error_message: row.error_message.unwrap_or_default(),
+        create_time: row.create_time,
+    }
+}
+
+fn map_infra_workplace_stats(
+    row: OrionInfraWorkplaceAggregate,
+) -> OrionInfraWorkplaceStatisticsResponse {
+    OrionInfraWorkplaceStatisticsResponse {
+        user_id: row.user_id,
+        username: row.username,
+        nickname: row.nickname.unwrap_or_default(),
+        unread_message_count: row.unread_message_count,
+        last_login_time: row.last_login_time.unwrap_or(0),
+        user_session_count: row.user_session_count,
+        operator_chart: OrionLineSingleChartData {
+            x: row.operator_chart_labels,
+            data: row.operator_chart_values,
+        },
+        login_history_list: row
+            .login_history
+            .into_iter()
+            .map(map_login_history_row)
+            .collect(),
     }
 }
 
@@ -7450,13 +6907,9 @@ async fn orion_system_role_get(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
     let id = parse_required_id(query.id, "id")?;
-    let row = sqlx::query_as::<_, (i64, String, String, i16, Option<String>, i64)>(
-        "SELECT id, name, code, status, description, EXTRACT(EPOCH FROM create_time)::bigint * 1000 FROM sys_role WHERE id = $1 AND deleted = 0",
-    )
-    .bind(id)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or_else(|| AppError::NotFound("Role not found".to_string()))?;
+    let row = role_service::get_role_by_id(&state.db, id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("Role not found".to_string()))?;
     Ok(OrionResponse::ok(map_role_row(row)))
 }
 
@@ -7465,11 +6918,7 @@ async fn orion_system_role_list(
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
-    let rows = sqlx::query_as::<_, (i64, String, String, i16, Option<String>, i64)>(
-        "SELECT id, name, code, status, description, EXTRACT(EPOCH FROM create_time)::bigint * 1000 FROM sys_role WHERE deleted = 0 ORDER BY id ASC",
-    )
-    .fetch_all(&state.db)
-    .await?;
+    let rows = role_service::list_roles(&state.db).await?;
     Ok(OrionResponse::ok(
         rows.into_iter().map(map_role_row).collect::<Vec<_>>(),
     ))
@@ -7482,20 +6931,8 @@ async fn orion_system_role_query(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
     let (page, limit, offset) = normalize_pagination(payload.page, payload.limit);
-    let rows = sqlx::query_as::<_, (i64, String, String, i16, Option<String>, i64)>(
-        "SELECT id, name, code, status, description, EXTRACT(EPOCH FROM create_time)::bigint * 1000
-         FROM sys_role
-         WHERE deleted = 0
-         ORDER BY id DESC
-         LIMIT $1 OFFSET $2",
-    )
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&state.db)
-    .await?;
-    let total = sqlx::query_scalar::<_, i64>("SELECT COUNT(1) FROM sys_role WHERE deleted = 0")
-        .fetch_one(&state.db)
-        .await?;
+    let rows = role_service::query_roles(&state.db, limit, offset).await?;
+    let total = role_service::count_roles(&state.db).await?;
     Ok(OrionResponse::ok(OrionDataGrid {
         page,
         limit,
@@ -7511,10 +6948,7 @@ async fn orion_system_role_delete(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
     let id = parse_required_id(query.id, "id")?;
-    sqlx::query("UPDATE sys_role SET deleted = 1 WHERE id = $1 AND deleted = 0")
-        .bind(id)
-        .execute(&state.db)
-        .await?;
+    role_service::soft_delete_role(&state.db, id).await?;
     Ok(OrionResponse::ok(true))
 }
 
@@ -7525,23 +6959,8 @@ async fn orion_system_role_grant_menu(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
     let role_id = parse_required_id(payload.role_id, "roleId")?;
-    let mut tx = state.db.begin().await?;
-    sqlx::query("DELETE FROM sys_role_menu WHERE role_id = $1")
-        .bind(role_id)
-        .execute(&mut *tx)
+    role_service::replace_role_menus(&state.db, role_id, payload.menu_id_list.unwrap_or_default())
         .await?;
-    for menu_id in payload.menu_id_list.unwrap_or_default() {
-        if menu_id > 0 {
-            sqlx::query(
-                "INSERT INTO sys_role_menu (role_id, menu_id) VALUES ($1, $2) ON CONFLICT (role_id, menu_id) DO NOTHING",
-            )
-            .bind(role_id)
-            .bind(menu_id)
-            .execute(&mut *tx)
-            .await?;
-        }
-    }
-    tx.commit().await?;
     Ok(OrionResponse::ok(true))
 }
 
@@ -7552,12 +6971,7 @@ async fn orion_system_role_get_menu_id(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
     let role_id = parse_required_id(query.role_id, "roleId")?;
-    let ids = sqlx::query_scalar::<_, i64>(
-        "SELECT menu_id FROM sys_role_menu WHERE role_id = $1 ORDER BY menu_id ASC",
-    )
-    .bind(role_id)
-    .fetch_all(&state.db)
-    .await?;
+    let ids = role_service::list_role_menu_ids(&state.db, role_id).await?;
     Ok(OrionResponse::ok(ids))
 }
 
@@ -7566,46 +6980,8 @@ async fn orion_system_menu_list(
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
-    let rows = sqlx::query_as::<
-        _,
-        (
-            i64,
-            i64,
-            String,
-            Option<String>,
-            i16,
-            i32,
-            i16,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-        ),
-    >(
-        "SELECT id, parent_id, name, permission, type, sort, visible, icon, path, component
-         FROM sys_menu ORDER BY sort ASC, id ASC",
-    )
-    .fetch_all(&state.db)
-    .await?;
-    let list = build_orion_menu_tree(
-        rows.into_iter()
-            .map(|m| OrionMenuItem {
-                id: m.0,
-                parent_id: m.1,
-                name: m.2,
-                permission: m.3.unwrap_or_default(),
-                r#type: m.4,
-                sort: m.5,
-                visible: m.6,
-                status: 1,
-                cache: 1,
-                new_window: 0,
-                icon: m.7.unwrap_or_default(),
-                path: m.8.unwrap_or_default(),
-                component: m.9.unwrap_or_default(),
-                children: Vec::new(),
-            })
-            .collect(),
-    );
+    let rows = menu_service::list_menus(&state.db).await?;
+    let list = build_orion_menu_tree(rows.into_iter().map(map_menu_row).collect());
     Ok(OrionResponse::ok(list))
 }
 
@@ -7618,21 +6994,20 @@ async fn orion_system_menu_create(
     let _ = (payload.cache, payload.new_window);
     let name = sanitize_search(payload.name)
         .ok_or_else(|| AppError::BadRequest("name is required".to_string()))?;
-    let id = sqlx::query_scalar::<_, i64>(
-        "INSERT INTO sys_menu (parent_id, name, path, component, icon, type, sort, visible, permission, create_time)
-         VALUES (COALESCE($1, 0), $2, $3, $4, $5, COALESCE($6, 1), COALESCE($7, 0), COALESCE($8, 1), $9, NOW())
-         RETURNING id",
+    let id = menu_service::create_menu(
+        &state.db,
+        menu_service::OrionMenuCreateInput {
+            parent_id: payload.parent_id,
+            name,
+            path: payload.path,
+            component: payload.component,
+            icon: payload.icon,
+            menu_type: payload.r#type,
+            sort: payload.sort,
+            visible: payload.visible,
+            permission: payload.permission,
+        },
     )
-    .bind(payload.parent_id)
-    .bind(name)
-    .bind(payload.path)
-    .bind(payload.component)
-    .bind(payload.icon)
-    .bind(payload.r#type)
-    .bind(payload.sort)
-    .bind(payload.visible)
-    .bind(payload.permission)
-    .fetch_one(&state.db)
     .await?;
     Ok(OrionResponse::ok(id))
 }
@@ -7644,30 +7019,21 @@ async fn orion_system_menu_update(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
     let id = parse_required_id(payload.id, "id")?;
-    sqlx::query(
-        "UPDATE sys_menu SET
-            parent_id = COALESCE($1, parent_id),
-            name = COALESCE(NULLIF($2, ''), name),
-            path = COALESCE($3, path),
-            component = COALESCE($4, component),
-            icon = COALESCE($5, icon),
-            type = COALESCE($6, type),
-            sort = COALESCE($7, sort),
-            visible = COALESCE($8, visible),
-            permission = COALESCE($9, permission)
-         WHERE id = $10",
+    menu_service::update_menu(
+        &state.db,
+        menu_service::OrionMenuUpdateInput {
+            id,
+            parent_id: payload.parent_id,
+            name: payload.name.map(|v| v.trim().to_string()),
+            path: payload.path,
+            component: payload.component,
+            icon: payload.icon,
+            menu_type: payload.r#type,
+            sort: payload.sort,
+            visible: payload.visible,
+            permission: payload.permission,
+        },
     )
-    .bind(payload.parent_id)
-    .bind(payload.name.map(|v| v.trim().to_string()))
-    .bind(payload.path)
-    .bind(payload.component)
-    .bind(payload.icon)
-    .bind(payload.r#type)
-    .bind(payload.sort)
-    .bind(payload.visible)
-    .bind(payload.permission)
-    .bind(id)
-    .execute(&state.db)
     .await?;
     Ok(OrionResponse::ok(true))
 }
@@ -7680,11 +7046,7 @@ async fn orion_system_menu_update_status(
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
     let id = parse_required_id(payload.id, "id")?;
     let visible = payload.status.unwrap_or(1);
-    sqlx::query("UPDATE sys_menu SET visible = $1 WHERE id = $2")
-        .bind(visible)
-        .bind(id)
-        .execute(&state.db)
-        .await?;
+    menu_service::update_menu_visible(&state.db, id, visible).await?;
     Ok(OrionResponse::ok(true))
 }
 
@@ -7695,16 +7057,7 @@ async fn orion_system_menu_delete(
 ) -> AppResult<impl axum::response::IntoResponse> {
     guard::require_permission(&state, &headers, "iam.user-role.assign").await?;
     let id = parse_required_id(query.id, "id")?;
-    let mut tx = state.db.begin().await?;
-    sqlx::query("DELETE FROM sys_role_menu WHERE menu_id = $1")
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM sys_menu WHERE id = $1")
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
-    tx.commit().await?;
+    menu_service::delete_menu(&state.db, id).await?;
     Ok(OrionResponse::ok(true))
 }
 
@@ -7715,43 +7068,32 @@ async fn orion_system_menu_refresh_cache() -> AppResult<impl axum::response::Int
 async fn orion_terminal_themes(
     State(state): State<AppState>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    // Query terminal themes from sys_dict_value table
-    let rows = sqlx::query_as::<_, (String, String, Option<String>)>(
-        r#"
-        SELECT 
-            dv.label as name,
-            dv.value::text as schema_json,
-            dv.extra::text as extra_json
-        FROM sys_dict_value dv
-        JOIN sys_dict_key dk ON dv.key_id = dk.id
-        WHERE dk.key_name = 'terminalTheme'
-          AND dv.deleted = 0
-        ORDER BY dv.sort, dv.id
-        "#,
-    )
-    .fetch_all(&state.db)
-    .await?;
+    let keys = vec!["terminalTheme".to_string()];
+    let rows = dict_value_service::list_dict_values_by_keys(&state.db, &keys).await?;
+    let themes = build_terminal_themes(rows);
 
-    let mut themes = Vec::new();
-    for (name, schema_json, extra_json) in rows {
+    Ok(OrionResponse::ok(themes))
+}
+
+fn build_terminal_themes(rows: Vec<OrionDictValueOptionAggregate>) -> Vec<serde_json::Value> {
+    let mut themes = Vec::with_capacity(rows.len());
+    for row in rows {
         let schema: serde_json::Value =
-            serde_json::from_str(&schema_json).unwrap_or_else(|_| serde_json::json!({}));
-
-        let mut dark = false;
-        if let Some(extra_str) = &extra_json {
-            if let Ok(extra) = serde_json::from_str::<serde_json::Value>(extra_str) {
-                dark = extra.get("dark").and_then(|v| v.as_bool()).unwrap_or(false);
-            }
-        }
+            serde_json::from_str(&row.value).unwrap_or_else(|_| serde_json::json!({}));
+        let dark = row
+            .extra
+            .as_deref()
+            .and_then(|extra| serde_json::from_str::<serde_json::Value>(extra).ok())
+            .and_then(|extra| extra.get("dark").and_then(serde_json::Value::as_bool))
+            .unwrap_or(false);
 
         themes.push(serde_json::json!({
-            "name": name,
+            "name": row.label,
             "dark": dark,
             "schema": schema
         }));
     }
-
-    Ok(OrionResponse::ok(themes))
+    themes
 }
 
 async fn orion_terminal_access(
@@ -7888,5 +7230,59 @@ mod tests {
         assert_eq!(stats.terminal_connect_chart.x.len(), 7);
         assert_eq!(stats.terminal_connect_chart.data.iter().sum::<i64>(), 2);
         assert_eq!(stats.terminal_connect_list.len(), 3);
+    }
+
+    #[test]
+    fn build_terminal_themes_parses_schema_and_dark_flag() {
+        let rows = vec![
+            crate::domain::orion::dict_value::OrionDictValueOptionAggregate {
+                key_name: "terminalTheme".to_string(),
+                value_type: "JSON".to_string(),
+                label: "Dracula".to_string(),
+                value: r##"{"background":"#282a36"}"##.to_string(),
+                extra: Some(r#"{"dark":true}"#.to_string()),
+            },
+        ];
+
+        let themes = build_terminal_themes(rows);
+        assert_eq!(themes.len(), 1);
+        assert_eq!(themes[0]["name"], "Dracula");
+        assert_eq!(themes[0]["dark"], true);
+        assert_eq!(themes[0]["schema"]["background"], "#282a36");
+    }
+
+    #[test]
+    fn build_terminal_themes_falls_back_for_invalid_json() {
+        let rows = vec![
+            crate::domain::orion::dict_value::OrionDictValueOptionAggregate {
+                key_name: "terminalTheme".to_string(),
+                value_type: "JSON".to_string(),
+                label: "Broken".to_string(),
+                value: "not-json".to_string(),
+                extra: Some("also-not-json".to_string()),
+            },
+        ];
+
+        let themes = build_terminal_themes(rows);
+        assert_eq!(themes.len(), 1);
+        assert_eq!(themes[0]["name"], "Broken");
+        assert_eq!(themes[0]["dark"], false);
+        assert_eq!(themes[0]["schema"], serde_json::json!({}));
+    }
+
+    #[test]
+    fn operator_log_info_prefers_method_and_path() {
+        let info = build_operator_log_info(
+            "update_role",
+            Some("PUT"),
+            Some("/infra/system-role/update"),
+        );
+        assert_eq!(info, "PUT /infra/system-role/update");
+    }
+
+    #[test]
+    fn operator_log_info_falls_back_to_operation() {
+        let info = build_operator_log_info("update_role", Some(""), Some(""));
+        assert_eq!(info, "update_role");
     }
 }

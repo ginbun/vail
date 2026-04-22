@@ -5,6 +5,27 @@ use crate::domain::orion::asset::{
 };
 use crate::error::AppResult;
 
+#[derive(Debug, sqlx::FromRow)]
+struct OrionHostKeyRow {
+    id: i64,
+    name: String,
+    description: Option<String>,
+    create_time_ms: i64,
+    update_time_ms: i64,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct OrionHostIdentityRow {
+    id: i64,
+    name: String,
+    identity_type: String,
+    username: Option<String>,
+    key_id: Option<i64>,
+    description: Option<String>,
+    create_time_ms: i64,
+    update_time_ms: i64,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct OrionHostKeyQueryFilters {
     pub id: Option<i64>,
@@ -28,13 +49,13 @@ pub async fn get_host_key_by_id(
     pool: &PgPool,
     id: i64,
 ) -> AppResult<Option<OrionHostKeyAggregate>> {
-    let row = sqlx::query_as::<_, (i64, String, Option<String>, i64, i64)>(
+    let row = sqlx::query_as::<_, OrionHostKeyRow>(
         "SELECT
             id,
             name,
             description,
-            COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0),
-            COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0)
+            COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0) AS create_time_ms,
+            COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0) AS update_time_ms
          FROM ssh_key
          WHERE id = $1 AND deleted = 0",
     )
@@ -42,23 +63,17 @@ pub async fn get_host_key_by_id(
     .fetch_optional(pool)
     .await?;
 
-    Ok(row.map(|v| OrionHostKeyAggregate {
-        id: v.0,
-        name: v.1,
-        description: v.2,
-        create_time_ms: v.3,
-        update_time_ms: v.4,
-    }))
+    Ok(row.map(Into::into))
 }
 
 pub async fn list_host_keys(pool: &PgPool) -> AppResult<Vec<OrionHostKeyAggregate>> {
-    let rows = sqlx::query_as::<_, (i64, String, Option<String>, i64, i64)>(
+    let rows = sqlx::query_as::<_, OrionHostKeyRow>(
         "SELECT
             id,
             name,
             description,
-            COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0),
-            COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0)
+            COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0) AS create_time_ms,
+            COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0) AS update_time_ms
          FROM ssh_key
          WHERE deleted = 0
          ORDER BY id DESC",
@@ -66,16 +81,7 @@ pub async fn list_host_keys(pool: &PgPool) -> AppResult<Vec<OrionHostKeyAggregat
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .into_iter()
-        .map(|v| OrionHostKeyAggregate {
-            id: v.0,
-            name: v.1,
-            description: v.2,
-            create_time_ms: v.3,
-            update_time_ms: v.4,
-        })
-        .collect())
+    Ok(rows.into_iter().map(Into::into).collect())
 }
 
 pub async fn count_host_keys(pool: &PgPool, f: &OrionHostKeyQueryFilters) -> AppResult<i64> {
@@ -107,13 +113,13 @@ pub async fn query_host_keys(
     offset: i64,
     limit: i64,
 ) -> AppResult<Vec<OrionHostKeyAggregate>> {
-    let rows = sqlx::query_as::<_, (i64, String, Option<String>, i64, i64)>(
+    let rows = sqlx::query_as::<_, OrionHostKeyRow>(
         "SELECT
             id,
             name,
             description,
-            COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0),
-            COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0)
+            COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0) AS create_time_ms,
+            COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0) AS update_time_ms
          FROM ssh_key
          WHERE deleted = 0
            AND ($1::BIGINT IS NULL OR id = $1)
@@ -136,16 +142,7 @@ pub async fn query_host_keys(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .into_iter()
-        .map(|v| OrionHostKeyAggregate {
-            id: v.0,
-            name: v.1,
-            description: v.2,
-            create_time_ms: v.3,
-            update_time_ms: v.4,
-        })
-        .collect())
+    Ok(rows.into_iter().map(Into::into).collect())
 }
 
 pub async fn soft_delete_host_key(pool: &PgPool, id: i64) -> AppResult<u64> {
@@ -241,28 +238,16 @@ pub async fn get_host_identity_by_id(
     pool: &PgPool,
     id: i64,
 ) -> AppResult<Option<OrionHostIdentityAggregate>> {
-    let row = sqlx::query_as::<
-        _,
-        (
-            i64,
-            String,
-            String,
-            Option<String>,
-            Option<i64>,
-            Option<String>,
-            i64,
-            i64,
-        ),
-    >(
+    let row = sqlx::query_as::<_, OrionHostIdentityRow>(
         "SELECT
             id,
             name,
-            type,
+            type AS identity_type,
             username,
             key_id,
             description,
-            COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0),
-            COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0)
+            COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0) AS create_time_ms,
+            COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0) AS update_time_ms
          FROM host_identity
          WHERE id = $1 AND deleted = 0",
     )
@@ -270,41 +255,20 @@ pub async fn get_host_identity_by_id(
     .fetch_optional(pool)
     .await?;
 
-    Ok(row.map(|v| OrionHostIdentityAggregate {
-        id: v.0,
-        name: v.1,
-        identity_type: v.2,
-        username: v.3,
-        key_id: v.4,
-        description: v.5,
-        create_time_ms: v.6,
-        update_time_ms: v.7,
-    }))
+    Ok(row.map(Into::into))
 }
 
 pub async fn list_host_identities(pool: &PgPool) -> AppResult<Vec<OrionHostIdentityAggregate>> {
-    let rows = sqlx::query_as::<
-        _,
-        (
-            i64,
-            String,
-            String,
-            Option<String>,
-            Option<i64>,
-            Option<String>,
-            i64,
-            i64,
-        ),
-    >(
+    let rows = sqlx::query_as::<_, OrionHostIdentityRow>(
         "SELECT
             id,
             name,
-            type,
+            type AS identity_type,
             username,
             key_id,
             description,
-            COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0),
-            COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0)
+            COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0) AS create_time_ms,
+            COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0) AS update_time_ms
          FROM host_identity
          WHERE deleted = 0
          ORDER BY id DESC",
@@ -312,19 +276,7 @@ pub async fn list_host_identities(pool: &PgPool) -> AppResult<Vec<OrionHostIdent
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .into_iter()
-        .map(|v| OrionHostIdentityAggregate {
-            id: v.0,
-            name: v.1,
-            identity_type: v.2,
-            username: v.3,
-            key_id: v.4,
-            description: v.5,
-            create_time_ms: v.6,
-            update_time_ms: v.7,
-        })
-        .collect())
+    Ok(rows.into_iter().map(Into::into).collect())
 }
 
 pub async fn count_host_identities(
@@ -366,28 +318,16 @@ pub async fn query_host_identities(
     offset: i64,
     limit: i64,
 ) -> AppResult<Vec<OrionHostIdentityAggregate>> {
-    let rows = sqlx::query_as::<
-        _,
-        (
-            i64,
-            String,
-            String,
-            Option<String>,
-            Option<i64>,
-            Option<String>,
-            i64,
-            i64,
-        ),
-    >(
+    let rows = sqlx::query_as::<_, OrionHostIdentityRow>(
         "SELECT
             id,
             name,
-            type,
+            type AS identity_type,
             username,
             key_id,
             description,
-            COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0),
-            COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0)
+            COALESCE((EXTRACT(EPOCH FROM create_time) * 1000)::BIGINT, 0) AS create_time_ms,
+            COALESCE((EXTRACT(EPOCH FROM update_time) * 1000)::BIGINT, 0) AS update_time_ms
          FROM host_identity
          WHERE deleted = 0
            AND ($1::BIGINT IS NULL OR id = $1)
@@ -417,19 +357,7 @@ pub async fn query_host_identities(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .into_iter()
-        .map(|v| OrionHostIdentityAggregate {
-            id: v.0,
-            name: v.1,
-            identity_type: v.2,
-            username: v.3,
-            key_id: v.4,
-            description: v.5,
-            create_time_ms: v.6,
-            update_time_ms: v.7,
-        })
-        .collect())
+    Ok(rows.into_iter().map(Into::into).collect())
 }
 
 pub async fn soft_delete_host_identity(pool: &PgPool, id: i64) -> AppResult<u64> {
@@ -621,4 +549,31 @@ pub async fn list_asset_grants(
     };
 
     Ok(rows)
+}
+
+impl From<OrionHostKeyRow> for OrionHostKeyAggregate {
+    fn from(value: OrionHostKeyRow) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            description: value.description,
+            create_time_ms: value.create_time_ms,
+            update_time_ms: value.update_time_ms,
+        }
+    }
+}
+
+impl From<OrionHostIdentityRow> for OrionHostIdentityAggregate {
+    fn from(value: OrionHostIdentityRow) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            identity_type: value.identity_type,
+            username: value.username,
+            key_id: value.key_id,
+            description: value.description,
+            create_time_ms: value.create_time_ms,
+            update_time_ms: value.update_time_ms,
+        }
+    }
 }
