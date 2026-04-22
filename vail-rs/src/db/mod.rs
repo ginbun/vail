@@ -8,15 +8,22 @@ use crate::config::DatabaseConfig;
 static MIGRATOR: Migrator = sqlx::migrate!("./migrations");
 
 pub async fn init_pool(config: &DatabaseConfig) -> PgPool {
-    let pool = PgPoolOptions::new()
+    match PgPoolOptions::new()
         .max_connections(5)
         .connect(&config.connection_string())
         .await
-        .expect("Failed to create database pool");
-
-    pool
+    {
+        Ok(pool) => pool,
+        Err(e) => {
+            eprintln!("Failed to create database pool: {}", e);
+            std::process::exit(1);
+        }
+    }
 }
 
 pub async fn run_migrations(pool: &PgPool) {
-    MIGRATOR.run(pool).await.expect("Failed to run migrations");
+    if let Err(e) = MIGRATOR.run(pool).await {
+        eprintln!("Failed to run migrations: {}", e);
+        std::process::exit(1);
+    }
 }
