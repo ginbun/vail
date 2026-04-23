@@ -74,6 +74,22 @@ pub async fn require_permission(
     Ok(user_id)
 }
 
+pub async fn require_any_permission(
+    state: &AppState,
+    headers: &HeaderMap,
+    permission_codes: &[&str],
+) -> AppResult<i64> {
+    for code in permission_codes {
+        match require_permission(state, headers, code).await {
+            Ok(user_id) => return Ok(user_id),
+            Err(AppError::Forbidden(_)) | Err(AppError::Auth(_)) => continue,
+            Err(err) => return Err(err),
+        }
+    }
+
+    Err(AppError::Forbidden("Permission denied".to_string()))
+}
+
 pub async fn has_host_read_permission(state: &AppState, user_id: i64) -> AppResult<bool> {
     let allowed = sqlx::query_scalar::<_, bool>(
         "SELECT EXISTS(

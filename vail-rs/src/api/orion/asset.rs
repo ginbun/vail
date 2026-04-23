@@ -1065,7 +1065,12 @@ pub(super) async fn orion_data_grant_host_group(
     headers: HeaderMap,
     Json(payload): Json<OrionAssetDataGrantRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "host.update").await?;
+    guard::require_any_permission(
+        &state,
+        &headers,
+        &["asset.data-grant.host-group.assign", "host.update"],
+    )
+    .await?;
     let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let scope = asset_service::resolve_grant_scope(payload.user_id, payload.role_id)?;
     asset_service::replace_asset_grants(
@@ -1083,7 +1088,12 @@ pub(super) async fn orion_data_grant_get_host_group(
     headers: HeaderMap,
     Query(query): Query<OrionAssetAuthorizedDataQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "host.read").await?;
+    guard::require_any_permission(
+        &state,
+        &headers,
+        &["asset.data-grant.host-group.view", "host.read"],
+    )
+    .await?;
     let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let scope = asset_service::resolve_grant_scope(query.user_id, query.role_id)?;
     let list = asset_service::list_asset_grants(&state.db, scope, "host-group").await?;
@@ -1095,7 +1105,12 @@ pub(super) async fn orion_data_grant_host_key(
     headers: HeaderMap,
     Json(payload): Json<OrionAssetDataGrantRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "host.update").await?;
+    guard::require_any_permission(
+        &state,
+        &headers,
+        &["asset.data-grant.host-key.assign", "host.update"],
+    )
+    .await?;
     let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let scope = asset_service::resolve_grant_scope(payload.user_id, payload.role_id)?;
     asset_service::replace_asset_grants(
@@ -1113,7 +1128,12 @@ pub(super) async fn orion_data_grant_get_host_key(
     headers: HeaderMap,
     Query(query): Query<OrionAssetAuthorizedDataQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "host.read").await?;
+    guard::require_any_permission(
+        &state,
+        &headers,
+        &["asset.data-grant.host-key.view", "host.read"],
+    )
+    .await?;
     let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let scope = asset_service::resolve_grant_scope(query.user_id, query.role_id)?;
     let list = asset_service::list_asset_grants(&state.db, scope, "host-key").await?;
@@ -1125,7 +1145,12 @@ pub(super) async fn orion_data_grant_host_identity(
     headers: HeaderMap,
     Json(payload): Json<OrionAssetDataGrantRequest>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "host.update").await?;
+    guard::require_any_permission(
+        &state,
+        &headers,
+        &["asset.data-grant.host-identity.assign", "host.update"],
+    )
+    .await?;
     let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let scope = asset_service::resolve_grant_scope(payload.user_id, payload.role_id)?;
     asset_service::replace_asset_grants(
@@ -1143,7 +1168,12 @@ pub(super) async fn orion_data_grant_get_host_identity(
     headers: HeaderMap,
     Query(query): Query<OrionAssetAuthorizedDataQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "host.read").await?;
+    guard::require_any_permission(
+        &state,
+        &headers,
+        &["asset.data-grant.host-identity.view", "host.read"],
+    )
+    .await?;
     let _user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let scope = asset_service::resolve_grant_scope(query.user_id, query.role_id)?;
     let list = asset_service::list_asset_grants(&state.db, scope, "host-identity").await?;
@@ -1157,7 +1187,6 @@ pub(super) async fn orion_authorized_data_current_host(
     headers: HeaderMap,
     Query(_query): Query<OrionHostListQuery>,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "host.read").await?;
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let data = asset_service::list_authorized_current_hosts(&state.db, user_id).await?;
     let group_tree = build_host_group_tree(data.group_tree);
@@ -1210,7 +1239,6 @@ pub(super) async fn orion_authorized_data_current_host_key(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "host.read").await?;
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let key_list = asset_service::list_authorized_current_host_keys(&state.db, user_id)
         .await?
@@ -1235,7 +1263,6 @@ pub(super) async fn orion_authorized_data_current_host_identity(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<impl axum::response::IntoResponse> {
-    guard::require_permission(&state, &headers, "host.read").await?;
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let identity_list = asset_service::list_authorized_current_host_identities(&state.db, user_id)
         .await?

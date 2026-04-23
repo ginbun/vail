@@ -145,6 +145,11 @@ struct SftpDownloadToken {
     expires_at_ms: i64,
 }
 
+struct SftpListResult {
+    path: String,
+    list: Vec<SftpFile>,
+}
+
 struct UploadState {
     host_id: i64,
     path: String,
@@ -671,10 +676,10 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
             let show_hidden = parts.next().unwrap_or("0") == "1";
             let path = parts.next().unwrap_or("/");
             match sftp_list(&state, host_id, path, show_hidden).await {
-                Ok(list) => {
-                    let body = serde_json::to_string(&list).unwrap_or_else(|_| "[]".to_string());
+                Ok(result) => {
+                    let body = serde_json::to_string(&result.list).unwrap_or_else(|_| "[]".to_string());
                     socket
-                        .send(Message::Text(format!("ls|{}|1||{body}", safe_field(path))))
+                        .send(Message::Text(format!("ls|{}|1||{body}", safe_field(&result.path))))
                         .await
                 }
                 Err(err) => {
@@ -1730,9 +1735,18 @@ async fn sftp_list(
     host_id: i64,
     path: &str,
     show_hidden: bool,
-) -> AppResult<Vec<SftpFile>> {
+) -> AppResult<SftpListResult> {
     let path = normalize_remote_path(path)?;
     with_sftp(state, host_id, move |sftp| {
+        let resolved_path = if path == "." {
+            sftp
+                .realpath(FsPath::new("."))
+                .ok()
+                .and_then(|p| p.to_str().map(ToOwned::to_owned))
+                .unwrap_or_else(|| "/".to_string())
+        } else {
+            path.clone()
+        };
         let mut list = Vec::new();
         let rows = sftp
             .readdir(FsPath::new(&path))
@@ -1749,7 +1763,7 @@ async fn sftp_list(
             if !show_hidden && name.starts_with('.') {
                 continue;
             }
-            let full = join_remote_path(&path, &name);
+            let full = join_remote_path(&resolved_path, &name);
             list.push(map_sftp_file(full, name, stat));
         }
         list.sort_by(|a, b| {
@@ -1761,7 +1775,10 @@ async fn sftp_list(
                 std::cmp::Ordering::Greater
             }
         });
-        Ok(list)
+        Ok(SftpListResult {
+            path: resolved_path,
+            list,
+        })
     })
     .await
 }

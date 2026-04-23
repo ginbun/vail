@@ -258,15 +258,7 @@ async fn require_any_permission(
     headers: &HeaderMap,
     permission_codes: &[&str],
 ) -> AppResult<i64> {
-    for code in permission_codes {
-        match guard::require_permission(state, headers, code).await {
-            Ok(user_id) => return Ok(user_id),
-            Err(AppError::Auth(_)) => continue,
-            Err(err) => return Err(err),
-        }
-    }
-
-    Err(AppError::Auth("Permission denied".to_string()))
+    guard::require_any_permission(state, headers, permission_codes).await
 }
 
 fn parse_csv_values(raw: Option<String>) -> Vec<String> {
