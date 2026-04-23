@@ -110,14 +110,29 @@ Container base images:
 - Frontend build stage (inside backend build): `node:24-alpine`
 - Backend runtime: `gcr.io/distroless/base-debian13`
 
+Development mode (build local backend image):
+
 ```bash
-docker compose up --build
+docker compose --profile dev up --build
+```
+
+Production mode (pull published backend image):
+
+```bash
+docker compose --profile prod up
 ```
 
 After startup:
 
 - Web UI + API entrypoint: `http://localhost:3000`
 - PostgreSQL: `localhost:5432` (`vail` / `vail`)
+
+Default bootstrap admin account (created by initial migration):
+
+- Username: `admin`
+- Password: `Admin@123456`
+
+For security, change this password immediately after first login.
 
 The backend runs migrations automatically on startup and ensures weekly partitions for log/session tables.
 API endpoints are available under `/api/v1/*`.
@@ -134,7 +149,7 @@ CI workflow path: `.github/workflows/ci.yml`
 - Every GitHub Release is treated as one product version.
 - Release tags must follow semantic version format: `vMAJOR.MINOR.PATCH`.
 - Release workflow path: `.github/workflows/release.yml`
-- On release publish, workflow validates tag format and runs backend/frontend verification.
+- On release publish, workflow validates tag format, runs backend/frontend verification, and publishes backend Docker image to GHCR (`ghcr.io/<owner>/vail`) with `latest` and semver tags.
 
 ## Current Focus
 
