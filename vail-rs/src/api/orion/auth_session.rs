@@ -13,7 +13,7 @@ pub(super) async fn orion_login(
         .map(|v| v.to_string());
     let user = iam_service::get_login_user_by_username(&state.db, &payload.username)
         .await?
-        .ok_or_else(|| AppError::Auth("User not found".to_string()))?;
+        .ok_or_else(|| AppError::Auth("Invalid username or password".to_string()))?;
 
     let password_ok = verify_orion_password(&payload.password, &user.password_hash);
 
@@ -29,7 +29,7 @@ pub(super) async fn orion_login(
         .await
         .ok();
 
-        return Err(AppError::Auth("Invalid password".to_string()));
+        return Err(AppError::Auth("Invalid username or password".to_string()));
     }
 
     let session_id = uuid::Uuid::new_v4().to_string();

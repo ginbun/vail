@@ -119,7 +119,8 @@ class="action"
       // 修改密码
       await updateCurrentUserPassword({
         beforePassword: formModel.value.beforePassword,
-        password: formModel.value.password
+        password: formModel.value.password,
+        checkPassword: formModel.value.checkPassword,
       });
       // 退出登录
       await logout('修改成功');

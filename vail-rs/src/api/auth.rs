@@ -176,7 +176,7 @@ async fn login(
     .bind(&payload.username)
     .fetch_optional(&state.db)
     .await?
-    .ok_or_else(|| AppError::Auth("User not found".to_string()))?;
+    .ok_or_else(|| AppError::Auth("Invalid username or password".to_string()))?;
 
     if !bcrypt::verify(&payload.password, &user.2).unwrap_or(false) {
         sqlx::query(
@@ -190,7 +190,7 @@ async fn login(
         .await
         .ok();
 
-        return Err(AppError::Auth("Invalid password".to_string()));
+        return Err(AppError::Auth("Invalid username or password".to_string()));
     }
 
     if user.4 {

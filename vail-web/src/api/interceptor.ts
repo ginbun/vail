@@ -79,7 +79,7 @@ axios.interceptors.response.use(
     // 判断是否弹出请求错误信息
     if (error.config.promptRequestErrorMessage) {
       Message.error({
-        content: error.msg || '请求失败',
+        content: error.msg || 'Request failed',
         duration: 5 * 1000,
       });
     }
