@@ -1142,8 +1142,10 @@ pub(super) async fn orion_mine_update_password(
         .password
         .ok_or_else(|| AppError::BadRequest("password is required".to_string()))?;
 
-    if payload.check_password.as_deref() != Some(&new_password) {
-        return Err(AppError::BadRequest("checkPassword mismatch".to_string()));
+    if let Some(check_password) = payload.check_password.as_deref() {
+        if check_password != new_password {
+            return Err(AppError::BadRequest("checkPassword mismatch".to_string()));
+        }
     }
     if !bcrypt::verify(before, &old_hash).unwrap_or(false) {
         return Err(AppError::Auth("invalid before password".to_string()));
@@ -1264,6 +1266,64 @@ pub(super) fn parse_required_id(v: Option<i64>, field: &str) -> AppResult<i64> {
         )));
     }
     Ok(id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_orion_mine_update_password_request_deserialization() {
+        // 1. 传入 checkPassword 且一致
+        let json = r#"{"beforePassword": "old", "password": "new", "checkPassword": "new"}"#;
+        let req: OrionMineUpdatePasswordRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.before_password.as_deref(), Some("old"));
+        assert_eq!(req.password.as_deref(), Some("new"));
+        assert_eq!(req.check_password.as_deref(), Some("new"));
+
+        // 2. 不传 checkPassword
+        let json = r#"{"beforePassword": "old", "password": "new"}"#;
+        let req: OrionMineUpdatePasswordRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.check_password, None);
+
+        // 3. 传入 checkPassword 为 null
+        let json = r#"{"beforePassword": "old", "password": "new", "checkPassword": null}"#;
+        let req: OrionMineUpdatePasswordRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.check_password, None);
+    }
+
+    #[test]
+    fn test_update_password_logic_check() {
+        // 模拟 orion_mine_update_password 中的校验逻辑 (Line 1145-1149)
+        let verify_logic = |password: &str, check_password: Option<&str>| -> Result<(), String> {
+            // 逻辑: 仅当传入 check_password 时才做校验
+            if let Some(cp) = check_password {
+                if cp != password {
+                    return Err("checkPassword mismatch".to_string());
+                }
+            }
+            Ok(())
+        };
+
+        // 覆盖：传入 checkPassword 且不一致 -> 返回 checkPassword mismatch
+        assert_eq!(
+            verify_logic("new_password", Some("mismatch_password")).unwrap_err(),
+            "checkPassword mismatch"
+        );
+
+        // 覆盖：传入 checkPassword 为空字符串且与密码不一致 -> 返回 checkPassword mismatch
+        // 注意：如果业务要求忽略空字符串，则此处逻辑需调整，但按当前代码逻辑它是会报错的
+        assert_eq!(
+            verify_logic("new_password", Some("")).unwrap_err(),
+            "checkPassword mismatch"
+        );
+
+        // 覆盖：传入 checkPassword 且一致 -> 通过
+        assert!(verify_logic("new_password", Some("new_password")).is_ok());
+
+        // 覆盖：不传 checkPassword (None) -> 不应因 mismatch 失败 -> 通过
+        assert!(verify_logic("new_password", None).is_ok());
+    }
 }
 
 async fn load_user_roles(state: &AppState, user_id: i64) -> AppResult<Vec<OrionRoleQueryResponse>> {

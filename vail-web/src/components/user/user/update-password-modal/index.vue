@@ -125,7 +125,8 @@ field="checkPassword"
       // 修改
       await updateCurrentUserPassword({
         beforePassword: formModel.value.beforePassword,
-        password: formModel.value.password
+        password: formModel.value.password,
+        checkPassword: formModel.value.checkPassword,
       });
       Message.success('修改成功');
       // 清空
