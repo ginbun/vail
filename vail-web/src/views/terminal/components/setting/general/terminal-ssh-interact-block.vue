@@ -7,7 +7,7 @@
       </h3>
     </div>
     <!-- 提示 -->
-    <a-alert class="mb16">修改后会立刻保存, 刷新页面后生效</a-alert>
+    <a-alert class="mb16">修改后会立刻保存, 并对已打开终端即时生效</a-alert>
     <!-- 非安全环境提示 -->
     <a-alert
 v-if="!isSecureEnvironment"
@@ -125,7 +125,7 @@ v-model="formModel.scrollBackLine"
 
   const { toOptions } = useDictStore();
 
-  const { formModel } = useTerminalPreference<TerminalSshInteractSetting>(TerminalPreferenceItem.SSH_INTERACT_SETTING);
+  const { formModel } = useTerminalPreference<TerminalSshInteractSetting>(TerminalPreferenceItem.SSH_INTERACT_SETTING, true);
 
 </script>
 

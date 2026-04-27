@@ -70,6 +70,22 @@ export const TerminalPreferenceItem = {
 
 const defaultSshRightMenuSetting = ['copy', 'paste', 'search', 'clear', 'disconnect'];
 
+const defaultSshInteractSetting: TerminalSshInteractSetting = {
+  fastScrollModifier: false,
+  altClickMovesCursor: false,
+  rightClickSelectsWord: false,
+  selectionChangeCopy: false,
+  copyAutoTrim: false,
+  pasteAutoTrim: false,
+  rightClickPaste: false,
+  enableRightClickMenu: true,
+  enableBell: false,
+  wordSeparator: '',
+  terminalEmulationType: 'xterm',
+  scrollBackLine: 1000,
+  replaceBackspace: false,
+};
+
 export default defineStore('terminal', {
   state: (): TerminalState => ({
     preference: {
@@ -80,7 +96,7 @@ export default defineStore('terminal', {
       sshDisplaySetting: {} as TerminalSshDisplaySetting,
       sshActionBarSetting: {} as TerminalSshActionBarSetting,
       sshRightMenuSetting: [...defaultSshRightMenuSetting],
-      sshInteractSetting: {} as TerminalSshInteractSetting,
+      sshInteractSetting: { ...defaultSshInteractSetting },
       sshPluginsSetting: {} as TerminalSshPluginsSetting,
       rdpGraphSetting: {} as TerminalRdpGraphSetting,
       rdpSessionSetting: {} as TerminalRdpSessionSetting,
@@ -128,9 +144,10 @@ export default defineStore('terminal', {
             this.preference[key as keyof TerminalPreference] = item as any;
           }
         });
-        if (this.preference.sshInteractSetting.enableRightClickMenu !== false) {
-          this.preference.sshInteractSetting.enableRightClickMenu = true;
-        }
+        this.preference.sshInteractSetting = {
+          ...defaultSshInteractSetting,
+          ...this.preference.sshInteractSetting,
+        };
         if (!Array.isArray(this.preference.sshRightMenuSetting)) {
           this.preference.sshRightMenuSetting = [...defaultSshRightMenuSetting];
         }
@@ -142,7 +159,12 @@ export default defineStore('terminal', {
     // 更新终端偏好
     async updateTerminalPreference(item: string, value: any, setLocal = false) {
       if (setLocal) {
-        this.preference[item as keyof TerminalPreference] = value;
+        const current = this.preference[item as keyof TerminalPreference];
+        if (isObject(current) && isObject(value)) {
+          Object.assign(current, value);
+        } else {
+          this.preference[item as keyof TerminalPreference] = value;
+        }
       }
       try {
         // 修改配置
