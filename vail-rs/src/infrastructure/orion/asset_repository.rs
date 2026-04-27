@@ -438,17 +438,19 @@ pub async fn create_host_with_groups(
     hostname: &str,
     description: Option<&str>,
     group_ids: &[i64],
+    tags: &Value,
 ) -> AppResult<i64> {
     let mut tx = pool.begin().await?;
 
     let new_id = sqlx::query_scalar::<_, i64>(
-        "INSERT INTO host (name, hostname, port, credential_type, description, status, create_time, update_time)
-         VALUES ($1, $2, 22, NULL, $3, 1, NOW(), NOW())
+        "INSERT INTO host (name, hostname, port, credential_type, description, tags, status, create_time, update_time)
+         VALUES ($1, $2, 22, NULL, $3, $4::jsonb, 1, NOW(), NOW())
          RETURNING id",
     )
     .bind(name)
     .bind(hostname)
     .bind(description)
+    .bind(tags.to_string())
     .fetch_one(&mut *tx)
     .await?;
 
@@ -475,6 +477,7 @@ pub async fn update_host_with_groups(
     hostname: Option<&str>,
     description: Option<&str>,
     group_ids: &[i64],
+    tags: Option<&Value>,
 ) -> AppResult<u64> {
     let mut tx = pool.begin().await?;
 
@@ -483,12 +486,14 @@ pub async fn update_host_with_groups(
          SET name = COALESCE(NULLIF($1, ''), name),
              hostname = COALESCE(NULLIF($2, ''), hostname),
              description = COALESCE($3, description),
+             tags = COALESCE($4::jsonb, tags),
              update_time = NOW()
-         WHERE id = $4 AND deleted = 0",
+         WHERE id = $5 AND deleted = 0",
     )
     .bind(name)
     .bind(hostname)
     .bind(description)
+    .bind(tags.map(|v| v.to_string()))
     .bind(id)
     .execute(&mut *tx)
     .await?

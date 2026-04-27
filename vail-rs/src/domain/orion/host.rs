@@ -1,3 +1,5 @@
+use serde_json::Value;
+
 #[derive(Debug, Clone)]
 pub struct OrionHostAggregate {
     pub id: i64,
@@ -8,6 +10,7 @@ pub struct OrionHostAggregate {
     pub create_time_ms: i64,
     pub update_time_ms: i64,
     pub group_ids: Vec<i64>,
+    pub tags: Vec<Value>,
 }
 
 impl OrionHostAggregate {

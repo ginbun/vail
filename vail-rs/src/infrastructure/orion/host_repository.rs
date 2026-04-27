@@ -1,3 +1,4 @@
+use serde_json::Value;
 use sqlx::PgPool;
 
 use crate::domain::orion::host::OrionHostAggregate;
@@ -12,6 +13,7 @@ struct OrionHostRow {
     create_time_ms: i64,
     update_time_ms: i64,
     group_ids: Option<Vec<i64>>,
+    tags: Value,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -35,7 +37,8 @@ pub async fn list_hosts(pool: &PgPool) -> Result<Vec<OrionHostAggregate>, sqlx::
             h.status,
             EXTRACT(EPOCH FROM h.create_time)::bigint * 1000 AS create_time_ms,
             EXTRACT(EPOCH FROM h.update_time)::bigint * 1000 AS update_time_ms,
-            ARRAY_REMOVE(ARRAY_AGG(hgr.group_id), NULL) AS group_ids
+            ARRAY_REMOVE(ARRAY_AGG(hgr.group_id), NULL) AS group_ids,
+            COALESCE(h.tags, '[]'::jsonb) AS tags
          FROM host h
          LEFT JOIN host_group_rel hgr ON hgr.host_id = h.id
          WHERE h.deleted = 0
@@ -61,7 +64,8 @@ pub async fn get_host_by_id(
             h.status,
             EXTRACT(EPOCH FROM h.create_time)::bigint * 1000 AS create_time_ms,
             EXTRACT(EPOCH FROM h.update_time)::bigint * 1000 AS update_time_ms,
-            ARRAY_REMOVE(ARRAY_AGG(hgr.group_id), NULL) AS group_ids
+            ARRAY_REMOVE(ARRAY_AGG(hgr.group_id), NULL) AS group_ids,
+            COALESCE(h.tags, '[]'::jsonb) AS tags
          FROM host h
          LEFT JOIN host_group_rel hgr ON hgr.host_id = h.id
          WHERE h.deleted = 0 AND h.id = $1
@@ -88,7 +92,8 @@ pub async fn query_hosts(
             h.status,
             EXTRACT(EPOCH FROM h.create_time)::bigint * 1000 AS create_time_ms,
             EXTRACT(EPOCH FROM h.update_time)::bigint * 1000 AS update_time_ms,
-            ARRAY_REMOVE(ARRAY_AGG(hgr.group_id), NULL) AS group_ids
+            ARRAY_REMOVE(ARRAY_AGG(hgr.group_id), NULL) AS group_ids,
+            COALESCE(h.tags, '[]'::jsonb) AS tags
          FROM host h
          LEFT JOIN host_group_rel hgr ON hgr.host_id = h.id
          WHERE h.deleted = 0
@@ -158,6 +163,7 @@ impl From<OrionHostRow> for OrionHostAggregate {
             create_time_ms: value.create_time_ms,
             update_time_ms: value.update_time_ms,
             group_ids: value.group_ids.unwrap_or_default(),
+            tags: value.tags.as_array().cloned().unwrap_or_default(),
         }
     }
 }

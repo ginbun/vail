@@ -165,6 +165,7 @@ struct OrionHostCreateRequest {
     address: Option<String>,
     description: Option<String>,
     group_id_list: Option<Vec<i64>>,
+    tags: Option<Vec<i64>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -175,6 +176,7 @@ struct OrionHostUpdateRequest {
     address: Option<String>,
     description: Option<String>,
     group_id_list: Option<Vec<i64>>,
+    tags: Option<Vec<i64>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -907,6 +909,24 @@ fn verify_orion_password(raw_password: &str, password_hash: &str) -> bool {
 
 fn map_host_row(host: OrionHostAggregate) -> OrionHostResponse {
     let status = host.status_label().to_string();
+    let tags = host
+        .tags
+        .into_iter()
+        .filter_map(|tag| {
+            let (id, name) = if let Some(id) = tag.as_i64() {
+                (id, String::new())
+            } else {
+                let id = tag.get("id").and_then(serde_json::Value::as_i64)?;
+                let name = tag
+                    .get("name")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                (id, name)
+            };
+            Some(OrionTagItem { id, name })
+        })
+        .collect();
     OrionHostResponse {
         id: host.id,
         types: vec!["SSH".to_string()],
@@ -927,7 +947,7 @@ fn map_host_row(host: OrionHostAggregate) -> OrionHostResponse {
         updater: "system".to_string(),
         alias: host.name.clone(),
         color: "".to_string(),
-        tags: Vec::new(),
+        tags,
         group_id_list: host.group_ids,
         spec: serde_json::json!({}),
         favorite: false,
@@ -1289,6 +1309,7 @@ mod tests {
             create_time_ms: 1,
             update_time_ms: 1,
             group_ids: vec![],
+            tags: vec![],
         };
         let disabled = OrionHostAggregate {
             status: 0,
@@ -1297,6 +1318,45 @@ mod tests {
 
         assert_eq!(map_host_row(enabled).status, "ENABLED");
         assert_eq!(map_host_row(disabled).status, "DISABLED");
+    }
+
+    #[test]
+    fn map_host_row_preserves_multiple_tags() {
+        let host = OrionHostAggregate {
+            id: 1,
+            name: "host-a".to_string(),
+            hostname: "10.0.0.1".to_string(),
+            description: None,
+            status: 1,
+            create_time_ms: 1,
+            update_time_ms: 1,
+            group_ids: vec![],
+            tags: vec![
+                serde_json::json!({ "id": 7, "name": "prod" }),
+                serde_json::json!({ "id": 8, "name": "ssh" }),
+            ],
+        };
+
+        let response = map_host_row(host);
+
+        assert_eq!(response.tags.len(), 2);
+        assert_eq!(response.tags[0].id, 7);
+        assert_eq!(response.tags[0].name, "prod");
+        assert_eq!(response.tags[1].id, 8);
+        assert_eq!(response.tags[1].name, "ssh");
+    }
+
+    #[test]
+    fn host_create_request_deserializes_multiple_tags() {
+        let payload: OrionHostCreateRequest = serde_json::from_value(serde_json::json!({
+            "name": "host-a",
+            "address": "10.0.0.1",
+            "groupIdList": [1],
+            "tags": [7, 8]
+        }))
+        .expect("valid host create request");
+
+        assert_eq!(payload.tags, Some(vec![7, 8]));
     }
 
     #[test]

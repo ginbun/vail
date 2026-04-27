@@ -130,6 +130,8 @@ pub(super) async fn orion_create_host(
     let audit_name = name.clone();
     let audit_address = address.clone();
     let audit_group_ids = group_ids.clone();
+    let tag_ids = payload.tags.unwrap_or_default();
+    let audit_tag_ids = tag_ids.clone();
     let new_id = asset_service::create_host(
         &state.db,
         asset_service::OrionHostCreateInput {
@@ -137,6 +139,7 @@ pub(super) async fn orion_create_host(
             hostname: address,
             description: payload.description,
             group_ids,
+            tag_ids,
         },
     )
     .await?;
@@ -153,6 +156,7 @@ pub(super) async fn orion_create_host(
                 "name": audit_name,
                 "address": audit_address,
                 "groupIdList": audit_group_ids,
+                "tags": audit_tag_ids,
             }),
             result: 1,
             error_message: None,
@@ -185,9 +189,11 @@ pub(super) async fn orion_update_host(
     let address = payload.address.map(|v| v.trim().to_string());
     let description = payload.description;
     let group_ids = normalize_group_ids(payload.group_id_list)?;
+    let tag_ids = payload.tags;
     let audit_name = name.clone();
     let audit_address = address.clone();
     let audit_group_ids = group_ids.clone();
+    let audit_tag_ids = tag_ids.clone();
 
     asset_service::update_host(
         &state.db,
@@ -197,6 +203,7 @@ pub(super) async fn orion_update_host(
             hostname: address,
             description,
             group_ids,
+            tag_ids,
         },
     )
     .await?;
@@ -213,6 +220,7 @@ pub(super) async fn orion_update_host(
                 "name": audit_name,
                 "address": audit_address,
                 "groupIdList": audit_group_ids,
+                "tags": audit_tag_ids,
             }),
             result: 1,
             error_message: None,

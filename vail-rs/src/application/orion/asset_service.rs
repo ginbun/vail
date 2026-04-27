@@ -6,6 +6,7 @@ use sqlx::PgPool;
 use crate::domain::orion::asset::{
     OrionGrantScope, OrionHostGroupAggregate, OrionHostIdentityAggregate, OrionHostKeyAggregate,
 };
+use crate::domain::orion::compat::OrionCompatModule;
 use crate::error::{AppError, AppResult};
 use crate::infrastructure::orion::asset_repository::{
     self, HostIdentityPatch, OrionHostIdentityQueryFilters as RepositoryHostIdentityQueryFilters,
@@ -78,6 +79,7 @@ pub struct OrionHostCreateInput {
     pub hostname: String,
     pub description: Option<String>,
     pub group_ids: Vec<i64>,
+    pub tag_ids: Vec<i64>,
 }
 
 #[derive(Debug)]
@@ -87,6 +89,7 @@ pub struct OrionHostUpdateInput {
     pub hostname: Option<String>,
     pub description: Option<String>,
     pub group_ids: Vec<i64>,
+    pub tag_ids: Option<Vec<i64>>,
 }
 
 #[derive(Debug, Clone)]
@@ -190,7 +193,9 @@ pub async fn ensure_host_groups_exist(pool: &PgPool, group_ids: &[i64]) -> AppRe
 
 pub async fn create_host(pool: &PgPool, input: OrionHostCreateInput) -> AppResult<i64> {
     let group_ids = normalize_ids(input.group_ids);
+    let tag_ids = normalize_ids(input.tag_ids);
     ensure_host_groups_exist(pool, &group_ids).await?;
+    let tags = resolve_host_tags(pool, &tag_ids).await?;
 
     asset_repository::create_host_with_groups(
         pool,
@@ -198,6 +203,7 @@ pub async fn create_host(pool: &PgPool, input: OrionHostCreateInput) -> AppResul
         &input.hostname,
         input.description.as_deref(),
         &group_ids,
+        &Value::Array(tags),
     )
     .await
 }
@@ -205,6 +211,12 @@ pub async fn create_host(pool: &PgPool, input: OrionHostCreateInput) -> AppResul
 pub async fn update_host(pool: &PgPool, input: OrionHostUpdateInput) -> AppResult<()> {
     let group_ids = normalize_ids(input.group_ids);
     ensure_host_groups_exist(pool, &group_ids).await?;
+    let tags = match input.tag_ids {
+        Some(tag_ids) => Some(Value::Array(
+            resolve_host_tags(pool, &normalize_ids(tag_ids)).await?,
+        )),
+        None => None,
+    };
 
     let rows = asset_repository::update_host_with_groups(
         pool,
@@ -213,6 +225,7 @@ pub async fn update_host(pool: &PgPool, input: OrionHostUpdateInput) -> AppResul
         input.hostname.as_deref(),
         input.description.as_deref(),
         &group_ids,
+        tags.as_ref(),
     )
     .await?;
 
@@ -221,6 +234,31 @@ pub async fn update_host(pool: &PgPool, input: OrionHostUpdateInput) -> AppResul
     }
 
     Ok(())
+}
+
+async fn resolve_host_tags(pool: &PgPool, tag_ids: &[i64]) -> AppResult<Vec<Value>> {
+    if tag_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let rows = asset_repository::load_cache_json_value(pool, OrionCompatModule::Tag.store_key())
+        .await?
+        .and_then(|value| value.as_array().cloned())
+        .unwrap_or_default();
+
+    let mut tags = Vec::with_capacity(tag_ids.len());
+    for tag_id in tag_ids {
+        let row = rows
+            .iter()
+            .find(|row| row.get("id").and_then(Value::as_i64) == Some(*tag_id));
+        let name = row
+            .and_then(|row| row.get("name"))
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        tags.push(serde_json::json!({ "id": tag_id, "name": name }));
+    }
+
+    Ok(tags)
 }
 
 pub async fn update_host_status(pool: &PgPool, id: i64, status: i16) -> AppResult<()> {
