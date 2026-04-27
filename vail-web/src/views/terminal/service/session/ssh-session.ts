@@ -25,6 +25,10 @@ import SshSessionHandler from '../handler/ssh-session-handler';
 // SSH 会话实现
 export default class SshSession extends BaseSession<ReactiveSessionState, ISshChannel> implements ISshSession {
 
+  private autoReconnectAttempts = 0;
+
+  private autoReconnectTimer?: number;
+
   public inst: Terminal;
 
   public config: SshInitConfig;
@@ -232,6 +236,35 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
         terminalType,
       })
     });
+  }
+
+  // 网络断开后自动重连
+  scheduleAutoReconnect(): boolean {
+    if (this.autoReconnectAttempts >= 3 || this.autoReconnectTimer) {
+      return false;
+    }
+    this.autoReconnectAttempts += 1;
+    this.state.canReconnect = false;
+    this.autoReconnectTimer = window.setTimeout(async () => {
+      this.autoReconnectTimer = undefined;
+      await useTerminalStore().reOpenSession(this.sessionKey);
+    }, Math.min(3000, this.autoReconnectAttempts * 1000));
+    return true;
+  }
+
+  // 重置自动重连计数
+  markAutoReconnectSucceeded(): void {
+    this.autoReconnectAttempts = 0;
+  }
+
+  // 断开连接
+  disconnect(): void {
+    if (this.autoReconnectTimer) {
+      window.clearTimeout(this.autoReconnectTimer);
+      this.autoReconnectTimer = undefined;
+    }
+    this.channel?.send(InputProtocol.CLOSE);
+    super.disconnect();
   }
 
   // 写入数据

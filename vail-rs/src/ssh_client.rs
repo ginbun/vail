@@ -3,6 +3,7 @@ use std::{io::Write, net::TcpStream, path::Path, time::Duration};
 use serde::Deserialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use socket2::{SockRef, TcpKeepalive};
 use ssh_key::HashAlg;
 
 use crate::{error::AppError, security};
@@ -484,6 +485,14 @@ pub fn connect_session(
     config: &HostSshConfig,
     timeout_secs: u64,
 ) -> Result<ssh2::Session, AppError> {
+    connect_session_with_keepalive(config, timeout_secs, 0)
+}
+
+pub fn connect_session_with_keepalive(
+    config: &HostSshConfig,
+    timeout_secs: u64,
+    keepalive_interval_secs: u64,
+) -> Result<ssh2::Session, AppError> {
     let stream = TcpStream::connect((config.hostname.as_str(), config.port)).map_err(|e| {
         AppError::Ssh(format!(
             "failed to connect to {}:{}: {e}",
@@ -493,6 +502,14 @@ pub fn connect_session(
     let timeout = Duration::from_secs(timeout_secs.max(1));
     let _ = stream.set_read_timeout(Some(timeout));
     let _ = stream.set_write_timeout(Some(timeout));
+    if keepalive_interval_secs > 0 {
+        let interval = Duration::from_secs(keepalive_interval_secs.max(1));
+        let keepalive = TcpKeepalive::new()
+            .with_time(interval)
+            .with_interval(interval)
+            .with_retries(3);
+        let _ = SockRef::from(&stream).set_tcp_keepalive(&keepalive);
+    }
 
     let mut session = ssh2::Session::new()
         .map_err(|e| AppError::Ssh(format!("failed to create ssh session: {e}")))?;

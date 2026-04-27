@@ -56,6 +56,7 @@ totp-rs = "5"
 rust-embed = "8"
 mime_guess = "2"
 futures-util = "0.3"
+socket2 = { version = "0.6", features = ["all"] }
 
 [lib]
 name = "vail_rs"

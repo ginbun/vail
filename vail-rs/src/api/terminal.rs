@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     io::{Read, Write},
     path::Path as FsPath,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use axum::{
@@ -36,6 +36,7 @@ use crate::{
 use super::AppState;
 
 const TERMINAL_CLOSE_FORCE: i32 = 10000;
+const TERMINAL_CLOSE_NETWORK: i32 = 10011;
 const TOKEN_EXPIRE_MS: i64 = 5 * 60 * 1000;
 
 static SFTP_CONTENT_TOKENS: Lazy<std::sync::Mutex<HashMap<String, SftpContentToken>>> =
@@ -407,8 +408,11 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
     let (cmd_tx, cmd_rx) = std::sync::mpsc::channel::<SshWorkerCommand>();
     let (event_tx, mut event_rx) = mpsc::unbounded_channel::<SshWorkerEvent>();
     let timeout_secs = state.config.ssh.connection_timeout;
+    let keepalive_interval_secs = state.config.ssh.keepalive_interval;
 
-    std::thread::spawn(move || run_ssh_worker(cmd_rx, event_tx, timeout_secs));
+    std::thread::spawn(move || {
+        run_ssh_worker(cmd_rx, event_tx, timeout_secs, keepalive_interval_secs)
+    });
 
     let session_id = format!("ssh-{}", uuid::Uuid::new_v4());
     let session_start = now_ms();
@@ -677,9 +681,13 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
             let path = parts.next().unwrap_or("/");
             match sftp_list(&state, host_id, path, show_hidden).await {
                 Ok(result) => {
-                    let body = serde_json::to_string(&result.list).unwrap_or_else(|_| "[]".to_string());
+                    let body =
+                        serde_json::to_string(&result.list).unwrap_or_else(|_| "[]".to_string());
                     socket
-                        .send(Message::Text(format!("ls|{}|1||{body}", safe_field(&result.path))))
+                        .send(Message::Text(format!(
+                            "ls|{}|1||{body}",
+                            safe_field(&result.path)
+                        )))
                         .await
                 }
                 Err(err) => {
@@ -993,10 +1001,17 @@ fn run_ssh_worker(
     cmd_rx: std::sync::mpsc::Receiver<SshWorkerCommand>,
     event_tx: mpsc::UnboundedSender<SshWorkerEvent>,
     timeout_secs: u64,
+    keepalive_interval_secs: u64,
 ) {
     let mut session: Option<ssh2::Session> = None;
     let mut channel: Option<ssh2::Channel> = None;
     let mut encoding: &'static Encoding = encoding_rs::UTF_8;
+    let keepalive_interval = if keepalive_interval_secs > 0 {
+        Some(Duration::from_secs(keepalive_interval_secs.max(1)))
+    } else {
+        None
+    };
+    let mut last_keepalive = Instant::now();
 
     loop {
         match cmd_rx.recv_timeout(Duration::from_millis(10)) {
@@ -1013,7 +1028,15 @@ fn run_ssh_worker(
                             encoding = enc;
                         }
                     }
-                    match ssh_client::connect_session(&config, timeout_secs).and_then(|sess| {
+                    match ssh_client::connect_session_with_keepalive(
+                        &config,
+                        timeout_secs,
+                        keepalive_interval_secs,
+                    )
+                    .and_then(|sess| {
+                        if keepalive_interval_secs > 0 {
+                            sess.set_keepalive(true, keepalive_interval_secs as u32);
+                        }
                         let mut ch = sess.channel_session().map_err(|e| {
                             AppError::Ssh(format!("open shell channel failed: {e}"))
                         })?;
@@ -1027,6 +1050,7 @@ fn run_ssh_worker(
                         Ok((sess, ch)) => {
                             session = Some(sess);
                             channel = Some(ch);
+                            last_keepalive = Instant::now();
                             let _ = event_tx.send(SshWorkerEvent::Connected);
                         }
                         Err(err) => {
@@ -1092,13 +1116,28 @@ fn run_ssh_worker(
                 }
                 Err(err) => {
                     if err.kind() != std::io::ErrorKind::WouldBlock {
-                        let _ = event_tx.send(SshWorkerEvent::Closed {
-                            code: TERMINAL_CLOSE_FORCE,
-                            msg: format!("ssh read failed: {err}"),
-                        });
+                        let (code, msg) = classify_ssh_read_error(&err);
+                        let _ = event_tx.send(SshWorkerEvent::Closed { code, msg });
                         break;
                     }
                 }
+            }
+        }
+
+        if let (Some(interval), Some(sess)) = (keepalive_interval, session.as_mut()) {
+            if last_keepalive.elapsed() >= interval {
+                if let Err(err) = sess.keepalive_send() {
+                    if err.message().to_ascii_lowercase().contains("would block") {
+                        last_keepalive = Instant::now();
+                        continue;
+                    }
+                    let _ = event_tx.send(SshWorkerEvent::Closed {
+                        code: TERMINAL_CLOSE_NETWORK,
+                        msg: format!("SSH keepalive failed, 网络连接可能已断开: {err}"),
+                    });
+                    break;
+                }
+                last_keepalive = Instant::now();
             }
         }
     }
@@ -1739,8 +1778,7 @@ async fn sftp_list(
     let path = normalize_remote_path(path)?;
     with_sftp(state, host_id, move |sftp| {
         let resolved_path = if path == "." {
-            sftp
-                .realpath(FsPath::new("."))
+            sftp.realpath(FsPath::new("."))
                 .ok()
                 .and_then(|p| p.to_str().map(ToOwned::to_owned))
                 .unwrap_or_else(|| "/".to_string())
@@ -2122,6 +2160,23 @@ fn sftp_operator_audit_type(op: &str) -> Option<&'static str> {
     }
 }
 
+fn classify_ssh_read_error(err: &std::io::Error) -> (i32, String) {
+    let raw = err.to_string();
+    let lower = raw.to_ascii_lowercase();
+    if lower.contains("transport read")
+        || lower.contains("connection reset")
+        || lower.contains("connection timed out")
+        || lower.contains("broken pipe")
+        || lower.contains("closed")
+    {
+        return (
+            TERMINAL_CLOSE_NETWORK,
+            "网络连接不稳定，SSH 会话已断开，正在等待重连...".to_string(),
+        );
+    }
+    (TERMINAL_CLOSE_FORCE, format!("ssh read failed: {raw}"))
+}
+
 fn safe_field(value: &str) -> String {
     value.replace('|', " ")
 }
@@ -2241,6 +2296,22 @@ mod tests {
             Some("terminal:sftp-download")
         );
         assert_eq!(sftp_operator_audit_type("ls"), None);
+    }
+
+    #[test]
+    fn classify_ssh_read_error_marks_transport_read_as_reconnectable() {
+        let err = std::io::Error::new(std::io::ErrorKind::Other, "transport read failed");
+        let (code, msg) = classify_ssh_read_error(&err);
+        assert_eq!(code, TERMINAL_CLOSE_NETWORK);
+        assert!(msg.contains("等待重连"));
+    }
+
+    #[test]
+    fn classify_ssh_read_error_keeps_unknown_errors_force_closed() {
+        let err = std::io::Error::new(std::io::ErrorKind::Other, "unexpected protocol error");
+        let (code, msg) = classify_ssh_read_error(&err);
+        assert_eq!(code, TERMINAL_CLOSE_FORCE);
+        assert!(msg.contains("ssh read failed"));
     }
 
     #[test]

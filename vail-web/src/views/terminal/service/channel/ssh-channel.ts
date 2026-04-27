@@ -25,6 +25,7 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
 
   // 处理已连接消息
   processConnected(_: OutputPayload): void {
+    (this.session as unknown as { markAutoReconnectSucceeded?: () => void }).markAutoReconnectSucceeded?.();
     // 设置可写
     this.session.setCanWrite(true);
     // 设置已连接
@@ -39,9 +40,16 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
     const beforeConnected = this.session.state.connected;
     this.triggerClosed = true;
     // 设置重连状态
-    this.session.state.canReconnect = TerminalCloseCode.FORCE !== Number.parseInt(code);
+    const codeNumber = Number.parseInt(code);
+    this.session.state.canReconnect = TerminalCloseCode.FORCE !== codeNumber;
     // 拼接关闭消息
     this.session.write((beforeConnected ? '\r\n\r\n' : '') + ansi(91, msg || ''));
+    if (codeNumber === TerminalCloseCode.NETWORK) {
+      const scheduled = (this.session as unknown as { scheduleAutoReconnect?: () => boolean }).scheduleAutoReconnect?.();
+      if (scheduled) {
+        this.session.write('\r\n' + ansi(91, TerminalMessages.autoReconnecting) + '\r\n');
+      }
+    }
     if (this.session.state.canReconnect) {
       this.session.write('\r\n' + ansi(91, TerminalMessages.waitingReconnect) + '\r\n');
     }
