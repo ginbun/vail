@@ -68,6 +68,8 @@ export const TerminalPreferenceItem = {
   SHORTCUT_SETTING: 'shortcutSetting',
 };
 
+const defaultSshRightMenuSetting = ['copy', 'paste', 'search', 'clear', 'disconnect'];
+
 export default defineStore('terminal', {
   state: (): TerminalState => ({
     preference: {
@@ -77,7 +79,7 @@ export default defineStore('terminal', {
       } as TerminalTheme,
       sshDisplaySetting: {} as TerminalSshDisplaySetting,
       sshActionBarSetting: {} as TerminalSshActionBarSetting,
-      sshRightMenuSetting: [],
+      sshRightMenuSetting: [...defaultSshRightMenuSetting],
       sshInteractSetting: {} as TerminalSshInteractSetting,
       sshPluginsSetting: {} as TerminalSshPluginsSetting,
       rdpGraphSetting: {} as TerminalRdpGraphSetting,
@@ -126,6 +128,12 @@ export default defineStore('terminal', {
             this.preference[key as keyof TerminalPreference] = item as any;
           }
         });
+        if (this.preference.sshInteractSetting.enableRightClickMenu !== false) {
+          this.preference.sshInteractSetting.enableRightClickMenu = true;
+        }
+        if (!Array.isArray(this.preference.sshRightMenuSetting)) {
+          this.preference.sshRightMenuSetting = [...defaultSshRightMenuSetting];
+        }
       } catch (e) {
         Message.error('配置加载失败');
       }

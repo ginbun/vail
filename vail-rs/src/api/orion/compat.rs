@@ -71,6 +71,51 @@ fn payload_search_value(payload: &serde_json::Value, query: &OrionCompatQuery) -
         .or_else(|| query.search_value.clone())
 }
 
+fn normalize_preference_value(value: serde_json::Value) -> serde_json::Value {
+    let Some(raw) = value.as_str() else {
+        return value;
+    };
+    let trimmed = raw.trim();
+    if !(trimmed.starts_with('{') || trimmed.starts_with('[')) {
+        return value;
+    }
+    serde_json::from_str(trimmed).unwrap_or(value)
+}
+
+fn normalize_preference_map(
+    map: serde_json::Map<String, serde_json::Value>,
+) -> serde_json::Map<String, serde_json::Value> {
+    map.into_iter()
+        .map(|(key, value)| (key, normalize_preference_value(value)))
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalizes_preference_array_json_string_to_array() {
+        let value = normalize_preference_value(serde_json::json!("[\"copy\",\"paste\"]"));
+
+        assert_eq!(value, serde_json::json!(["copy", "paste"]));
+    }
+
+    #[test]
+    fn normalizes_preference_object_json_string_to_object() {
+        let value = normalize_preference_value(serde_json::json!("{\"fontSize\":14}"));
+
+        assert_eq!(value, serde_json::json!({ "fontSize": 14 }));
+    }
+
+    #[test]
+    fn keeps_plain_preference_string_as_string() {
+        let value = normalize_preference_value(serde_json::json!("xterm"));
+
+        assert_eq!(value, serde_json::json!("xterm"));
+    }
+}
+
 pub(super) async fn orion_exec_dispatch(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -1082,6 +1127,7 @@ pub(super) async fn orion_infra_dispatch(
                 OrionCompatModule::Preference.store_key()
             );
             let mut map = compat_service::get_config_map(&state.db, &key).await?;
+            map = normalize_preference_map(map);
             if let Some(items) = query.items.as_deref() {
                 let allow = items
                     .split(',')
@@ -1112,7 +1158,7 @@ pub(super) async fn orion_infra_dispatch(
                 OrionCompatModule::Preference.store_key()
             );
             let mut map = compat_service::get_config_map(&state.db, &key).await?;
-            map.insert(item.to_string(), value);
+            map.insert(item.to_string(), normalize_preference_value(value));
             compat_service::set_config_map(&state.db, &key, &map).await?;
             Ok(orion_ok(true))
         }
@@ -1128,7 +1174,7 @@ pub(super) async fn orion_infra_dispatch(
             let mut map = compat_service::get_config_map(&state.db, &key).await?;
             if let Some(config) = payload.get("config").and_then(serde_json::Value::as_object) {
                 for (k, v) in config {
-                    map.insert(k.clone(), v.clone());
+                    map.insert(k.clone(), normalize_preference_value(v.clone()));
                 }
             }
             compat_service::set_config_map(&state.db, &key, &map).await?;

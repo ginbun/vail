@@ -35,6 +35,7 @@ v-for="(action, index) in actions"
 <script lang="ts" setup>
   import type { ISshSession } from '@/views/terminal/interfaces';
   import type { ContextMenuItem } from '@/views/terminal/types/define';
+  import { computed } from 'vue';
   import { SshActionBarItems } from '@/views/terminal/types/const';
   import { useTerminalStore } from '@/store';
 
@@ -46,11 +47,14 @@ v-for="(action, index) in actions"
 
   const { preference } = useTerminalStore();
 
-  const actions: Array<ContextMenuItem> = !preference.sshInteractSetting.enableRightClickMenu
-    ? []
-    : preference.sshRightMenuSetting
+  const actions = computed<Array<ContextMenuItem>>(() => {
+    if (!preference.sshInteractSetting.enableRightClickMenu || !Array.isArray(preference.sshRightMenuSetting)) {
+      return [];
+    }
+    return preference.sshRightMenuSetting
       .map(s => SshActionBarItems.find(i => i.item === s) as ContextMenuItem)
       .filter(Boolean);
+  });
 
 </script>
 
