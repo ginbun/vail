@@ -6,7 +6,7 @@
   - Scope: `vail-rs/` (API, auth, SSH/SFTP session proxy, DB schema, migrations, middleware)
   - Ownership: security-critical logic, protocol correctness, performance-sensitive paths
 - Frontend Agent (Primary): `Gemini 3 Flash Preview`
-  - Scope: `vail-web/` (Svelte pages/components, API integration, UX for bastion workflows)
+  - Scope: `vail-web/` (Vue 3 pages/components, API integration, UX for bastion workflows)
   - Ownership: secure interaction flows, operator usability, audit visualization
 - Security Gate Agent (Cross-cutting): reviewer role (can be either model)
   - Scope: threat modeling, security checklist validation, release gate decisions
@@ -89,9 +89,7 @@
 
 ## Branch and Repository Guardrails
 
-- `orion-visor/` is reference-only and must not be committed to this repository.
 - Keep implementation changes in `vail-rs/` and `vail-web/` unless infra/docs update is required.
-- Before commit, verify staged files exclude `orion-visor/`.
 
 ## Definition of Done (Security)
 

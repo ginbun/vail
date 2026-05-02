@@ -1,12 +1,19 @@
 # Vail
 
-Vail is a bastion host project with a Rust backend (`vail-rs`) and an Orion-compatible frontend (`vail-web`).
+Vail is a bastion host project with a Rust backend (`vail-rs`) and a Vue 3 frontend (`vail-web`).
+It keeps practical compatibility with Orion interaction patterns while incrementally evolving native Vail behavior.
 
 ## Project Layout
 
 - `vail-rs/`: Rust + Axum backend (auth, permissions, host/session APIs, migrations)
-- `vail-web/`: Orion-compatible frontend (Vue 3 + Arco direction)
-- `orion-visor/`: reference-only upstream project, do not commit changes to this repo
+- `vail-web/`: frontend (Vue 3 + Arco), currently compatibility-first for terminal/asset workflows
+- Orion Visor upstream is used as an external reference for compatibility work (no local mirror in this repo)
+
+## Upstream Reference
+
+- Upstream project: `https://github.com/dromara/orion-visor`
+- Usage in this repository: reference only (API/UX behavior comparison and migration guidance)
+- Rule: do not add `orion-visor/` back into this repository; keep upstream comparison external
 
 ## Local Development
 
@@ -97,7 +104,7 @@ npm ci
 npm run build
 ```
 
-Note: frontend direction is compatibility-first with Orion UI behavior and API contract, then incremental UX/performance optimization.
+Note: frontend direction is compatibility-first for existing Orion-like workflows, then gradual migration toward native Vail UX/API.
 
 ## Docker Compose
 
