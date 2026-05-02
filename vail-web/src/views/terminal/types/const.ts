@@ -112,6 +112,7 @@ export const TerminalMessages = {
   sessionClosed: '会话已结束...',
   waitingReconnect: '输入回车重新连接...',
   autoReconnecting: '网络连接不稳定, 正在自动重连...',
+  reconnectSuccess: '网络连接已恢复',
   loggedElsewhere: '该账号已在另一台设备登录',
   connectTimeout: '请检查远程计算机网络及其他配置是否正常',
   fileTransferError: '传输失败',

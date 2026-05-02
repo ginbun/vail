@@ -157,6 +157,12 @@ export const OutputProtocol = {
     template: ['type', 'body'],
     processMethod: 'processSshOutput'
   },
+  // 关闭元数据
+  CL_META: {
+    type: 'clmeta',
+    template: ['type', 'body'],
+    processMethod: 'processClMeta'
+  },
   // SFTP 文件列表
   SFTP_LIST: {
     type: 'ls',

@@ -20,19 +20,27 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
       }
     });
     // 打开 channel
-    this.client = await openTerminalAccessChannel(TerminalSessionTypes.SSH.channel, data);
+    this.client = await openTerminalAccessChannel(TerminalSessionTypes.SSH.channel, data, {
+      maxAttempts: 3,
+      baseDelay: 1000,
+      jitter: true,
+    });
   }
 
   // 处理已连接消息
   processConnected(_: OutputPayload): void {
-    (this.session as unknown as { markAutoReconnectSucceeded?: () => void }).markAutoReconnectSucceeded?.();
+    const wasReconnecting = this.session.autoReconnectAttempts > 0;
+    this.session.markAutoReconnectSucceeded?.();
     // 设置可写
     this.session.setCanWrite(true);
     // 设置已连接
     this.session.setConnected();
+    if (wasReconnecting) {
+      this.session.write(ansi(92, `\r\n${TerminalMessages.reconnectSuccess}\r\n`));
+    }
   }
 
-  // 处理已关闭消息
+  // 处理已已关闭消息
   processClosed({ code, msg }: OutputPayload): void {
     if (this.triggerClosed) {
       return;
@@ -45,7 +53,7 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
     // 拼接关闭消息
     this.session.write((beforeConnected ? '\r\n\r\n' : '') + ansi(91, msg || ''));
     if (codeNumber === TerminalCloseCode.NETWORK) {
-      const scheduled = (this.session as unknown as { scheduleAutoReconnect?: () => boolean }).scheduleAutoReconnect?.();
+      const scheduled = this.session.scheduleAutoReconnect?.();
       if (scheduled) {
         this.session.write('\r\n' + ansi(91, TerminalMessages.autoReconnecting) + '\r\n');
       }
@@ -67,6 +75,28 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
   // 处理 SSH 输出消息
   processSshOutput({ body }: OutputPayload): void {
     this.session.write(body);
+  }
+
+  // 处理关闭元数据
+  processClMeta({ body }: OutputPayload): void {
+    try {
+      const meta = JSON.parse(body);
+      // 如果 meta 标记为可重试，且尚未触发自动重连，则尝试触发
+      if (meta.retryable && !this.session.autoReconnectTimer) {
+        const scheduled = this.session.scheduleAutoReconnect?.();
+        if (scheduled) {
+          this.session.write('\r\n' + ansi(91, TerminalMessages.autoReconnecting) + '\r\n');
+        }
+      }
+      // 可以根据 meta.reason 提供更详细的错误信息
+      if (meta.reason && meta.reason !== this.session.state.lastCloseReason) {
+        this.session.state.lastCloseReason = meta.reason;
+        // 如果需要，可以在终端显示更详细的原因
+        // this.session.write('\r\n' + ansi(91, `Reason: ${meta.reason}`) + '\r\n');
+      }
+    } catch (e) {
+      console.error('Failed to parse clmeta', e);
+    }
   }
 
 }

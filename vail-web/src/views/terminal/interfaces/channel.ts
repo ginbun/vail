@@ -17,6 +17,8 @@ export interface ITerminalChannel {
   processConnected: (payload: OutputPayload) => void;
   // 处理已关闭消息
   processClosed: (payload: OutputPayload) => void;
+  // 处理关闭元数据
+  processClMeta: (payload: OutputPayload) => void;
   // 处理修改大小
   processResize: (payload: OutputPayload) => void;
   // 处理 pong 消息

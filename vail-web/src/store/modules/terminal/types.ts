@@ -70,6 +70,8 @@ export interface TerminalSshInteractSetting {
   wordSeparator: string;
   terminalEmulationType: string;
   scrollBackLine: number;
+  scrollOnOutput: boolean;
+  scrollOnInput: boolean;
   replaceBackspace: boolean;
 }
 

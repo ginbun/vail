@@ -1,6 +1,6 @@
 import type { TerminalTheme } from '@/views/terminal/interfaces';
 import axios from 'axios';
-import { createAppWebSocket } from '@/utils/http';
+import { createAppWebSocket, type WebSocketRetryOptions } from '@/utils/http';
 
 // 终端访问请求
 export interface TerminalAccessRequest {
@@ -33,14 +33,14 @@ export function getTerminalTransferToken() {
 /**
  * 打开主机终端 websocket
  */
-export const openTerminalAccessChannel = (protocol: string, accessToken: string) => {
-  return createAppWebSocket(`/terminal/access/${protocol}/${accessToken}`);
+export const openTerminalAccessChannel = (protocol: string, accessToken: string, retryOptions?: WebSocketRetryOptions) => {
+  return createAppWebSocket(`/terminal/access/${protocol}/${accessToken}`, retryOptions);
 };
 
 /**
  * 打开主机传输 websocket
  */
-export const openTerminalTransferChannel = (accessToken: string) => {
-  return createAppWebSocket(`/terminal/transfer/${accessToken}`);
+export const openTerminalTransferChannel = (accessToken: string, retryOptions?: WebSocketRetryOptions) => {
+  return createAppWebSocket(`/terminal/transfer/${accessToken}`, retryOptions);
 };
 

@@ -93,9 +93,19 @@ v-model="formModel.scrollBackLine"
                           size="small"
                           :min="1"
                           :max="100000"
-                          placeholder="缓冲区行数 默认 1000 行"
+                          placeholder="缓冲区行数 默认 5000 行"
                           allow-clear
                           hide-button />
+        </block-setting-item>
+      </a-row>
+      <a-row class="mb16" align="stretch" :gutter="16">
+        <!-- 输出滚动 -->
+        <block-setting-item label="输出滚动" desc="接收到新输出时自动滚动到底部, 建议关闭以方便翻阅历史记录">
+          <a-switch v-model="formModel.scrollOnOutput" type="round" />
+        </block-setting-item>
+        <!-- 输入滚动 -->
+        <block-setting-item label="输入滚动" desc="输入字符时自动滚动到底部">
+          <a-switch v-model="formModel.scrollOnInput" type="round" />
         </block-setting-item>
       </a-row>
       <a-row class="mb16" align="stretch" :gutter="16">

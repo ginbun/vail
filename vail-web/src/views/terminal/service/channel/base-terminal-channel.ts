@@ -80,6 +80,10 @@ export default abstract class BaseTerminalChannel<T extends ITerminalSession> im
   // 处理已关闭消息
   abstract processClosed(payload: OutputPayload): void;
 
+  // 处理关闭元数据
+  processClMeta(_: OutputPayload) {
+  }
+
   // 处理修改大小
   processResize(_: OutputPayload) {
   };

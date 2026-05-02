@@ -52,6 +52,8 @@ export interface ReactiveSessionState {
   canWrite: boolean;
   // 是否可以重新连接
   canReconnect: boolean;
+  // 最后一次关闭原因
+  lastCloseReason?: string;
 }
 
 // guacd 会话状态
@@ -128,6 +130,14 @@ export interface ISshSession extends ITerminalSession, IDomViewportHandler {
   write: (value: string) => void;
   // 查找
   find: (word: string, next: boolean, options: ISearchOptions) => void;
+  // 自动重连次数
+  autoReconnectAttempts: number;
+  // 自动重连定时器
+  autoReconnectTimer?: number;
+  // 调度自动重连
+  scheduleAutoReconnect: () => boolean;
+  // 标记自动重连成功
+  markAutoReconnectSucceeded: () => void;
 }
 
 // SFTP 会话定义

@@ -208,6 +208,14 @@ pub struct SshConfig {
     pub connection_timeout: u64,
     #[serde(default = "default_keepalive_interval")]
     pub keepalive_interval: u64,
+    #[serde(default = "default_max_consecutive_retryable_read_errors")]
+    pub max_consecutive_retryable_read_errors: u32,
+    #[serde(default = "default_max_consecutive_keepalive_errors")]
+    pub max_consecutive_keepalive_errors: u32,
+    #[serde(default = "default_network_silence_multiplier")]
+    pub network_silence_multiplier: u32,
+    #[serde(default = "default_transient_read_error_backoff_ms")]
+    pub transient_read_error_backoff_ms: u64,
 }
 
 impl Default for SshConfig {
@@ -216,6 +224,10 @@ impl Default for SshConfig {
             default_port: default_ssh_port(),
             connection_timeout: default_connection_timeout(),
             keepalive_interval: default_keepalive_interval(),
+            max_consecutive_retryable_read_errors: default_max_consecutive_retryable_read_errors(),
+            max_consecutive_keepalive_errors: default_max_consecutive_keepalive_errors(),
+            network_silence_multiplier: default_network_silence_multiplier(),
+            transient_read_error_backoff_ms: default_transient_read_error_backoff_ms(),
         }
     }
 }
@@ -230,6 +242,22 @@ fn default_connection_timeout() -> u64 {
 
 fn default_keepalive_interval() -> u64 {
     60
+}
+
+fn default_max_consecutive_retryable_read_errors() -> u32 {
+    12
+}
+
+fn default_max_consecutive_keepalive_errors() -> u32 {
+    8
+}
+
+fn default_network_silence_multiplier() -> u32 {
+    6
+}
+
+fn default_transient_read_error_backoff_ms() -> u64 {
+    50
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -426,6 +454,10 @@ impl Default for Config {
                 default_port: 22,
                 connection_timeout: 30,
                 keepalive_interval: 60,
+                max_consecutive_retryable_read_errors: 12,
+                max_consecutive_keepalive_errors: 8,
+                network_silence_multiplier: 6,
+                transient_read_error_backoff_ms: 50,
             },
             storage: StorageConfig {
                 temp_dir: "/tmp/vail".to_string(),
@@ -637,5 +669,14 @@ mod tests {
 
         let err = cfg.validate().expect_err("PEM must be rejected for EdDSA");
         assert!(err.contains("base64"));
+    }
+
+    #[test]
+    fn ssh_defaults_include_resilience_thresholds() {
+        let cfg = Config::default();
+        assert_eq!(cfg.ssh.max_consecutive_retryable_read_errors, 12);
+        assert_eq!(cfg.ssh.max_consecutive_keepalive_errors, 8);
+        assert_eq!(cfg.ssh.network_silence_multiplier, 6);
+        assert_eq!(cfg.ssh.transient_read_error_backoff_ms, 50);
     }
 }

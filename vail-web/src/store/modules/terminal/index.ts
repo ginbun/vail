@@ -82,7 +82,9 @@ const defaultSshInteractSetting: TerminalSshInteractSetting = {
   enableBell: false,
   wordSeparator: '',
   terminalEmulationType: 'xterm',
-  scrollBackLine: 1000,
+  scrollBackLine: 5000,
+  scrollOnOutput: false,
+  scrollOnInput: true,
   replaceBackspace: false,
 };
 

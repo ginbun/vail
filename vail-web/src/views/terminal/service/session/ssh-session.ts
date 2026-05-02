@@ -7,7 +7,7 @@ import type { XtermAddons } from '@/types/xterm';
 import { defaultFontFamily } from '@/types/xterm';
 import { useTerminalStore } from '@/store';
 import { InputProtocol } from '@/views/terminal/types/protocol';
-import { BACKSPACE_CHAR, CTRL_H_CHAR, TerminalShortcutType } from '@/views/terminal/types/const';
+import { BACKSPACE_CHAR, CTRL_H_CHAR, TerminalShortcutType, TerminalStatus } from '@/views/terminal/types/const';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -25,9 +25,9 @@ import SshSessionHandler from '../handler/ssh-session-handler';
 // SSH 会话实现
 export default class SshSession extends BaseSession<ReactiveSessionState, ISshChannel> implements ISshSession {
 
-  private autoReconnectAttempts = 0;
+  public autoReconnectAttempts = 0;
 
-  private autoReconnectTimer?: number;
+  public autoReconnectTimer?: number;
 
   public inst: Terminal;
 
@@ -60,6 +60,8 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
       rightClickSelectsWord: !!preference.sshInteractSetting.rightClickSelectsWord,
       wordSeparator: preference.sshInteractSetting.wordSeparator,
       scrollback: preference.sshInteractSetting.scrollBackLine,
+      scrollOnOutput: !!preference.sshInteractSetting.scrollOnOutput,
+      scrollOnInput: !!preference.sshInteractSetting.scrollOnInput,
       fontFamily: fontFamily === '_' ? defaultFontFamily : `${fontFamily}, ${defaultFontFamily}`,
       allowProposedApi: true,
     };
@@ -111,6 +113,9 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
         this.state.canReconnect = false;
         // 异步作用域重新连接
         setTimeout(async () => {
+          if (this.state.connected || this.state.connectStatus === TerminalStatus.CONNECTING) {
+            return;
+          }
           await useTerminalStore().reOpenSession(this.sessionKey);
         }, 50);
         return true;
@@ -240,15 +245,31 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
 
   // 网络断开后自动重连
   scheduleAutoReconnect(): boolean {
-    if (this.autoReconnectAttempts >= 3 || this.autoReconnectTimer) {
+    // 已经达到最大重连次数，或者正在重连中
+    if (this.autoReconnectAttempts >= 5 || this.autoReconnectTimer) {
       return false;
     }
     this.autoReconnectAttempts += 1;
+    // 重连期间禁手动重连
     this.state.canReconnect = false;
+    
+    // 指数避退 + 抖动
+    const baseDelay = 1000;
+    const delay = Math.min(10000, baseDelay * Math.pow(2, this.autoReconnectAttempts - 1)) * (0.5 + Math.random() * 0.5);
+
     this.autoReconnectTimer = window.setTimeout(async () => {
       this.autoReconnectTimer = undefined;
-      await useTerminalStore().reOpenSession(this.sessionKey);
-    }, Math.min(3000, this.autoReconnectAttempts * 1000));
+      // 检查当前状态，如果已经手动关闭或已连接，则跳过
+      if (this.state.connected || this.state.connectStatus === TerminalStatus.CONNECTING) {
+        return;
+      }
+      try {
+        await useTerminalStore().reOpenSession(this.sessionKey);
+      } catch {
+        // 重连失败，如果还可以重连则再次尝试
+        this.state.canReconnect = true;
+      }
+    }, delay);
     return true;
   }
 
@@ -322,7 +343,7 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
       setTimeout(() => {
         this.inst.dispose();
       }, 300);
-    } catch (e) {
+    } catch {
       // 卸载可能会报错
     }
   }
@@ -332,6 +353,8 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
     super.setConnected();
     // 聚焦
     this.inst.focus();
+    // 自适应
+    this.fit();
   }
 
   // 设置是否可写

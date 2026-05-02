@@ -72,7 +72,16 @@ enum SshWorkerCommand {
 enum SshWorkerEvent {
     Connected,
     Output(String),
-    Closed { code: i32, msg: String },
+    Closed(SshCloseNotice),
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SshCloseNotice {
+    code: i32,
+    msg: String,
+    retryable: bool,
+    reason: &'static str,
 }
 
 #[derive(Debug, Deserialize)]
@@ -409,9 +418,23 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
     let (event_tx, mut event_rx) = mpsc::unbounded_channel::<SshWorkerEvent>();
     let timeout_secs = state.config.ssh.connection_timeout;
     let keepalive_interval_secs = state.config.ssh.keepalive_interval;
+    let max_consecutive_retryable_read_errors =
+        state.config.ssh.max_consecutive_retryable_read_errors;
+    let max_consecutive_keepalive_errors = state.config.ssh.max_consecutive_keepalive_errors;
+    let network_silence_multiplier = state.config.ssh.network_silence_multiplier;
+    let transient_read_error_backoff_ms = state.config.ssh.transient_read_error_backoff_ms;
 
     std::thread::spawn(move || {
-        run_ssh_worker(cmd_rx, event_tx, timeout_secs, keepalive_interval_secs)
+        run_ssh_worker(
+            cmd_rx,
+            event_tx,
+            timeout_secs,
+            keepalive_interval_secs,
+            max_consecutive_retryable_read_errors,
+            max_consecutive_keepalive_errors,
+            network_silence_multiplier,
+            transient_read_error_backoff_ms,
+        )
     });
 
     let session_id = format!("ssh-{}", uuid::Uuid::new_v4());
@@ -456,11 +479,29 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
                     SshWorkerEvent::Output(body) => {
                         socket.send(Message::Text(format!("o|{body}"))).await
                     }
-                    SshWorkerEvent::Closed { code, msg } => {
-                        if code != 0 {
-                            close_error = Some(msg.clone());
+                    SshWorkerEvent::Closed(close) => {
+                        if close.code != 0 {
+                            close_error = Some(close.msg.clone());
                         }
-                        socket.send(Message::Text(format!("cl|{code}|{}", safe_field(&msg)))).await
+                        let primary = socket
+                            .send(Message::Text(format!(
+                                "cl|{}|{}",
+                                close.code,
+                                safe_field(&close.msg)
+                            )))
+                            .await;
+                        if primary.is_ok() && close.code != 0 {
+                            // Optional structured metadata for newer clients.
+                            // Legacy clients can safely ignore this message type.
+                            let payload = serde_json::to_string(&close).unwrap_or_else(|_| {
+                                format!(
+                                    "{{\"code\":{},\"retryable\":{},\"reason\":\"{}\"}}",
+                                    close.code, close.retryable, close.reason
+                                )
+                            });
+                            let _ = socket.send(Message::Text(format!("clmeta|{payload}"))).await;
+                        }
+                        primary
                     }
                 };
                 if send_res.is_err() {
@@ -1002,7 +1043,13 @@ fn run_ssh_worker(
     event_tx: mpsc::UnboundedSender<SshWorkerEvent>,
     timeout_secs: u64,
     keepalive_interval_secs: u64,
+    max_consecutive_retryable_read_errors: u32,
+    max_consecutive_keepalive_errors: u32,
+    network_silence_multiplier: u32,
+    transient_read_error_backoff_ms: u64,
 ) {
+    let transient_read_error_backoff = Duration::from_millis(transient_read_error_backoff_ms.max(1));
+
     let mut session: Option<ssh2::Session> = None;
     let mut channel: Option<ssh2::Channel> = None;
     let mut encoding: &'static Encoding = encoding_rs::UTF_8;
@@ -1012,6 +1059,9 @@ fn run_ssh_worker(
         None
     };
     let mut last_keepalive = Instant::now();
+    let mut last_network_progress = Instant::now();
+    let mut consecutive_transient_read_errors: u32 = 0;
+    let mut consecutive_keepalive_errors: u32 = 0;
 
     loop {
         match cmd_rx.recv_timeout(Duration::from_millis(10)) {
@@ -1051,13 +1101,18 @@ fn run_ssh_worker(
                             session = Some(sess);
                             channel = Some(ch);
                             last_keepalive = Instant::now();
+                            last_network_progress = Instant::now();
+                            consecutive_transient_read_errors = 0;
+                            consecutive_keepalive_errors = 0;
                             let _ = event_tx.send(SshWorkerEvent::Connected);
                         }
                         Err(err) => {
-                            let _ = event_tx.send(SshWorkerEvent::Closed {
+                            let _ = event_tx.send(SshWorkerEvent::Closed(SshCloseNotice {
                                 code: TERMINAL_CLOSE_FORCE,
                                 msg: err.to_string(),
-                            });
+                                retryable: false,
+                                reason: "connect-failed",
+                            }));
                             break;
                         }
                     }
@@ -1065,10 +1120,12 @@ fn run_ssh_worker(
                 SshWorkerCommand::Input(command) => {
                     if let Some(ch) = channel.as_mut() {
                         if let Err(err) = ch.write_all(command.as_bytes()) {
-                            let _ = event_tx.send(SshWorkerEvent::Closed {
+                            let _ = event_tx.send(SshWorkerEvent::Closed(SshCloseNotice {
                                 code: TERMINAL_CLOSE_FORCE,
                                 msg: format!("ssh write failed: {err}"),
-                            });
+                                retryable: false,
+                                reason: "write-failed",
+                            }));
                             break;
                         }
                         let _ = ch.flush();
@@ -1087,10 +1144,12 @@ fn run_ssh_worker(
                     if let Some(sess) = session.take() {
                         let _ = sess.disconnect(None, "closed", None);
                     }
-                    let _ = event_tx.send(SshWorkerEvent::Closed {
+                    let _ = event_tx.send(SshWorkerEvent::Closed(SshCloseNotice {
                         code: 0,
                         msg: "会话已结束...".to_string(),
-                    });
+                        retryable: false,
+                        reason: "closed-by-client",
+                    }));
                     break;
                 }
             },
@@ -1103,21 +1162,38 @@ fn run_ssh_worker(
             match ch.read(&mut buf) {
                 Ok(read) if read > 0 => {
                     let (out, _, _) = encoding.decode(&buf[..read]);
+                    consecutive_transient_read_errors = 0;
+                    consecutive_keepalive_errors = 0;
+                    last_network_progress = Instant::now();
                     let _ = event_tx.send(SshWorkerEvent::Output(out.into_owned()));
                 }
                 Ok(_) => {
                     if ch.eof() {
-                        let _ = event_tx.send(SshWorkerEvent::Closed {
+                        let _ = event_tx.send(SshWorkerEvent::Closed(SshCloseNotice {
                             code: 0,
                             msg: "会话已结束...".to_string(),
-                        });
+                            retryable: false,
+                            reason: "eof",
+                        }));
                         break;
                     }
                 }
                 Err(err) => {
                     if err.kind() != std::io::ErrorKind::WouldBlock {
-                        let (code, msg) = classify_ssh_read_error(&err);
-                        let _ = event_tx.send(SshWorkerEvent::Closed { code, msg });
+                        let close = classify_ssh_read_error(&err);
+                        if close.retryable {
+                            consecutive_transient_read_errors += 1;
+                            if should_tolerate_retryable_read_error(
+                                &close,
+                                consecutive_transient_read_errors,
+                                max_consecutive_retryable_read_errors,
+                            ) {
+                                std::thread::sleep(transient_read_error_backoff);
+                                continue;
+                            }
+                        }
+
+                        let _ = event_tx.send(SshWorkerEvent::Closed(close));
                         break;
                     }
                 }
@@ -1131,16 +1207,62 @@ fn run_ssh_worker(
                         last_keepalive = Instant::now();
                         continue;
                     }
-                    let _ = event_tx.send(SshWorkerEvent::Closed {
-                        code: TERMINAL_CLOSE_NETWORK,
+                    let lower = err.message().to_ascii_lowercase();
+                    let retryable = !lower.contains("auth")
+                        && !lower.contains("permission")
+                        && !lower.contains("protocol");
+                    if retryable {
+                        consecutive_keepalive_errors += 1;
+                        if consecutive_keepalive_errors < max_consecutive_keepalive_errors {
+                            last_keepalive = Instant::now();
+                            continue;
+                        }
+                    }
+                    let _ = event_tx.send(SshWorkerEvent::Closed(SshCloseNotice {
+                        code: if retryable {
+                            TERMINAL_CLOSE_NETWORK
+                        } else {
+                            TERMINAL_CLOSE_FORCE
+                        },
                         msg: format!("SSH keepalive failed, 网络连接可能已断开: {err}"),
-                    });
+                        retryable,
+                        reason: if retryable {
+                            "keepalive-failed"
+                        } else {
+                            "keepalive-non-retryable"
+                        },
+                    }));
                     break;
                 }
+                consecutive_keepalive_errors = 0;
                 last_keepalive = Instant::now();
+                last_network_progress = Instant::now();
+            }
+        }
+
+        if let Some(interval) = keepalive_interval {
+            let silence_limit = interval.saturating_mul(network_silence_multiplier);
+            if silence_limit.as_secs() > 0 && last_network_progress.elapsed() >= silence_limit {
+                let _ = event_tx.send(SshWorkerEvent::Closed(SshCloseNotice {
+                    code: TERMINAL_CLOSE_NETWORK,
+                    msg: "网络长时间无响应，SSH 会话已断开，正在等待重连...".to_string(),
+                    retryable: true,
+                    reason: "network-silence-timeout",
+                }));
+                break;
             }
         }
     }
+}
+
+fn should_tolerate_retryable_read_error(
+    close: &SshCloseNotice,
+    consecutive_transient_read_errors: u32,
+    max_consecutive_retryable_read_errors: u32,
+) -> bool {
+    close.retryable
+        && consecutive_transient_read_errors > 0
+        && consecutive_transient_read_errors < max_consecutive_retryable_read_errors
 }
 
 async fn handle_transfer_socket(state: AppState, mut socket: WebSocket, user_id: i64) {
@@ -2160,21 +2282,46 @@ fn sftp_operator_audit_type(op: &str) -> Option<&'static str> {
     }
 }
 
-fn classify_ssh_read_error(err: &std::io::Error) -> (i32, String) {
+fn classify_ssh_read_error(err: &std::io::Error) -> SshCloseNotice {
     let raw = err.to_string();
     let lower = raw.to_ascii_lowercase();
-    if lower.contains("transport read")
+    let retryable_kind = matches!(
+        err.kind(),
+        std::io::ErrorKind::ConnectionAborted
+            | std::io::ErrorKind::ConnectionReset
+            | std::io::ErrorKind::TimedOut
+            | std::io::ErrorKind::UnexpectedEof
+            | std::io::ErrorKind::BrokenPipe
+            | std::io::ErrorKind::NotConnected
+    );
+    let retryable_text = lower.contains("transport read")
         || lower.contains("connection reset")
         || lower.contains("connection timed out")
+        || lower.contains("timed out")
         || lower.contains("broken pipe")
-        || lower.contains("closed")
-    {
-        return (
-            TERMINAL_CLOSE_NETWORK,
-            "网络连接不稳定，SSH 会话已断开，正在等待重连...".to_string(),
-        );
+        || lower.contains("unexpected eof")
+        || lower.contains("network is unreachable")
+        || lower.contains("connection aborted")
+        || lower.contains("connection closed by remote host")
+        || lower.contains("connection closed")
+        || lower.contains("connection lost")
+        || lower.contains("socket closed");
+
+    if retryable_kind || retryable_text {
+        return SshCloseNotice {
+            code: TERMINAL_CLOSE_NETWORK,
+            msg: "网络连接不稳定，SSH 会话已断开，正在等待重连...".to_string(),
+            retryable: true,
+            reason: "network-read-failed",
+        };
     }
-    (TERMINAL_CLOSE_FORCE, format!("ssh read failed: {raw}"))
+
+    SshCloseNotice {
+        code: TERMINAL_CLOSE_FORCE,
+        msg: format!("ssh read failed: {raw}"),
+        retryable: false,
+        reason: "read-failed",
+    }
 }
 
 fn safe_field(value: &str) -> String {
@@ -2301,17 +2448,76 @@ mod tests {
     #[test]
     fn classify_ssh_read_error_marks_transport_read_as_reconnectable() {
         let err = std::io::Error::new(std::io::ErrorKind::Other, "transport read failed");
-        let (code, msg) = classify_ssh_read_error(&err);
-        assert_eq!(code, TERMINAL_CLOSE_NETWORK);
-        assert!(msg.contains("等待重连"));
+        let close = classify_ssh_read_error(&err);
+        assert_eq!(close.code, TERMINAL_CLOSE_NETWORK);
+        assert!(close.retryable);
+        assert_eq!(close.reason, "network-read-failed");
+        assert!(close.msg.contains("等待重连"));
     }
 
     #[test]
     fn classify_ssh_read_error_keeps_unknown_errors_force_closed() {
         let err = std::io::Error::new(std::io::ErrorKind::Other, "unexpected protocol error");
-        let (code, msg) = classify_ssh_read_error(&err);
-        assert_eq!(code, TERMINAL_CLOSE_FORCE);
-        assert!(msg.contains("ssh read failed"));
+        let close = classify_ssh_read_error(&err);
+        assert_eq!(close.code, TERMINAL_CLOSE_FORCE);
+        assert!(!close.retryable);
+        assert_eq!(close.reason, "read-failed");
+        assert!(close.msg.contains("ssh read failed"));
+    }
+
+    #[test]
+    fn classify_ssh_read_error_marks_timeout_kind_reconnectable() {
+        let err = std::io::Error::new(std::io::ErrorKind::TimedOut, "read timeout");
+        let close = classify_ssh_read_error(&err);
+        assert_eq!(close.code, TERMINAL_CLOSE_NETWORK);
+        assert!(close.retryable);
+    }
+
+    #[test]
+    fn classify_ssh_read_error_marks_unexpected_eof_reconnectable() {
+        let err = std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "unexpected eof");
+        let close = classify_ssh_read_error(&err);
+        assert_eq!(close.code, TERMINAL_CLOSE_NETWORK);
+        assert!(close.retryable);
+    }
+
+    #[test]
+    fn tolerate_retryable_read_error_within_transient_budget() {
+        let close = SshCloseNotice {
+            code: TERMINAL_CLOSE_NETWORK,
+            msg: "transient".to_string(),
+            retryable: true,
+            reason: "network-read-failed",
+        };
+
+        assert!(should_tolerate_retryable_read_error(&close, 1, 12));
+        assert!(should_tolerate_retryable_read_error(&close, 11, 12));
+        assert!(!should_tolerate_retryable_read_error(&close, 12, 12));
+    }
+
+    #[test]
+    fn do_not_tolerate_non_retryable_read_error() {
+        let close = SshCloseNotice {
+            code: TERMINAL_CLOSE_FORCE,
+            msg: "protocol".to_string(),
+            retryable: false,
+            reason: "read-failed",
+        };
+
+        assert!(!should_tolerate_retryable_read_error(&close, 1, 12));
+    }
+
+    #[test]
+    fn tolerate_retryable_read_error_uses_configured_budget() {
+        let close = SshCloseNotice {
+            code: TERMINAL_CLOSE_NETWORK,
+            msg: "transient".to_string(),
+            retryable: true,
+            reason: "network-read-failed",
+        };
+
+        assert!(should_tolerate_retryable_read_error(&close, 2, 3));
+        assert!(!should_tolerate_retryable_read_error(&close, 3, 3));
     }
 
     #[test]

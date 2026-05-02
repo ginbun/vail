@@ -502,12 +502,13 @@ pub fn connect_session_with_keepalive(
     let timeout = Duration::from_secs(timeout_secs.max(1));
     let _ = stream.set_read_timeout(Some(timeout));
     let _ = stream.set_write_timeout(Some(timeout));
+    let _ = stream.set_nodelay(true);
     if keepalive_interval_secs > 0 {
         let interval = Duration::from_secs(keepalive_interval_secs.max(1));
         let keepalive = TcpKeepalive::new()
             .with_time(interval)
             .with_interval(interval)
-            .with_retries(3);
+            .with_retries(5);
         let _ = SockRef::from(&stream).set_tcp_keepalive(&keepalive);
     }
 
