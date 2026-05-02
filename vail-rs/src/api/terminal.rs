@@ -1061,6 +1061,7 @@ fn run_ssh_worker(
     let mut last_keepalive = Instant::now();
     let mut last_network_progress = Instant::now();
     let mut consecutive_transient_read_errors: u32 = 0;
+    let mut consecutive_transient_write_errors: u32 = 0;
     let mut consecutive_keepalive_errors: u32 = 0;
 
     loop {
@@ -1119,15 +1120,25 @@ fn run_ssh_worker(
                 }
                 SshWorkerCommand::Input(command) => {
                     if let Some(ch) = channel.as_mut() {
-                        if let Err(err) = ch.write_all(command.as_bytes()) {
-                            let _ = event_tx.send(SshWorkerEvent::Closed(SshCloseNotice {
-                                code: TERMINAL_CLOSE_FORCE,
-                                msg: format!("ssh write failed: {err}"),
-                                retryable: false,
-                                reason: "write-failed",
-                            }));
+                        if let Err(err) = write_ssh_command_with_retry(
+                            ch,
+                            command.as_bytes(),
+                            max_consecutive_retryable_read_errors,
+                            transient_read_error_backoff,
+                        ) {
+                            let close = classify_ssh_write_error(&err);
+                            if should_tolerate_retryable_write_error(
+                                &close,
+                                &mut consecutive_transient_write_errors,
+                                max_consecutive_retryable_read_errors,
+                            ) {
+                                continue;
+                            }
+                            let _ = event_tx.send(SshWorkerEvent::Closed(close));
                             break;
                         }
+                        consecutive_transient_write_errors = 0;
+                        last_network_progress = Instant::now();
                         let _ = ch.flush();
                     }
                 }
@@ -1163,6 +1174,7 @@ fn run_ssh_worker(
                 Ok(read) if read > 0 => {
                     let (out, _, _) = encoding.decode(&buf[..read]);
                     consecutive_transient_read_errors = 0;
+                    consecutive_transient_write_errors = 0;
                     consecutive_keepalive_errors = 0;
                     last_network_progress = Instant::now();
                     let _ = event_tx.send(SshWorkerEvent::Output(out.into_owned()));
@@ -1263,6 +1275,67 @@ fn should_tolerate_retryable_read_error(
     close.retryable
         && consecutive_transient_read_errors > 0
         && consecutive_transient_read_errors < max_consecutive_retryable_read_errors
+}
+
+fn write_ssh_command_with_retry(
+    ch: &mut ssh2::Channel,
+    mut pending: &[u8],
+    max_retryable_errors: u32,
+    backoff: Duration,
+) -> std::io::Result<()> {
+    let mut retryable_errors: u32 = 0;
+    while !pending.is_empty() {
+        match ch.write(pending) {
+            Ok(0) => {
+                retryable_errors += 1;
+                if retryable_errors >= max_retryable_errors {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::WriteZero,
+                        "ssh write returned zero bytes",
+                    ));
+                }
+                std::thread::sleep(backoff);
+            }
+            Ok(written) => {
+                pending = &pending[written..];
+                retryable_errors = 0;
+            }
+            Err(err) => {
+                if err.kind() == std::io::ErrorKind::WouldBlock {
+                    retryable_errors += 1;
+                    if retryable_errors >= max_retryable_errors {
+                        return Err(err);
+                    }
+                    std::thread::sleep(backoff);
+                    continue;
+                }
+                let close = classify_ssh_write_error(&err);
+                if close.retryable {
+                    retryable_errors += 1;
+                    if retryable_errors >= max_retryable_errors {
+                        return Err(err);
+                    }
+                    std::thread::sleep(backoff);
+                    continue;
+                }
+                return Err(err);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn should_tolerate_retryable_write_error(
+    close: &SshCloseNotice,
+    consecutive_transient_write_errors: &mut u32,
+    max_consecutive_retryable_write_errors: u32,
+) -> bool {
+    if close.retryable && *consecutive_transient_write_errors < max_consecutive_retryable_write_errors {
+        *consecutive_transient_write_errors += 1;
+        return true;
+    }
+    false
 }
 
 async fn handle_transfer_socket(state: AppState, mut socket: WebSocket, user_id: i64) {
@@ -2324,6 +2397,51 @@ fn classify_ssh_read_error(err: &std::io::Error) -> SshCloseNotice {
     }
 }
 
+fn classify_ssh_write_error(err: &std::io::Error) -> SshCloseNotice {
+    let raw = err.to_string();
+    let lower = raw.to_ascii_lowercase();
+    let retryable_kind = matches!(
+        err.kind(),
+        std::io::ErrorKind::ConnectionAborted
+            | std::io::ErrorKind::ConnectionReset
+            | std::io::ErrorKind::TimedOut
+            | std::io::ErrorKind::UnexpectedEof
+            | std::io::ErrorKind::BrokenPipe
+            | std::io::ErrorKind::NotConnected
+            | std::io::ErrorKind::WouldBlock
+    );
+    let retryable_text = lower.contains("transport write")
+        || lower.contains("draining incoming flow")
+        || lower.contains("connection reset")
+        || lower.contains("connection timed out")
+        || lower.contains("timed out")
+        || lower.contains("broken pipe")
+        || lower.contains("unexpected eof")
+        || lower.contains("network is unreachable")
+        || lower.contains("connection aborted")
+        || lower.contains("connection closed by remote host")
+        || lower.contains("connection closed")
+        || lower.contains("connection lost")
+        || lower.contains("socket closed")
+        || lower.contains("would block");
+
+    if retryable_kind || retryable_text {
+        return SshCloseNotice {
+            code: TERMINAL_CLOSE_NETWORK,
+            msg: "网络连接不稳定，SSH 会话写入失败，正在等待重连...".to_string(),
+            retryable: true,
+            reason: "network-write-failed",
+        };
+    }
+
+    SshCloseNotice {
+        code: TERMINAL_CLOSE_FORCE,
+        msg: format!("ssh write failed: {raw}"),
+        retryable: false,
+        reason: "write-failed",
+    }
+}
+
 fn safe_field(value: &str) -> String {
     value.replace('|', " ")
 }
@@ -2479,6 +2597,24 @@ mod tests {
         let close = classify_ssh_read_error(&err);
         assert_eq!(close.code, TERMINAL_CLOSE_NETWORK);
         assert!(close.retryable);
+    }
+
+    #[test]
+    fn classify_ssh_write_error_marks_drain_flow_as_reconnectable() {
+        let err = std::io::Error::other("Failure while draining incoming flow");
+        let close = classify_ssh_write_error(&err);
+        assert_eq!(close.code, TERMINAL_CLOSE_NETWORK);
+        assert!(close.retryable);
+        assert_eq!(close.reason, "network-write-failed");
+    }
+
+    #[test]
+    fn classify_ssh_write_error_keeps_unknown_errors_force_closed() {
+        let err = std::io::Error::other("unexpected protocol write error");
+        let close = classify_ssh_write_error(&err);
+        assert_eq!(close.code, TERMINAL_CLOSE_FORCE);
+        assert!(!close.retryable);
+        assert_eq!(close.reason, "write-failed");
     }
 
     #[test]

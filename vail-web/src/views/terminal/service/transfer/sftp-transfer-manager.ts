@@ -23,9 +23,14 @@ export default class SftpTransferManager extends BaseTransferManager implements 
 
   private currentTask?: FileTransferTaskType;
 
+  private reconnectAttempts: number;
+
+  private reconnectTimer?: number;
+
   constructor() {
     super();
     this.run = false;
+    this.reconnectAttempts = 0;
   }
 
   // 添加上传任务
@@ -95,6 +100,7 @@ export default class SftpTransferManager extends BaseTransferManager implements 
     // 打开会话
     try {
       this.client = await openTerminalTransferChannel(transferToken);
+      this.reconnectAttempts = 0;
     } catch (e) {
       // 打开失败将传输列表置为失效
       Message.error('会话打开失败');
@@ -112,11 +118,14 @@ export default class SftpTransferManager extends BaseTransferManager implements 
     // 关闭会话
     this.client.onclose = event => {
       console.warn('transfer close', event);
-      this.close();
+      this.handleDisconnect();
     };
     // 处理消息
     this.client.onmessage = this.resolveMessage.bind(this);
     // 打开后自动传输下一个任务
+    if (this.currentTask && this.currentTask.state.status === TransferStatus.TRANSFERRING) {
+      this.resetTaskForRetry(this.currentTask);
+    }
     this.transferNextItem();
   }
 
@@ -170,8 +179,58 @@ export default class SftpTransferManager extends BaseTransferManager implements 
   protected close() {
     // 重置 run
     this.run = false;
+    if (this.reconnectTimer) {
+      window.clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
+    this.client = undefined;
+    this.currentTask = undefined;
     // 关闭
     super.close();
+  }
+
+  private handleDisconnect() {
+    this.run = false;
+    this.client = undefined;
+    const hasPending = this.tasks.some(task =>
+      task.state.status === TransferStatus.WAITING || task.state.status === TransferStatus.TRANSFERRING,
+    );
+    if (!hasPending) {
+      this.currentTask = undefined;
+      return;
+    }
+
+    if (this.currentTask && this.currentTask.state.status === TransferStatus.TRANSFERRING) {
+      this.resetTaskForRetry(this.currentTask);
+    }
+
+    if (this.reconnectAttempts >= 5) {
+      Message.error('网络不稳定，文件传输重连失败');
+      super.close();
+      this.currentTask = undefined;
+      return;
+    }
+
+    this.reconnectAttempts += 1;
+    const delay = Math.min(10_000, 1000 * Math.pow(2, this.reconnectAttempts - 1));
+    Message.warning(`网络中断，${Math.round(delay / 1000)} 秒后重试传输连接...`);
+    this.reconnectTimer = window.setTimeout(async () => {
+      this.reconnectTimer = undefined;
+      if (this.run) {
+        return;
+      }
+      await this.openClient();
+    }, delay);
+  }
+
+  private resetTaskForRetry(task: FileTransferTaskType) {
+    task.state.status = TransferStatus.WAITING;
+    task.state.finished = false;
+    task.state.aborted = false;
+    task.state.errorMessage = undefined;
+    if (task instanceof SftpFileUploadTask) {
+      task.resetForRetry();
+    }
   }
 
 }

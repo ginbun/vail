@@ -1,5 +1,6 @@
 import type { FileTransferItem, IFileUploadTask, ITerminalSession } from '@/views/terminal/interfaces';
 import { closeFileReader } from '@/utils/file';
+import { TransferStatus } from '../../types/const';
 import SftpBaseTransferTask from './sftp-base-transfer-task';
 
 // 512 KB
@@ -41,6 +42,17 @@ export default class SftpFileUploadTask extends SftpBaseTransferTask implements 
     } else {
       this.finish();
     }
+  }
+
+  // 弱网重试时重置分片游标并重试整个文件
+  resetForRetry() {
+    this.currentPart = 0;
+    this.state.currentSize = 0;
+    this.state.progress = 0;
+    this.state.errorMessage = undefined;
+    this.state.finished = false;
+    this.state.aborted = false;
+    this.state.status = TransferStatus.WAITING;
   }
 
   // 执行上传下一分片
