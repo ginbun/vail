@@ -25,6 +25,11 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
       baseDelay: 1000,
       jitter: true,
     });
+    this.client.send(JSON.stringify({
+      type: 'auth',
+      ticket: data.wsTicket,
+      sessionHint: data.sessionHint,
+    }));
   }
 
   // 处理已连接消息

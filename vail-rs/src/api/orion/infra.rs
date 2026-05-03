@@ -197,6 +197,24 @@ pub(super) struct OrionTerminalAccessRequest {
     connect_type: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OrionTerminalAccessResponse {
+    access_id: String,
+    ws_url: String,
+    ws_ticket: String,
+    expires_at: i64,
+    session_hint: String,
+    resume: OrionTerminalResumeConfig,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OrionTerminalResumeConfig {
+    enabled: bool,
+    window_seconds: i32,
+}
+
 fn parse_csv_ids(raw: Option<String>) -> Vec<i64> {
     raw.unwrap_or_default()
         .split(',')
@@ -2311,17 +2329,30 @@ pub(super) async fn orion_terminal_access(
     let user_id = guard::current_user_id(&headers, &state.config.jwt)?;
     let host_id = parse_required_id(payload.host_id, "hostId")?;
     guard::require_host_permission(&state, user_id, host_id).await?;
-    let issued_at_ms = now_ms();
-    let payload = format!(
-        "term:{}:{}:{}:{}",
+    let connect_type = payload
+        .connect_type
+        .unwrap_or_else(|| "ssh".to_string())
+        .to_ascii_lowercase();
+    let ticket = crate::api::terminal::issue_terminal_access_v2_ticket(
+        &state.db,
         user_id,
         host_id,
-        payload.connect_type.unwrap_or_else(|| "ssh".to_string()),
-        issued_at_ms
-    );
-    let signature = terminal_token_signature(&payload, &state.config.secrets.data_encryption_key);
-    let token = format!("{payload}:{signature}");
-    Ok(OrionResponse::ok(token))
+        &connect_type,
+        &state.config.secrets.data_encryption_key,
+    )
+    .await?;
+    let response = OrionTerminalAccessResponse {
+        access_id: ticket.access_id,
+        ws_url: ticket.ws_url,
+        ws_ticket: ticket.ws_ticket,
+        expires_at: ticket.expires_at_ms,
+        session_hint: ticket.session_hint,
+        resume: OrionTerminalResumeConfig {
+            enabled: false,
+            window_seconds: 0,
+        },
+    };
+    Ok(OrionResponse::ok(response))
 }
 
 pub(super) async fn orion_terminal_transfer(

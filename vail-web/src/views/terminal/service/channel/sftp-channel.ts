@@ -15,6 +15,11 @@ export default class SftpChannel extends BaseTerminalChannel<ISftpSession> imple
     });
     // 打开 channel
     this.client = await openTerminalAccessChannel(TerminalSessionTypes.SFTP.channel, data);
+    this.client.send(JSON.stringify({
+      type: 'auth',
+      ticket: data.wsTicket,
+      sessionHint: data.sessionHint,
+    }));
   }
 
   // 处理已连接消息

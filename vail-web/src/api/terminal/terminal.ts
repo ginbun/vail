@@ -9,6 +9,20 @@ export interface TerminalAccessRequest {
   extra?: Record<string, any>;
 }
 
+export interface TerminalAccessResumeConfig {
+  enabled: boolean;
+  windowSeconds: number;
+}
+
+export interface TerminalAccessV2Response {
+  accessId: string;
+  wsUrl: string;
+  wsTicket: string;
+  expiresAt: number;
+  sessionHint: string;
+  resume: TerminalAccessResumeConfig;
+}
+
 /**
  * 获取主机终端主题
  */
@@ -20,7 +34,7 @@ export function getTerminalThemes() {
  * 获取主机终端 accessToken
  */
 export function getTerminalAccessToken(request: TerminalAccessRequest) {
-  return axios.post<string>('/terminal/terminal/access', request);
+  return axios.post<TerminalAccessV2Response>('/terminal/terminal/access', request);
 }
 
 /**
@@ -33,8 +47,15 @@ export function getTerminalTransferToken() {
 /**
  * 打开主机终端 websocket
  */
-export const openTerminalAccessChannel = (protocol: string, accessToken: string, retryOptions?: WebSocketRetryOptions) => {
-  return createAppWebSocket(`/terminal/access/${protocol}/${accessToken}`, retryOptions);
+export const openTerminalAccessChannel = (
+  protocol: string,
+  access: TerminalAccessV2Response,
+  retryOptions?: WebSocketRetryOptions
+) => {
+  if (!access.wsUrl) {
+    return createAppWebSocket(`/terminal/access/${protocol}`, retryOptions);
+  }
+  return createAppWebSocket(access.wsUrl, retryOptions);
 };
 
 /**
@@ -43,4 +64,3 @@ export const openTerminalAccessChannel = (protocol: string, accessToken: string,
 export const openTerminalTransferChannel = (accessToken: string, retryOptions?: WebSocketRetryOptions) => {
   return createAppWebSocket(`/terminal/transfer/${accessToken}`, retryOptions);
 };
-
