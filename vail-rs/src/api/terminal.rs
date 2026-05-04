@@ -27,7 +27,11 @@ use tokio::sync::mpsc;
 
 use crate::{
     api::guard,
-    application::orion::compat_service,
+    application::{
+        orion::compat_service,
+        terminal::{access_service, audit_service},
+    },
+    domain::terminal::command_audit::SshCommandAuditSnapshot,
     domain::orion::compat::OrionCompatModule,
     error::{AppError, AppResult},
     ssh_client::{self, HostSshConfig},
@@ -38,15 +42,11 @@ use super::AppState;
 const TERMINAL_CLOSE_FORCE: i32 = 10000;
 const TERMINAL_CLOSE_NETWORK: i32 = 10011;
 const TOKEN_EXPIRE_MS: i64 = 5 * 60 * 1000;
-const TERMINAL_TICKET_CLEANUP_INTERVAL_MS: i64 = 60 * 1000;
-const TERMINAL_TICKET_CLEANUP_BATCH_SIZE: i64 = 500;
 
 static SFTP_CONTENT_TOKENS: Lazy<std::sync::Mutex<HashMap<String, SftpContentToken>>> =
     Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
 static SFTP_DOWNLOAD_TOKENS: Lazy<std::sync::Mutex<HashMap<String, SftpDownloadToken>>> =
     Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
-static TERMINAL_TICKET_CLEANUP_LAST_RUN_MS: Lazy<std::sync::Mutex<i64>> =
-    Lazy::new(|| std::sync::Mutex::new(0));
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TerminalTheme {
@@ -106,23 +106,6 @@ struct TerminalWsAuthFrame {
     session_hint: String,
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct TerminalAccessV2TicketIssue {
-    pub access_id: String,
-    pub ws_ticket: String,
-    pub ws_url: String,
-    pub expires_at_ms: i64,
-    pub session_hint: String,
-}
-
-#[derive(Debug, Clone)]
-struct TerminalAccessV2Ticket {
-    user_id: i64,
-    host_id: i64,
-    connect_type: String,
-    session_hint: String,
-    expires_at_ms: i64,
-}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -462,6 +445,7 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
     let context = load_terminal_audit_context(&state, user_id, host_id).await;
     let mut connect_log_id: Option<i64> = None;
     let mut close_error: Option<String> = None;
+    let mut command_snapshot = SshCommandAuditSnapshot::default();
     if socket
         .send(Message::Text(format!("id|{session_id}")))
         .await
@@ -589,6 +573,7 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
                         }
 
                         if let Some(command) = text.strip_prefix("i|") {
+                            command_snapshot.ingest(command);
                             let _ = cmd_tx.send(SshWorkerCommand::Input(command.to_string()));
                             continue;
                         }
@@ -609,6 +594,23 @@ async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64,
     }
 
     let _ = cmd_tx.send(SshWorkerCommand::Close);
+    command_snapshot.finish_line();
+    audit_service::append_terminal_command_snapshot(
+        &state.db,
+        audit_service::TerminalCommandSnapshotRecordInput {
+            user_id,
+            host_id,
+            username: &context.username,
+            host_name: &context.host_name,
+            host_address: &context.host_address,
+            session_id: &session_id,
+            start_time: session_start,
+            end_time: now_ms(),
+            snapshot: command_snapshot,
+        },
+    )
+    .await;
+
     let status = if connected { "COMPLETE" } else { "FAILED" };
     if let Some(log_id) = connect_log_id {
         update_terminal_connect_log(&state, user_id, log_id, status, now_ms()).await;
@@ -1772,7 +1774,7 @@ async fn handle_v2_terminal_access_socket(state: AppState, mut socket: WebSocket
         }
     };
 
-    let ticket = match consume_v2_access_ticket(
+    let ticket = match access_service::consume_terminal_access_v2_ticket(
         &state.db,
         &frame.ticket,
         &frame.session_hint,
@@ -1974,226 +1976,6 @@ async fn append_terminal_file_log(
         &format!("user-{user_id}"),
     )
     .await;
-}
-
-pub(crate) async fn issue_terminal_access_v2_ticket(
-    db: &PgPool,
-    user_id: i64,
-    host_id: i64,
-    connect_type: &str,
-    signing_key: &str,
-) -> AppResult<TerminalAccessV2TicketIssue> {
-    maybe_cleanup_expired_terminal_access_tickets(db).await;
-
-    let connect_type = connect_type.to_ascii_lowercase();
-    if !matches!(connect_type.as_str(), "ssh" | "sftp") {
-        return Err(AppError::BadRequest(
-            "invalid connect type for terminal access".to_string(),
-        ));
-    }
-
-    let access_id = uuid::Uuid::new_v4().to_string();
-    let session_hint = uuid::Uuid::new_v4().to_string();
-    let issued_at_ms = now_ms();
-    let expires_at_ms = issued_at_ms + TOKEN_EXPIRE_MS;
-    let payload = format!(
-        "termv2:{}:{}:{}:{}:{}:{}",
-        access_id, user_id, host_id, connect_type, issued_at_ms, session_hint
-    );
-    let signature = token_signature(&payload, signing_key);
-    let ws_ticket = format!("{payload}:{signature}");
-    let ticket_hash = ticket_digest(&ws_ticket);
-
-    sqlx::query(
-        r#"
-        INSERT INTO terminal_access_ticket (
-            access_id,
-            user_id,
-            host_id,
-            connect_type,
-            session_hint,
-            ticket_hash,
-            expires_at
-        ) VALUES (
-            $1::uuid,
-            $2,
-            $3,
-            $4,
-            $5::uuid,
-            $6,
-            to_timestamp($7::double precision / 1000.0)
-        )
-        "#,
-    )
-    .bind(&access_id)
-    .bind(user_id)
-    .bind(host_id)
-    .bind(&connect_type)
-    .bind(&session_hint)
-    .bind(ticket_hash)
-    .bind(expires_at_ms as f64)
-    .execute(db)
-    .await
-    .map_err(AppError::Database)?;
-
-    Ok(TerminalAccessV2TicketIssue {
-        access_id,
-        ws_ticket,
-        ws_url: format!("/terminal/access/{connect_type}"),
-        expires_at_ms,
-        session_hint,
-    })
-}
-
-async fn maybe_cleanup_expired_terminal_access_tickets(db: &PgPool) {
-    let now = now_ms();
-    let should_run = {
-        let mut last_run = TERMINAL_TICKET_CLEANUP_LAST_RUN_MS
-            .lock()
-            .expect("terminal ticket cleanup mutex poisoned");
-        if now - *last_run >= TERMINAL_TICKET_CLEANUP_INTERVAL_MS {
-            *last_run = now;
-            true
-        } else {
-            false
-        }
-    };
-
-    if !should_run {
-        return;
-    }
-
-    let _ = sqlx::query(
-        r#"
-        DELETE FROM terminal_access_ticket
-        WHERE ctid IN (
-            SELECT ctid
-            FROM terminal_access_ticket
-            WHERE expires_at < now()
-            LIMIT $1
-        )
-        "#,
-    )
-    .bind(TERMINAL_TICKET_CLEANUP_BATCH_SIZE)
-    .execute(db)
-    .await;
-}
-
-async fn consume_v2_access_ticket(
-    db: &PgPool,
-    token: &str,
-    session_hint: &str,
-    signing_key: &str,
-) -> AppResult<TerminalAccessV2Ticket> {
-    let (access_id, user_id, host_id, connect_type, token_session_hint) =
-        parse_v2_access_ticket(token, session_hint, signing_key)?;
-
-    let ticket_hash = ticket_digest(token);
-    let now = now_ms() as f64;
-    let stored = sqlx::query_as::<_, (String, i64, i64, String, String, i64)>(
-        r#"
-        UPDATE terminal_access_ticket
-        SET used_at = now()
-        WHERE access_id = $1::uuid
-          AND ticket_hash = $2
-          AND session_hint = $3::uuid
-          AND used_at IS NULL
-          AND expires_at > to_timestamp($4::double precision / 1000.0)
-        RETURNING access_id::text,
-                  user_id,
-                  host_id,
-                  connect_type,
-                  session_hint::text,
-                  FLOOR(EXTRACT(EPOCH FROM expires_at) * 1000)::bigint
-        "#,
-    )
-    .bind(&access_id)
-    .bind(ticket_hash)
-    .bind(session_hint)
-    .bind(now)
-    .fetch_optional(db)
-    .await
-    .map_err(AppError::Database)?;
-
-    let Some((stored_access_id, stored_user_id, stored_host_id, stored_connect_type, stored_session_hint, stored_expires_at_ms)) = stored else {
-        return Err(AppError::BadRequest(
-            "terminal access ticket already used or expired".to_string(),
-        ));
-    };
-
-    let _ = stored_access_id;
-    let stored = TerminalAccessV2Ticket {
-        user_id: stored_user_id,
-        host_id: stored_host_id,
-        connect_type: stored_connect_type,
-        session_hint: stored_session_hint,
-        expires_at_ms: stored_expires_at_ms,
-    };
-
-    if stored.user_id != user_id
-        || stored.host_id != host_id
-        || stored.connect_type != connect_type
-        || stored.session_hint != token_session_hint
-    {
-        return Err(AppError::BadRequest(
-            "terminal access ticket context mismatch".to_string(),
-        ));
-    }
-    if stored.expires_at_ms < now_ms() {
-        return Err(AppError::BadRequest(
-            "terminal access ticket expired".to_string(),
-        ));
-    }
-
-    Ok(stored)
-}
-
-fn parse_v2_access_ticket(
-    token: &str,
-    session_hint: &str,
-    signing_key: &str,
-) -> AppResult<(String, i64, i64, String, String)> {
-    let parts = token.split(':').collect::<Vec<_>>();
-    if parts.len() != 8 || parts[0] != "termv2" {
-        return Err(AppError::BadRequest(
-            "invalid terminal access ticket".to_string(),
-        ));
-    }
-
-    let unsigned = parts[0..7].join(":");
-    ensure_token_signature(&unsigned, parts[7], signing_key)?;
-
-    let access_id = parts[1].to_string();
-    let user_id = parts[2]
-        .parse::<i64>()
-        .map_err(|_| AppError::BadRequest("invalid user in terminal access ticket".to_string()))?;
-    let host_id = parts[3]
-        .parse::<i64>()
-        .map_err(|_| AppError::BadRequest("invalid host in terminal access ticket".to_string()))?;
-    let connect_type = parts[4].to_ascii_lowercase();
-    if !matches!(connect_type.as_str(), "ssh" | "sftp") {
-        return Err(AppError::BadRequest(
-            "invalid connect type in terminal access ticket".to_string(),
-        ));
-    }
-    let issued_at_ms = parts[5].parse::<i64>().map_err(|_| {
-        AppError::BadRequest("invalid timestamp in terminal access ticket".to_string())
-    })?;
-    ensure_token_freshness_ms(issued_at_ms, "terminal access ticket expired")?;
-    let token_session_hint = parts[6].to_string();
-    if token_session_hint != session_hint {
-        return Err(AppError::BadRequest(
-            "terminal access session hint mismatch".to_string(),
-        ));
-    }
-
-    Ok((access_id, user_id, host_id, connect_type, token_session_hint))
-}
-
-fn ticket_digest(token: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(token.as_bytes());
-    URL_SAFE_NO_PAD.encode(hasher.finalize())
 }
 
 fn parse_transfer_token(token: &str, signing_key: &str) -> AppResult<i64> {
@@ -2959,86 +2741,27 @@ mod tests {
     }
 
     #[test]
-    fn terminal_access_v2_ticket_parses_valid_payload() {
-        let issued_at_ms = now_ms();
-        let payload = format!(
-            "termv2:{}:{}:{}:{}:{}:{}",
-            "a4d7f4c6-5ef6-4c26-b88e-8d40dc29bc2c",
-            1,
-            2,
-            "ssh",
-            issued_at_ms,
-            "f0d6f731-8f83-4d97-a61b-055ff42a77e5"
-        );
-        let token = format!("{payload}:{}", token_signature(&payload, "k"));
-        let parsed = parse_v2_access_ticket(
-            &token,
-            "f0d6f731-8f83-4d97-a61b-055ff42a77e5",
-            "k",
-        )
-        .expect("parse success");
-        assert_eq!(parsed.1, 1);
-        assert_eq!(parsed.2, 2);
-        assert_eq!(parsed.3, "ssh");
-    }
-
-    #[test]
-    fn terminal_access_v2_ticket_rejects_session_hint_mismatch() {
-        let payload = format!(
-            "termv2:{}:{}:{}:{}:{}:{}",
-            "a4d7f4c6-5ef6-4c26-b88e-8d40dc29bc2c",
-            1,
-            2,
-            "ssh",
-            now_ms(),
-            "f0d6f731-8f83-4d97-a61b-055ff42a77e5"
-        );
-        let token = format!("{payload}:{}", token_signature(&payload, "k"));
-        let err = parse_v2_access_ticket(&token, "wrong-session", "k").unwrap_err();
-        assert!(err.to_string().contains("session hint mismatch"));
-    }
-
-    #[test]
-    fn terminal_access_v2_ticket_rejects_unknown_connect_type() {
-        let payload = format!(
-            "termv2:{}:{}:{}:{}:{}:{}",
-            "a4d7f4c6-5ef6-4c26-b88e-8d40dc29bc2c",
-            1,
-            2,
-            "rdp",
-            now_ms(),
-            "f0d6f731-8f83-4d97-a61b-055ff42a77e5"
-        );
-        let token = format!("{payload}:{}", token_signature(&payload, "k"));
-        let err =
-            parse_v2_access_ticket(&token, "f0d6f731-8f83-4d97-a61b-055ff42a77e5", "k")
-                .unwrap_err();
-        assert!(err.to_string().contains("invalid connect type"));
-    }
-
-    #[test]
-    fn terminal_access_v2_ticket_rejects_bad_signature() {
-        let payload = format!(
-            "termv2:{}:{}:{}:{}:{}:{}",
-            "a4d7f4c6-5ef6-4c26-b88e-8d40dc29bc2c",
-            1,
-            2,
-            "ssh",
-            now_ms(),
-            "f0d6f731-8f83-4d97-a61b-055ff42a77e5"
-        );
-        let token = format!("{payload}:invalid-signature");
-        let err = parse_v2_access_ticket(&token, "f0d6f731-8f83-4d97-a61b-055ff42a77e5", "k")
-            .unwrap_err();
-        assert!(err.to_string().contains("invalid terminal token signature"));
-    }
-
-    #[test]
     fn parse_transfer_token_rejects_future_timestamp() {
         let future = now_ms() + TOKEN_EXPIRE_MS + 1000;
         let payload = format!("transfer:1:{future}");
         let token = format!("{payload}:{}", token_signature(&payload, "k"));
         let err = parse_transfer_token(&token, "k").unwrap_err();
         assert!(err.to_string().contains("transfer token expired"));
+    }
+
+    #[test]
+    fn mask_command_for_audit_masks_mysql_inline_password() {
+        let masked = crate::domain::terminal::command_audit::mask_command_for_audit(
+            "mysql -h 127.0.0.1 -uroot -pMySecret",
+        );
+        assert_eq!(masked, "mysql -h 127.0.0.1 -uroot -p***");
+    }
+
+    #[test]
+    fn mask_command_for_audit_masks_key_value_secrets() {
+        let masked = crate::domain::terminal::command_audit::mask_command_for_audit(
+            "export token=abc123 password='abc'",
+        );
+        assert_eq!(masked, "export token=*** password=***");
     }
 }

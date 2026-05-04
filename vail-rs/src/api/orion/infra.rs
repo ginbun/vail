@@ -2333,7 +2333,7 @@ pub(super) async fn orion_terminal_access(
         .connect_type
         .unwrap_or_else(|| "ssh".to_string())
         .to_ascii_lowercase();
-    let ticket = crate::api::terminal::issue_terminal_access_v2_ticket(
+    let ticket = crate::application::terminal::access_service::issue_terminal_access_v2_ticket(
         &state.db,
         user_id,
         host_id,
