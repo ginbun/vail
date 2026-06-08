@@ -216,6 +216,14 @@ pub struct SshConfig {
     pub network_silence_multiplier: u32,
     #[serde(default = "default_transient_read_error_backoff_ms")]
     pub transient_read_error_backoff_ms: u64,
+    #[serde(default = "default_resume_grace_seconds")]
+    pub resume_grace_seconds: u64,
+    #[serde(default = "default_resume_buffer_max_bytes")]
+    pub resume_buffer_max_bytes: usize,
+    #[serde(default = "default_resume_max_sessions_global")]
+    pub resume_max_sessions_global: usize,
+    #[serde(default = "default_resume_max_sessions_per_user")]
+    pub resume_max_sessions_per_user: usize,
 }
 
 impl Default for SshConfig {
@@ -228,6 +236,10 @@ impl Default for SshConfig {
             max_consecutive_keepalive_errors: default_max_consecutive_keepalive_errors(),
             network_silence_multiplier: default_network_silence_multiplier(),
             transient_read_error_backoff_ms: default_transient_read_error_backoff_ms(),
+            resume_grace_seconds: default_resume_grace_seconds(),
+            resume_buffer_max_bytes: default_resume_buffer_max_bytes(),
+            resume_max_sessions_global: default_resume_max_sessions_global(),
+            resume_max_sessions_per_user: default_resume_max_sessions_per_user(),
         }
     }
 }
@@ -258,6 +270,22 @@ fn default_network_silence_multiplier() -> u32 {
 
 fn default_transient_read_error_backoff_ms() -> u64 {
     50
+}
+
+fn default_resume_grace_seconds() -> u64 {
+    30
+}
+
+fn default_resume_buffer_max_bytes() -> usize {
+    262_144
+}
+
+fn default_resume_max_sessions_global() -> usize {
+    256
+}
+
+fn default_resume_max_sessions_per_user() -> usize {
+    8
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -372,6 +400,13 @@ fn env_u64(name: &str) -> Option<u64> {
     })
 }
 
+fn env_usize(name: &str) -> Option<usize> {
+    env_string(name).map(|v| {
+        v.parse::<usize>()
+            .unwrap_or_else(|_| panic!("invalid {name}: expected usize, got '{v}'"))
+    })
+}
+
 fn env_algorithm(name: &str) -> Option<Algorithm> {
     env_string(name).map(|v| match v.to_uppercase().as_str() {
         "HS256" => Algorithm::HS256,
@@ -426,6 +461,19 @@ fn apply_env_overrides(config: &mut Config) {
     if let Some(v) = env_string("VAIL_DATA_ENCRYPTION_KEY") {
         config.secrets.data_encryption_key = v;
     }
+
+    if let Some(v) = env_u64("VAIL_SSH_RESUME_GRACE_SECONDS") {
+        config.ssh.resume_grace_seconds = v;
+    }
+    if let Some(v) = env_usize("VAIL_SSH_RESUME_BUFFER_MAX_BYTES") {
+        config.ssh.resume_buffer_max_bytes = v;
+    }
+    if let Some(v) = env_usize("VAIL_SSH_RESUME_MAX_SESSIONS_GLOBAL") {
+        config.ssh.resume_max_sessions_global = v;
+    }
+    if let Some(v) = env_usize("VAIL_SSH_RESUME_MAX_SESSIONS_PER_USER") {
+        config.ssh.resume_max_sessions_per_user = v;
+    }
 }
 
 impl Default for Config {
@@ -458,6 +506,10 @@ impl Default for Config {
                 max_consecutive_keepalive_errors: 8,
                 network_silence_multiplier: 6,
                 transient_read_error_backoff_ms: 50,
+                resume_grace_seconds: 30,
+                resume_buffer_max_bytes: 262_144,
+                resume_max_sessions_global: 256,
+                resume_max_sessions_per_user: 8,
             },
             storage: StorageConfig {
                 temp_dir: "/tmp/vail".to_string(),
@@ -678,5 +730,9 @@ mod tests {
         assert_eq!(cfg.ssh.max_consecutive_keepalive_errors, 8);
         assert_eq!(cfg.ssh.network_silence_multiplier, 6);
         assert_eq!(cfg.ssh.transient_read_error_backoff_ms, 50);
+        assert_eq!(cfg.ssh.resume_grace_seconds, 30);
+        assert_eq!(cfg.ssh.resume_buffer_max_bytes, 262_144);
+        assert_eq!(cfg.ssh.resume_max_sessions_global, 256);
+        assert_eq!(cfg.ssh.resume_max_sessions_per_user, 8);
     }
 }

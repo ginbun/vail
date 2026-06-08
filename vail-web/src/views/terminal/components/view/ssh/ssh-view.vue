@@ -10,6 +10,17 @@ class="ssh-wrapper"
            :style="{ background: preference.sshTheme.schema.background }">
         <!-- 终端实例 -->
         <div ref="viewport" class="ssh-viewport" />
+        <!-- 重连次数耗尽：让用户选择继续重试 / 放弃 -->
+        <div v-if="session?.state?.reconnectExhausted" class="reconnect-overlay">
+          <div class="reconnect-card">
+            <div class="reconnect-title">自动重连多次未成功</div>
+            <div class="reconnect-desc">网络可能仍不稳定，您可以继续重试或放弃本次连接。</div>
+            <div class="reconnect-actions">
+              <a-button type="primary" size="small" @click="continueReconnect">继续重试</a-button>
+              <a-button size="small" @click="giveUpReconnect">放弃</a-button>
+            </div>
+          </div>
+        </div>
         <!-- 搜索模态框 -->
         <xterm-search-modal
 ref="searchModal"
@@ -68,6 +79,16 @@ ref="uploadModal"
     session.value?.handler.invokeHandle.call(session.value?.handler, handle);
   };
 
+  // 继续重试
+  const continueReconnect = () => {
+    session.value?.continueReconnect();
+  };
+
+  // 放弃重连
+  const giveUpReconnect = () => {
+    session.value?.giveUpReconnect();
+  };
+
   // 初始化会话
   onMounted(async () => {
     // 创建终端会话
@@ -109,6 +130,44 @@ ref="uploadModal"
 
       ::-webkit-scrollbar-track {
         display: none;
+      }
+    }
+  }
+
+  .reconnect-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 10;
+
+    .reconnect-card {
+      min-width: 280px;
+      padding: 20px;
+      border-radius: 6px;
+      background: var(--color-bg-2, #fff);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      text-align: center;
+
+      .reconnect-title {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--color-text-1);
+      }
+
+      .reconnect-desc {
+        font-size: 13px;
+        color: var(--color-text-3);
+        margin-bottom: 16px;
+      }
+
+      .reconnect-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
       }
     }
   }

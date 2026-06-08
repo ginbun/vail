@@ -29,13 +29,29 @@ export default class TerminalSessionManager implements ITerminalSessionManager {
 
   private readonly dispatchFitFn: () => void;
 
+  private readonly handleNetworkOnlineFn: () => void;
+
   constructor() {
     this.sessions = [];
     this.dispatchFitFn = useDebounceFn(this.dispatchFit, 300).bind(this);
+    // 网络恢复事件做防抖，避免 online 抖动风暴反复触发重连
+    this.handleNetworkOnlineFn = useDebounceFn(this.dispatchNetworkOnline, 500).bind(this);
     // 注册 resize 事件
     addEventListen(window, 'resize', this.dispatchFitFn);
+    // 注册网络恢复事件
+    addEventListen(window, 'online', this.handleNetworkOnlineFn);
     // 注册 ping 事件
     this.keepAliveTaskId = window.setInterval(this.dispatchPing.bind(this), 15000);
+  }
+
+  // 网络恢复时通知各会话立即尝试重连
+  dispatchNetworkOnline() {
+    this.sessions.forEach(s => {
+      const notify = (s as unknown as { notifyNetworkOnline?: () => void })?.notifyNetworkOnline;
+      if (typeof notify === 'function') {
+        notify.call(s);
+      }
+    });
   }
 
   // 打开 ssh 会话
@@ -49,7 +65,7 @@ export default class TerminalSessionManager implements ITerminalSessionManager {
       await sleep(100);
       // 连接会话
       session.connect();
-    } catch (ex) {
+    } catch {
       // 异常关闭
       session.close();
     }
@@ -64,7 +80,7 @@ export default class TerminalSessionManager implements ITerminalSessionManager {
       await session.init(handler);
       // 连接会话
       session.connect();
-    } catch (ex) {
+    } catch {
       // 异常关闭
       session.close();
     }
@@ -81,7 +97,7 @@ export default class TerminalSessionManager implements ITerminalSessionManager {
       await sleep(100);
       // 连接会话
       session.connect();
-    } catch (ex) {
+    } catch {
       // 异常关闭
       session.close();
     }
@@ -98,7 +114,7 @@ export default class TerminalSessionManager implements ITerminalSessionManager {
       await sleep(100);
       // 连接会话
       session.connect();
-    } catch (ex) {
+    } catch {
       // 异常关闭
       session.close();
     }
@@ -179,7 +195,9 @@ export default class TerminalSessionManager implements ITerminalSessionManager {
       clearInterval(this.keepAliveTaskId);
       // 移除 resize 事件
       removeEventListen(window, 'resize', this.dispatchFitFn);
-    } catch (e) {
+      // 移除网络恢复事件
+      removeEventListen(window, 'online', this.handleNetworkOnlineFn);
+    } catch {
       // ignored
     }
   }

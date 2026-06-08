@@ -23,7 +23,8 @@ export default class SftpChannel extends BaseTerminalChannel<ISftpSession> imple
   }
 
   // 处理已连接消息
-  processConnected(_: OutputPayload): void {
+  processConnected(payload: OutputPayload): void {
+    void payload;
     // 设置可写
     this.session.setCanWrite(true);
     // 设置已连接

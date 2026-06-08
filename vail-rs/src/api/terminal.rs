@@ -2,13 +2,14 @@ use std::{
     collections::HashMap,
     io::{Read, Write},
     path::Path as FsPath,
+    sync::Arc,
     time::{Duration, Instant},
 };
 
 use axum::{
     extract::{
         ws::{Message, WebSocket},
-        Multipart, Path, Query, State, WebSocketUpgrade,
+        ConnectInfo, Multipart, Path, Query, State, WebSocketUpgrade,
     },
     http::{header, HeaderMap, HeaderValue, StatusCode},
     response::IntoResponse,
@@ -17,7 +18,7 @@ use axum::{
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use encoding_rs::Encoding;
-use futures_util::StreamExt;
+use futures_util::{SinkExt, StreamExt};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -29,15 +30,20 @@ use crate::{
     api::guard,
     application::{
         orion::compat_service,
-        terminal::{access_service, audit_service},
+        terminal::{access_service, audit_service, resume_service},
     },
-    domain::terminal::command_audit::SshCommandAuditSnapshot,
+    domain::terminal::{
+        command_audit::SshCommandAuditSnapshot,
+        resume::{ReplayError, ReplayRingBuffer},
+        resume_registry::{AdmissionError, SessionRegistry},
+    },
     domain::orion::compat::OrionCompatModule,
     error::{AppError, AppResult},
     ssh_client::{self, HostSshConfig},
 };
 
 use super::AppState;
+use std::net::SocketAddr;
 
 const TERMINAL_CLOSE_FORCE: i32 = 10000;
 const TERMINAL_CLOSE_NETWORK: i32 = 10011;
@@ -47,6 +53,9 @@ static SFTP_CONTENT_TOKENS: Lazy<std::sync::Mutex<HashMap<String, SftpContentTok
     Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
 static SFTP_DOWNLOAD_TOKENS: Lazy<std::sync::Mutex<HashMap<String, SftpDownloadToken>>> =
     Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
+type SshResumeHandle = Arc<std::sync::Mutex<SshResumeSession>>;
+static SSH_RESUME_SESSIONS: Lazy<std::sync::Mutex<SessionRegistry<SshResumeHandle>>> =
+    Lazy::new(|| std::sync::Mutex::new(SessionRegistry::new(256, 8)));
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TerminalTheme {
@@ -104,6 +113,34 @@ struct TerminalWsAuthFrame {
     frame_type: String,
     ticket: String,
     session_hint: String,
+    #[serde(default)]
+    resume_session_id: Option<String>,
+    #[serde(default)]
+    resume_last_offset: Option<u64>,
+}
+
+#[derive(Debug, Clone)]
+struct TerminalSocketContext {
+    source_ip: String,
+}
+
+#[derive(Debug)]
+struct SshResumeSession {
+    session_id: String,
+    user_id: i64,
+    host_id: i64,
+    connect_type: String,
+    cmd_tx: std::sync::mpsc::Sender<SshWorkerCommand>,
+    output: ReplayRingBuffer,
+    connected: bool,
+    connect_started: bool,
+    closed_notice: Option<SshCloseNotice>,
+    detach_deadline: Option<Instant>,
+    connect_log_id: Option<i64>,
+    session_start: i64,
+    context: TerminalAuditContext,
+    close_error: Option<String>,
+    attached_tx: Option<mpsc::UnboundedSender<String>>,
 }
 
 
@@ -266,6 +303,7 @@ async fn fetch_terminal_themes(db: &PgPool) -> Result<Vec<TerminalTheme>, AppErr
 async fn open_terminal_access_ws(
     State(state): State<AppState>,
     Path(protocol): Path<String>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     ws: WebSocketUpgrade,
 ) -> AppResult<impl axum::response::IntoResponse> {
     let protocol = protocol.to_ascii_lowercase();
@@ -276,7 +314,15 @@ async fn open_terminal_access_ws(
     }
 
     Ok(ws.on_upgrade(move |socket| async move {
-        handle_v2_terminal_access_socket(state, socket, protocol).await;
+        handle_v2_terminal_access_socket(
+            state,
+            socket,
+            protocol,
+            TerminalSocketContext {
+                source_ip: addr.ip().to_string(),
+            },
+        )
+        .await;
     }))
 }
 
@@ -416,222 +462,794 @@ async fn terminal_sftp_download(
     Ok(response)
 }
 
-async fn handle_ssh_socket(state: AppState, mut socket: WebSocket, user_id: i64, host_id: i64) {
-    let (cmd_tx, cmd_rx) = std::sync::mpsc::channel::<SshWorkerCommand>();
-    let (event_tx, mut event_rx) = mpsc::unbounded_channel::<SshWorkerEvent>();
-    let timeout_secs = state.config.ssh.connection_timeout;
-    let keepalive_interval_secs = state.config.ssh.keepalive_interval;
-    let max_consecutive_retryable_read_errors =
-        state.config.ssh.max_consecutive_retryable_read_errors;
-    let max_consecutive_keepalive_errors = state.config.ssh.max_consecutive_keepalive_errors;
-    let network_silence_multiplier = state.config.ssh.network_silence_multiplier;
-    let transient_read_error_backoff_ms = state.config.ssh.transient_read_error_backoff_ms;
-
-    std::thread::spawn(move || {
-        run_ssh_worker(
-            cmd_rx,
-            event_tx,
-            timeout_secs,
-            keepalive_interval_secs,
-            max_consecutive_retryable_read_errors,
-            max_consecutive_keepalive_errors,
-            network_silence_multiplier,
-            transient_read_error_backoff_ms,
-        )
-    });
-
-    let session_id = format!("ssh-{}", uuid::Uuid::new_v4());
-    let session_start = now_ms();
-    let context = load_terminal_audit_context(&state, user_id, host_id).await;
-    let mut connect_log_id: Option<i64> = None;
-    let mut close_error: Option<String> = None;
+async fn handle_ssh_socket(
+    state: AppState,
+    mut socket: WebSocket,
+    user_id: i64,
+    host_id: i64,
+    resume_session_id: Option<String>,
+    resume_last_offset: u64,
+    socket_ctx: TerminalSocketContext,
+) {
+    let resume_grace = Duration::from_secs(state.config.ssh.resume_grace_seconds.max(1));
+    let resume_buffer_max_bytes = state.config.ssh.resume_buffer_max_bytes.max(1024);
+    let mut resume_replay: Vec<String> = Vec::new();
     let mut command_snapshot = SshCommandAuditSnapshot::default();
+
+    // Outcome of the resume handshake's single synchronous critical section.
+    // Owned data only (no lock guards) so it can cross the subsequent awaits.
+    enum ResumeOutcome {
+        Resume {
+            handle: SshResumeHandle,
+            messages: Vec<String>,
+        },
+        NotFound,
+        Unavailable,
+        Reject {
+            msg: String,
+            context: TerminalAuditContext,
+            sid: String,
+            audit_type: &'static str,
+            reason: Option<String>,
+        },
+    }
+
+    let session_arc = if let Some(resume_id) = resume_session_id.clone() {
+        // D1/D2 fix: perform lookup, authorization, S3 mutual-exclusion check and
+        // (on success) the "reserve" step atomically while holding BOTH the
+        // registry lock and the per-session lock. Reserving means marking the
+        // session attached in the registry inside this critical section, so that
+        // (D1) it can no longer be picked as the oldest detached victim by a
+        // concurrent new-session admission during the `id|...` handshake await,
+        // and (D2) a concurrent second resume of the same session observes it as
+        // already attached and is rejected instead of overwriting `attached_tx`.
+        // Lock order is always registry -> session (never the reverse elsewhere),
+        // so this nesting cannot deadlock.
+        let outcome = match SSH_RESUME_SESSIONS.lock() {
+            Ok(mut reg) => match reg.get(&resume_id) {
+                None => ResumeOutcome::NotFound,
+                Some(existing) => match existing.lock() {
+                    Ok(mut session) => {
+                        if let Err(err) = resume_service::ensure_resume_binding(
+                            &resume_service::ResumeBinding {
+                                user_id: session.user_id,
+                                host_id: session.host_id,
+                                connect_type: session.connect_type.clone(),
+                            },
+                            resume_service::ResumeRequest {
+                                user_id,
+                                host_id,
+                                connect_type: "ssh",
+                            },
+                        ) {
+                            ResumeOutcome::Reject {
+                                msg: err.to_string(),
+                                context: session.context.clone(),
+                                sid: session.session_id.clone(),
+                                audit_type: "terminal:ssh-resume-auth-failed",
+                                reason: Some("resume binding mismatch".to_string()),
+                            }
+                        } else if reg.is_attached(&resume_id) || session.attached_tx.is_some() {
+                            // S3 / D2: the session is already attached or reserved
+                            // by another connection. Reject to avoid clobbering it.
+                            ResumeOutcome::Reject {
+                                msg: "会话已在另一连接中使用，无法续连".to_string(),
+                                context: session.context.clone(),
+                                sid: session.session_id.clone(),
+                                audit_type: "terminal:ssh-resume-busy",
+                                reason: Some("session already has an attached connection".to_string()),
+                            }
+                        } else {
+                            match session.output.replay_from(resume_last_offset) {
+                                Ok(messages) => {
+                                    session.detach_deadline = None;
+                                    // Reserve in the same critical section (D1/D2).
+                                    reg.mark_attached(&resume_id);
+                                    ResumeOutcome::Resume {
+                                        handle: existing.clone(),
+                                        messages,
+                                    }
+                                }
+                                Err(
+                                    ReplayError::GapExceeded { .. }
+                                    | ReplayError::InvalidOffset { .. },
+                                ) => ResumeOutcome::Reject {
+                                    msg: "无法无缝续连，输出缓冲区已过期，请重新建立会话"
+                                        .to_string(),
+                                    context: session.context.clone(),
+                                    sid: session.session_id.clone(),
+                                    audit_type: "terminal:ssh-resume-gap",
+                                    reason: Some(
+                                        "resume offset exceeds buffered window".to_string(),
+                                    ),
+                                },
+                            }
+                        }
+                    }
+                    Err(_) => ResumeOutcome::Unavailable,
+                },
+            },
+            Err(_) => ResumeOutcome::Unavailable,
+        };
+
+        match outcome {
+            ResumeOutcome::Resume { handle, messages } => {
+                resume_replay = messages;
+                handle
+            }
+            ResumeOutcome::NotFound => {
+                // S2: audit unknown/forged resume attempts. We never log the ticket
+                // or any credential; only who/where/when plus the claimed id (a uuid).
+                let context = load_terminal_audit_context(&state, user_id, host_id).await;
+                append_terminal_lifecycle_log(
+                    &state,
+                    user_id,
+                    host_id,
+                    &context,
+                    "terminal:ssh-resume-not-found",
+                    0,
+                    &resume_id,
+                    &socket_ctx.source_ip,
+                    "resume session id not found or expired",
+                )
+                .await;
+                let _ = socket
+                    .send(Message::Text(format!(
+                        "cl|{}|{}",
+                        TERMINAL_CLOSE_FORCE,
+                        safe_field("resume session not found")
+                    )))
+                    .await;
+                return;
+            }
+            ResumeOutcome::Unavailable => {
+                let _ = socket
+                    .send(Message::Text(format!(
+                        "cl|{}|{}",
+                        TERMINAL_CLOSE_FORCE,
+                        safe_field("resume session unavailable")
+                    )))
+                    .await;
+                return;
+            }
+            ResumeOutcome::Reject {
+                msg,
+                context,
+                sid,
+                audit_type,
+                reason,
+            } => {
+                let close = SshCloseNotice {
+                    code: TERMINAL_CLOSE_FORCE,
+                    msg: msg.clone(),
+                    retryable: false,
+                    reason: match audit_type {
+                        "terminal:ssh-resume-gap" => "resume-buffer-gap",
+                        "terminal:ssh-resume-busy" => "resume-busy",
+                        _ => "resume-auth-failed",
+                    },
+                };
+                let _ = socket
+                    .send(Message::Text(format!(
+                        "cl|{}|{}",
+                        close.code,
+                        safe_field(&close.msg)
+                    )))
+                    .await;
+                if close.reason == "resume-buffer-gap" {
+                    let payload = serde_json::to_string(&close).unwrap_or_else(|_| {
+                        "{\"retryable\":false,\"reason\":\"resume-buffer-gap\"}".to_string()
+                    });
+                    let _ = socket.send(Message::Text(format!("clmeta|{payload}"))).await;
+                }
+                append_terminal_lifecycle_log(
+                    &state,
+                    user_id,
+                    host_id,
+                    &context,
+                    audit_type,
+                    0,
+                    &sid,
+                    &socket_ctx.source_ip,
+                    reason.as_deref().unwrap_or("resume failed"),
+                )
+                .await;
+                return;
+            }
+        }
+    } else {
+        let (cmd_tx, cmd_rx) = std::sync::mpsc::channel::<SshWorkerCommand>();
+        let (event_tx, event_rx) = mpsc::unbounded_channel::<SshWorkerEvent>();
+        let timeout_secs = state.config.ssh.connection_timeout;
+        let keepalive_interval_secs = state.config.ssh.keepalive_interval;
+        let max_consecutive_retryable_read_errors =
+            state.config.ssh.max_consecutive_retryable_read_errors;
+        let max_consecutive_keepalive_errors = state.config.ssh.max_consecutive_keepalive_errors;
+        let network_silence_multiplier = state.config.ssh.network_silence_multiplier;
+        let transient_read_error_backoff_ms = state.config.ssh.transient_read_error_backoff_ms;
+
+        std::thread::spawn(move || {
+            run_ssh_worker(
+                cmd_rx,
+                event_tx,
+                timeout_secs,
+                keepalive_interval_secs,
+                max_consecutive_retryable_read_errors,
+                max_consecutive_keepalive_errors,
+                network_silence_multiplier,
+                transient_read_error_backoff_ms,
+            )
+        });
+
+        let session_id = format!("ssh-{}", uuid::Uuid::new_v4());
+        let context = load_terminal_audit_context(&state, user_id, host_id).await;
+        let session = Arc::new(std::sync::Mutex::new(SshResumeSession {
+            session_id: session_id.clone(),
+            user_id,
+            host_id,
+            connect_type: "ssh".to_string(),
+            cmd_tx: cmd_tx.clone(),
+            output: ReplayRingBuffer::new(resume_buffer_max_bytes),
+            connected: false,
+            connect_started: false,
+            closed_notice: None,
+            detach_deadline: None,
+            connect_log_id: None,
+            session_start: now_ms(),
+            context,
+            close_error: None,
+            attached_tx: None,
+        }));
+
+        // S1: enforce per-user / global concurrency caps before keeping the
+        // session alive. Over-cap admissions evict the oldest detached session
+        // (LRU); if none can be freed, reject so resource usage stays bounded.
+        let admission = {
+            match SSH_RESUME_SESSIONS.lock() {
+                Ok(mut reg) => {
+                    reg.set_limits(
+                        state.config.ssh.resume_max_sessions_global,
+                        state.config.ssh.resume_max_sessions_per_user,
+                    );
+                    Some(reg.insert(session_id.clone(), user_id, session.clone()))
+                }
+                Err(_) => None,
+            }
+        };
+
+        match admission {
+            Some(Ok(evicted)) => {
+                for victim in evicted {
+                    let meta = {
+                        if let Ok(victim_session) = victim.lock() {
+                            let _ = victim_session.cmd_tx.send(SshWorkerCommand::Close);
+                            Some((
+                                victim_session.user_id,
+                                victim_session.host_id,
+                                victim_session.context.clone(),
+                                victim_session.session_id.clone(),
+                            ))
+                        } else {
+                            None
+                        }
+                    };
+                    if let Some((victim_user, victim_host, victim_ctx, victim_sid)) = meta {
+                        append_terminal_lifecycle_log(
+                            &state,
+                            victim_user,
+                            victim_host,
+                            &victim_ctx,
+                            "terminal:ssh-resume-evicted",
+                            1,
+                            &victim_sid,
+                            "",
+                            "evicted by resume session capacity policy",
+                        )
+                        .await;
+                    }
+                }
+            }
+            Some(Err(admission_err)) => {
+                let _ = cmd_tx.send(SshWorkerCommand::Close);
+                let reason = match admission_err {
+                    AdmissionError::PerUserLimitReached => "per-user resume session limit reached",
+                    AdmissionError::GlobalLimitReached => "global resume session limit reached",
+                };
+                let session_ctx = {
+                    session
+                        .lock()
+                        .map(|s| s.context.clone())
+                        .unwrap_or_else(|_| TerminalAuditContext {
+                            username: format!("user-{user_id}"),
+                            host_name: format!("host-{host_id}"),
+                            host_address: String::new(),
+                        })
+                };
+                append_terminal_lifecycle_log(
+                    &state,
+                    user_id,
+                    host_id,
+                    &session_ctx,
+                    "terminal:ssh-resume-limit",
+                    0,
+                    &session_id,
+                    &socket_ctx.source_ip,
+                    reason,
+                )
+                .await;
+                let _ = socket
+                    .send(Message::Text(format!(
+                        "cl|{}|{}",
+                        TERMINAL_CLOSE_FORCE,
+                        safe_field("too many concurrent sessions, please retry later")
+                    )))
+                    .await;
+                return;
+            }
+            None => {
+                let _ = cmd_tx.send(SshWorkerCommand::Close);
+                let _ = socket
+                    .send(Message::Text(format!(
+                        "cl|{}|{}",
+                        TERMINAL_CLOSE_FORCE,
+                        safe_field("resume registry unavailable")
+                    )))
+                    .await;
+                return;
+            }
+        }
+
+        tokio::spawn(run_ssh_resume_pump(state.clone(), session_id, session.clone(), event_rx));
+        session
+    };
+
+    let session_id = {
+        session_arc
+            .lock()
+            .ok()
+            .map(|s| s.session_id.clone())
+            .unwrap_or_else(|| format!("ssh-{}", uuid::Uuid::new_v4()))
+    };
     if socket
         .send(Message::Text(format!("id|{session_id}")))
         .await
         .is_err()
     {
+        // D3 fix: at this point the session is already in the registry and either
+        // freshly inserted (new) or reserved via mark_attached (resume), and the
+        // original grace reaper (if any) was disarmed by detach_deadline=None.
+        // The client vanished mid-handshake before we could attach `attached_tx`
+        // or (re)schedule a reaper, so no one would reclaim it. Tear it down here
+        // to guarantee no leaked SSH worker / registry entry.
+        if let Ok(session) = session_arc.lock() {
+            let _ = session.cmd_tx.send(SshWorkerCommand::Close);
+        }
+        if let Ok(mut reg) = SSH_RESUME_SESSIONS.lock() {
+            reg.remove(&session_id);
+        }
         return;
     }
 
-    let mut connected = false;
-    loop {
-        tokio::select! {
-            Some(event) = event_rx.recv() => {
-                let send_res = match event {
-                    SshWorkerEvent::Connected => {
-                        connected = true;
-                        if connect_log_id.is_none() {
-                            connect_log_id = create_terminal_connect_log(
-                                &state,
-                                TerminalConnectLogParams {
-                                    user_id,
-                                    host_id,
-                                    context: &context,
-                                    connect_type: "SSH",
-                                    session_id: &session_id,
-                                    status: "CONNECTING",
-                                    start_time: session_start,
-                                    end_time: 0,
-                                    error_message: None,
-                                },
-                            )
-                            .await;
-                        }
-                        socket.send(Message::Text("co".to_string())).await
-                    }
-                    SshWorkerEvent::Output(body) => {
-                        socket.send(Message::Text(format!("o|{body}"))).await
-                    }
-                    SshWorkerEvent::Closed(close) => {
-                        if close.code != 0 {
-                            close_error = Some(close.msg.clone());
-                        }
-                        let primary = socket
-                            .send(Message::Text(format!(
-                                "cl|{}|{}",
-                                close.code,
-                                safe_field(&close.msg)
-                            )))
-                            .await;
-                        if primary.is_ok() && close.code != 0 {
-                            // Optional structured metadata for newer clients.
-                            // Legacy clients can safely ignore this message type.
-                            let payload = serde_json::to_string(&close).unwrap_or_else(|_| {
-                                format!(
-                                    "{{\"code\":{},\"retryable\":{},\"reason\":\"{}\"}}",
-                                    close.code, close.retryable, close.reason
-                                )
-                            });
-                            let _ = socket.send(Message::Text(format!("clmeta|{payload}"))).await;
-                        }
-                        primary
-                    }
-                };
-                if send_res.is_err() {
-                    break;
-                }
+    let (mut ws_sender, mut ws_receiver) = socket.split();
+    let (outbound_tx, mut outbound_rx) = mpsc::unbounded_channel::<String>();
+    let writer = tokio::spawn(async move {
+        while let Some(frame) = outbound_rx.recv().await {
+            if ws_sender.send(Message::Text(frame)).await.is_err() {
+                break;
             }
-            msg = socket.next() => {
-                match msg {
-                    Some(Ok(Message::Text(text))) => {
-                        if text == "p" {
-                            if socket.send(Message::Text("p".to_string())).await.is_err() {
-                                break;
-                            }
-                            continue;
-                        }
+        }
+    });
 
-                        if text == "cl" {
-                            let _ = cmd_tx.send(SshWorkerCommand::Close);
-                            break;
-                        }
-
-                        if let Some(body) = text.strip_prefix("co|") {
-                            if connected {
-                                continue;
-                            }
-                            let payload: SshConnectPayload = serde_json::from_str(body)
-                                .unwrap_or(SshConnectPayload { width: None, height: None, terminal_type: None, charset: None });
-
-                            // 获取主机配置中的编码
-                            let mut charset = payload.charset;
-                            if charset.is_none() {
-                                let cache_key = format!("orion:host-config:host:{host_id}:type:SSH");
-                                if let Ok(Some(raw)) = sqlx::query_scalar::<_, String>(
-                                    "SELECT cache_value FROM cache
-                                     WHERE cache_key = $1
-                                       AND (expire_time IS NULL OR expire_time > NOW())",
-                                )
-                                .bind(cache_key)
-                                .fetch_optional(&state.db)
-                                .await
-                                {
-                                    if let Ok(config) = serde_json::from_str::<serde_json::Value>(&raw) {
-                                        charset = config.get("charset").and_then(|v| v.as_str()).map(|v| v.to_string());
-                                    }
-                                }
-                            }
-
-                            let cfg = match ssh_client::resolve_host_ssh_config(
-                                &state.db,
-                                &state.config.secrets.data_encryption_key,
-                                Some(user_id),
-                                host_id,
-                            ).await {
-                                Ok(v) => v,
-                                Err(err) => {
-                                    let _ = socket.send(Message::Text(format!("cl|{TERMINAL_CLOSE_FORCE}|{}", safe_field(&err.to_string())))).await;
-                                    break;
-                                }
-                            };
-                            let width = payload.width.unwrap_or(120).max(1);
-                            let height = payload.height.unwrap_or(40).max(1);
-                            let terminal_type = payload.terminal_type.unwrap_or_else(|| "xterm".to_string());
-                            let _ = cmd_tx.send(SshWorkerCommand::Connect { config: cfg, width, height, terminal_type, charset });
-                            continue;
-                        }
-
-                        if let Some(command) = text.strip_prefix("i|") {
-                            command_snapshot.ingest(command);
-                            let _ = cmd_tx.send(SshWorkerCommand::Input(command.to_string()));
-                            continue;
-                        }
-
-                        if let Some(body) = text.strip_prefix("rs|") {
-                            let mut parts = body.split('|');
-                            let width = parts.next().and_then(|v| v.parse::<u32>().ok()).unwrap_or(120).max(1);
-                            let height = parts.next().and_then(|v| v.parse::<u32>().ok()).unwrap_or(40).max(1);
-                            let _ = cmd_tx.send(SshWorkerCommand::Resize { width, height });
-                        }
-                    }
-                    Some(Ok(Message::Close(_))) | None => break,
-                    Some(Ok(_)) => {}
-                    Some(Err(_)) => break,
-                }
+    {
+        if let Ok(mut session) = session_arc.lock() {
+            session.attached_tx = Some(outbound_tx.clone());
+            session.detach_deadline = None;
+            if session.connected {
+                let _ = outbound_tx.send("co".to_string());
             }
+        }
+        if let Ok(mut reg) = SSH_RESUME_SESSIONS.lock() {
+            reg.mark_attached(&session_id);
         }
     }
 
-    let _ = cmd_tx.send(SshWorkerCommand::Close);
-    command_snapshot.finish_line();
-    audit_service::append_terminal_command_snapshot(
-        &state.db,
-        audit_service::TerminalCommandSnapshotRecordInput {
-            user_id,
-            host_id,
-            username: &context.username,
-            host_name: &context.host_name,
-            host_address: &context.host_address,
-            session_id: &session_id,
-            start_time: session_start,
-            end_time: now_ms(),
-            snapshot: command_snapshot,
-        },
-    )
-    .await;
+    for body in resume_replay {
+        let _ = outbound_tx.send(format!("o|{body}"));
+    }
 
-    let status = if connected { "COMPLETE" } else { "FAILED" };
-    if let Some(log_id) = connect_log_id {
-        update_terminal_connect_log(&state, user_id, log_id, status, now_ms()).await;
-    } else {
-        let _ = create_terminal_connect_log(
-            &state,
-            TerminalConnectLogParams {
+    if resume_session_id.is_some() {
+        let (context, sid) = match session_arc.lock() {
+            Ok(session) => (session.context.clone(), session.session_id.clone()),
+            Err(_) => return,
+        };
+            append_terminal_lifecycle_log(
+                &state,
                 user_id,
                 host_id,
-                context: &context,
-                connect_type: "SSH",
-                session_id: &session_id,
-                status,
-                start_time: session_start,
+                &context,
+                "terminal:ssh-reattach",
+                1,
+                &sid,
+                &socket_ctx.source_ip,
+                "reattach within grace window",
+            )
+            .await;
+    }
+
+    while let Some(msg) = ws_receiver.next().await {
+        match msg {
+            Ok(Message::Text(text)) => {
+                if text == "p" {
+                    let _ = outbound_tx.send("p".to_string());
+                    continue;
+                }
+                if text == "cl" {
+                    if let Ok(session) = session_arc.lock() {
+                        let _ = session.cmd_tx.send(SshWorkerCommand::Close);
+                    }
+                    break;
+                }
+                if let Some(body) = text.strip_prefix("co|") {
+                    let mut already_started = false;
+                    if let Ok(mut session) = session_arc.lock() {
+                        if session.connect_started {
+                            already_started = true;
+                        } else {
+                            session.connect_started = true;
+                        }
+                    }
+                    if already_started {
+                        continue;
+                    }
+
+                    let payload: SshConnectPayload =
+                        serde_json::from_str(body).unwrap_or(SshConnectPayload {
+                            width: None,
+                            height: None,
+                            terminal_type: None,
+                            charset: None,
+                        });
+
+                    let mut charset = payload.charset;
+                    if charset.is_none() {
+                        let cache_key = format!("orion:host-config:host:{host_id}:type:SSH");
+                        if let Ok(Some(raw)) = sqlx::query_scalar::<_, String>(
+                            "SELECT cache_value FROM cache
+                                     WHERE cache_key = $1
+                                       AND (expire_time IS NULL OR expire_time > NOW())",
+                        )
+                        .bind(cache_key)
+                        .fetch_optional(&state.db)
+                        .await
+                        {
+                            if let Ok(config) = serde_json::from_str::<serde_json::Value>(&raw) {
+                                charset = config
+                                    .get("charset")
+                                    .and_then(|v| v.as_str())
+                                    .map(|v| v.to_string());
+                            }
+                        }
+                    }
+
+                    let cfg = match ssh_client::resolve_host_ssh_config(
+                        &state.db,
+                        &state.config.secrets.data_encryption_key,
+                        Some(user_id),
+                        host_id,
+                    )
+                    .await
+                    {
+                        Ok(v) => v,
+                        Err(err) => {
+                            let _ = outbound_tx.send(format!(
+                                "cl|{TERMINAL_CLOSE_FORCE}|{}",
+                                safe_field(&err.to_string())
+                            ));
+                            break;
+                        }
+                    };
+                    let width = payload.width.unwrap_or(120).max(1);
+                    let height = payload.height.unwrap_or(40).max(1);
+                    let terminal_type = payload.terminal_type.unwrap_or_else(|| "xterm".to_string());
+                    if let Ok(session) = session_arc.lock() {
+                        let _ = session.cmd_tx.send(SshWorkerCommand::Connect {
+                            config: cfg,
+                            width,
+                            height,
+                            terminal_type,
+                            charset,
+                        });
+                    }
+                    continue;
+                }
+                if let Some(command) = text.strip_prefix("i|") {
+                    command_snapshot.ingest(command);
+                    if let Ok(session) = session_arc.lock() {
+                        let _ = session
+                            .cmd_tx
+                            .send(SshWorkerCommand::Input(command.to_string()));
+                    }
+                    continue;
+                }
+                if let Some(body) = text.strip_prefix("rs|") {
+                    let mut parts = body.split('|');
+                    let width = parts
+                        .next()
+                        .and_then(|v| v.parse::<u32>().ok())
+                        .unwrap_or(120)
+                        .max(1);
+                    let height = parts
+                        .next()
+                        .and_then(|v| v.parse::<u32>().ok())
+                        .unwrap_or(40)
+                        .max(1);
+                    if let Ok(session) = session_arc.lock() {
+                        let _ = session.cmd_tx.send(SshWorkerCommand::Resize { width, height });
+                    }
+                }
+            }
+            Ok(Message::Close(_)) | Err(_) => break,
+            Ok(_) => {}
+        }
+    }
+
+    command_snapshot.finish_line();
+    let detach_meta = {
+        if let Ok(mut session) = session_arc.lock() {
+            session.attached_tx = None;
+            session.detach_deadline = Some(Instant::now() + resume_grace);
+            Some((
+                session.session_id.clone(),
+                session.context.clone(),
+                session.session_start,
+            ))
+        } else {
+            None
+        }
+    };
+    if let Some((sid, context, start)) = detach_meta {
+        if let Ok(mut reg) = SSH_RESUME_SESSIONS.lock() {
+            reg.mark_detached(&sid);
+        }
+        audit_service::append_terminal_command_snapshot(
+            &state.db,
+            audit_service::TerminalCommandSnapshotRecordInput {
+                user_id,
+                host_id,
+                username: &context.username,
+                host_name: &context.host_name,
+                host_address: &context.host_address,
+                session_id: &sid,
+                start_time: start,
                 end_time: now_ms(),
-                error_message: close_error.as_deref(),
+                snapshot: command_snapshot,
             },
         )
         .await;
+        append_terminal_lifecycle_log(
+            &state,
+            user_id,
+            host_id,
+            &context,
+            "terminal:ssh-detach",
+            1,
+            &sid,
+            &socket_ctx.source_ip,
+            "websocket detached, waiting for resume",
+        )
+        .await;
+        schedule_ssh_grace_reaper(state.clone(), sid, resume_grace, socket_ctx.source_ip.clone());
     }
-    tracing::info!(user_id, host_id, "ssh websocket closed");
+
+    drop(outbound_tx);
+    let _ = writer.await;
+}
+
+async fn run_ssh_resume_pump(
+    state: AppState,
+    session_id: String,
+    session_arc: Arc<std::sync::Mutex<SshResumeSession>>,
+    mut event_rx: mpsc::UnboundedReceiver<SshWorkerEvent>,
+) {
+    while let Some(event) = event_rx.recv().await {
+        match event {
+            SshWorkerEvent::Connected => {
+                let (tx, should_create_log, user_id, host_id, context, start_time) =
+                    match session_arc.lock() {
+                        Ok(mut session) => {
+                            session.connected = true;
+                            (
+                                session.attached_tx.clone(),
+                                session.connect_log_id.is_none(),
+                                session.user_id,
+                                session.host_id,
+                                session.context.clone(),
+                                session.session_start,
+                            )
+                        }
+                        Err(_) => break,
+                    };
+                if should_create_log {
+                    let log_id = create_terminal_connect_log(
+                        &state,
+                        TerminalConnectLogParams {
+                            user_id,
+                            host_id,
+                            context: &context,
+                            connect_type: "SSH",
+                            session_id: &session_id,
+                            status: "CONNECTING",
+                            start_time,
+                            end_time: 0,
+                            error_message: None,
+                        },
+                    )
+                    .await;
+                    if let Ok(mut session) = session_arc.lock() {
+                        session.connect_log_id = log_id;
+                    }
+                }
+                if let Some(tx) = tx {
+                    let _ = tx.send("co".to_string());
+                }
+            }
+            SshWorkerEvent::Output(body) => {
+                let tx = {
+                    match session_arc.lock() {
+                        Ok(mut session) => {
+                            session.output.append(&body);
+                            session.attached_tx.clone()
+                        }
+                        Err(_) => None,
+                    }
+                };
+                if let Some(tx) = tx {
+                    let _ = tx.send(format!("o|{body}"));
+                }
+            }
+            SshWorkerEvent::Closed(close) => {
+                let (
+                    tx,
+                    connect_log_id,
+                    user_id,
+                    host_id,
+                    context,
+                    session_start,
+                    close_error,
+                    sid,
+                ) = match session_arc.lock() {
+                    Ok(mut session) => {
+                        if close.code != 0 {
+                            session.close_error = Some(close.msg.clone());
+                        }
+                        session.closed_notice = Some(close.clone());
+                        (
+                            session.attached_tx.clone(),
+                            session.connect_log_id,
+                            session.user_id,
+                            session.host_id,
+                            session.context.clone(),
+                            session.session_start,
+                            session.close_error.clone(),
+                            session.session_id.clone(),
+                        )
+                    }
+                    Err(_) => break,
+                };
+
+                if let Some(tx) = tx {
+                    let _ = tx.send(format!("cl|{}|{}", close.code, safe_field(&close.msg)));
+                    if close.code != 0 {
+                        let payload = serde_json::to_string(&close).unwrap_or_else(|_| {
+                            format!(
+                                "{{\"code\":{},\"retryable\":{},\"reason\":\"{}\"}}",
+                                close.code, close.retryable, close.reason
+                            )
+                        });
+                        let _ = tx.send(format!("clmeta|{payload}"));
+                    }
+                }
+
+                let status = if close.code == 0 { "COMPLETE" } else { "FAILED" };
+                if let Some(log_id) = connect_log_id {
+                    update_terminal_connect_log(&state, user_id, log_id, status, now_ms()).await;
+                } else {
+                    let _ = create_terminal_connect_log(
+                        &state,
+                        TerminalConnectLogParams {
+                            user_id,
+                            host_id,
+                            context: &context,
+                            connect_type: "SSH",
+                            session_id: &sid,
+                            status,
+                            start_time: session_start,
+                            end_time: now_ms(),
+                            error_message: close_error.as_deref(),
+                        },
+                    )
+                    .await;
+                }
+
+                append_terminal_lifecycle_log(
+                    &state,
+                    user_id,
+                    host_id,
+                    &context,
+                    "terminal:ssh-session-closed",
+                    if close.code == 0 { 1 } else { 0 },
+                    &sid,
+                    "",
+                    close.reason,
+                )
+                .await;
+
+                if let Ok(mut map) = SSH_RESUME_SESSIONS.lock() {
+                    map.remove(&sid);
+                }
+                break;
+            }
+        }
+    }
+}
+
+fn schedule_ssh_grace_reaper(
+    state: AppState,
+    session_id: String,
+    grace: Duration,
+    source_ip: String,
+) {
+    tokio::spawn(async move {
+        tokio::time::sleep(grace).await;
+        let session_arc = {
+            SSH_RESUME_SESSIONS
+                .lock()
+                .ok()
+                .and_then(|map| map.get(&session_id))
+        };
+        let Some(session_arc) = session_arc else {
+            return;
+        };
+
+        let (should_reap, cmd_tx, user_id, host_id, context, sid) = match session_arc.lock() {
+            Ok(session) => {
+                let expired = session
+                    .detach_deadline
+                    .map(|deadline| deadline <= Instant::now())
+                    .unwrap_or(false);
+                (
+                    expired && session.attached_tx.is_none(),
+                    session.cmd_tx.clone(),
+                    session.user_id,
+                    session.host_id,
+                    session.context.clone(),
+                    session.session_id.clone(),
+                )
+            }
+            Err(_) => return,
+        };
+
+        if !should_reap {
+            return;
+        }
+
+        let _ = cmd_tx.send(SshWorkerCommand::Close);
+        if let Ok(mut map) = SSH_RESUME_SESSIONS.lock() {
+            map.remove(&session_id);
+        }
+        append_terminal_lifecycle_log(
+            &state,
+            user_id,
+            host_id,
+            &context,
+            "terminal:ssh-grace-expired",
+            1,
+            &sid,
+            &source_ip,
+            "resume grace window elapsed",
+        )
+        .await;
+    });
 }
 
 async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64, host_id: i64) {
@@ -1745,7 +2363,12 @@ async fn handle_transfer_socket(state: AppState, mut socket: WebSocket, user_id:
     }
 }
 
-async fn handle_v2_terminal_access_socket(state: AppState, mut socket: WebSocket, protocol: String) {
+async fn handle_v2_terminal_access_socket(
+    state: AppState,
+    mut socket: WebSocket,
+    protocol: String,
+    socket_ctx: TerminalSocketContext,
+) {
     let auth_text = match tokio::time::timeout(Duration::from_secs(10), socket.next()).await {
         Ok(Some(Ok(Message::Text(text)))) => text,
         _ => {
@@ -1821,7 +2444,18 @@ async fn handle_v2_terminal_access_socket(state: AppState, mut socket: WebSocket
     }
 
     match protocol.as_str() {
-        "ssh" => handle_ssh_socket(state, socket, ticket.user_id, ticket.host_id).await,
+        "ssh" => {
+            handle_ssh_socket(
+                state,
+                socket,
+                ticket.user_id,
+                ticket.host_id,
+                frame.resume_session_id,
+                frame.resume_last_offset.unwrap_or(0),
+                socket_ctx,
+            )
+            .await
+        }
         "sftp" => handle_sftp_socket(state, socket, ticket.user_id, ticket.host_id).await,
         _ => {
             let _ = socket
@@ -1966,6 +2600,45 @@ async fn append_terminal_file_log(
         "startTime": now_ms(),
         "extra": {
             "maxCount": 0
+        }
+    });
+
+    let _ = compat_service::create_record(
+        &state.db,
+        OrionCompatModule::TerminalFileLog,
+        payload,
+        &format!("user-{user_id}"),
+    )
+    .await;
+}
+
+async fn append_terminal_lifecycle_log(
+    state: &AppState,
+    user_id: i64,
+    host_id: i64,
+    context: &TerminalAuditContext,
+    operator_type: &str,
+    result: i32,
+    session_id: &str,
+    source_ip: &str,
+    reason: &str,
+) {
+    let payload = serde_json::json!({
+        "userId": user_id,
+        "username": context.username,
+        "hostId": host_id,
+        "hostName": context.host_name,
+        "hostAddress": context.host_address,
+        "address": source_ip,
+        "location": "",
+        "userAgent": "",
+        "paths": [],
+        "type": operator_type,
+        "result": result,
+        "startTime": now_ms(),
+        "extra": {
+            "sessionId": session_id,
+            "reason": reason
         }
     });
 

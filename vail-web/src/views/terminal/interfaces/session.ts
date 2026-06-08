@@ -54,6 +54,8 @@ export interface ReactiveSessionState {
   canReconnect: boolean;
   // 最后一次关闭原因
   lastCloseReason?: string;
+  // 自动重连次数已耗尽，等待用户决策（继续/放弃）
+  reconnectExhausted?: boolean;
 }
 
 // guacd 会话状态
@@ -135,9 +137,23 @@ export interface ISshSession extends ITerminalSession, IDomViewportHandler {
   // 自动重连定时器
   autoReconnectTimer?: number;
   // 调度自动重连
-  scheduleAutoReconnect: () => boolean;
+  scheduleAutoReconnect: (immediate?: boolean) => boolean;
+  // 网络恢复时立即触发重连
+  notifyNetworkOnline: () => void;
+  // 用户选择继续重试
+  continueReconnect: () => void;
+  // 用户选择放弃重连
+  giveUpReconnect: () => void;
+  // 最大自动重连次数
+  readonly maxAutoReconnectAttempts: number;
   // 标记自动重连成功
   markAutoReconnectSucceeded: () => void;
+  // 逻辑会话 ID（用于后端 resume）
+  resumeSessionId?: string;
+  // 客户端累计收到的输出偏移（UTF-8 字节）
+  lastOutputOffset: number;
+  // 标记当前轮次强制降级为新会话
+  forceFreshSession: boolean;
 }
 
 // SFTP 会话定义
@@ -198,8 +214,7 @@ export interface IRdpSession extends IGuacdSession {
 }
 
 // VNC 会话定义
-export interface IVncSession extends IGuacdSession {
-}
+export type IVncSession = IGuacdSession;
 
 // sftp 文件
 export interface SftpFile {

@@ -113,6 +113,8 @@ export const TerminalMessages = {
   waitingReconnect: '输入回车重新连接...',
   autoReconnecting: '网络连接不稳定, 正在自动重连...',
   reconnectSuccess: '网络连接已恢复',
+  reconnectInputDiscarded: '断连期间的部分输入未发送，已丢弃',
+  reconnectInputDropped: '断连期间输入过多，最早的部分输入已丢弃',
   loggedElsewhere: '该账号已在另一台设备登录',
   connectTimeout: '请检查远程计算机网络及其他配置是否正常',
   fileTransferError: '传输失败',

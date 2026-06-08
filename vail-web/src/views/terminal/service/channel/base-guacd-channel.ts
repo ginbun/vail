@@ -7,6 +7,17 @@ import BaseTerminalChannel from './base-terminal-channel';
 
 export const PING_FREQUENCY = 500;
 
+// 自适应心跳上下限（毫秒）
+const MIN_PING_FREQUENCY = 500;
+const MAX_PING_FREQUENCY = 5000;
+const MIN_UNSTABLE_THRESHOLD = 3000;
+const MAX_UNSTABLE_THRESHOLD = 15000;
+const MIN_RECEIVE_TIMEOUT = 30000;
+const MAX_RECEIVE_TIMEOUT = 60000;
+
+// 上下限裁剪
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
 // guacd 通信处理器基类 实现
 export default abstract class BaseGuacdChannel<T extends ITerminalSession<GuacdReactiveSessionStatus>>
   extends BaseTerminalChannel<T>
@@ -21,6 +32,11 @@ export default abstract class BaseGuacdChannel<T extends ITerminalSession<GuacdR
   public pingTimeoutId?: number;
   public lastSentTime: number;
 
+  // 自适应心跳：当前 ping 频率、平滑 RTT、在途 ping 时间戳
+  public pingFrequency: number;
+  private smoothedRtt: number;
+  private pingInFlightAt: number;
+
   public onuuid: ((uuid: string) => void) | null;
   public onerror: ((status: Guacamole.Status) => void) | null;
   public oninstruction: ((opcode: string, args: unknown[]) => void) | null;
@@ -30,8 +46,11 @@ export default abstract class BaseGuacdChannel<T extends ITerminalSession<GuacdR
     super(session);
     this.uuid = null;
     this.lastSentTime = 0;
-    this.receiveTimeout = 30000;
-    this.unstableThreshold = 3000;
+    this.receiveTimeout = MIN_RECEIVE_TIMEOUT;
+    this.unstableThreshold = MIN_UNSTABLE_THRESHOLD;
+    this.pingFrequency = PING_FREQUENCY;
+    this.smoothedRtt = 0;
+    this.pingInFlightAt = 0;
     this.state = Guacamole.Tunnel.State.CLOSED;
     this.onuuid = null;
     this.onerror = null;
@@ -43,7 +62,8 @@ export default abstract class BaseGuacdChannel<T extends ITerminalSession<GuacdR
   protected abstract openChannel(): Promise<void>;
 
   // 连接会话 guacd 内部调用
-  async connect(_: string): Promise<void> {
+  async connect(connectData: string): Promise<void> {
+    void connectData;
     // 重置计时器
     this.resetTimers();
     // 未开启则初始化
@@ -71,6 +91,8 @@ export default abstract class BaseGuacdChannel<T extends ITerminalSession<GuacdR
 
   // 处理指令
   processInstruction({ instruction }: OutputPayload): void {
+    // 收到任意数据视为一次往返样本，更新自适应心跳
+    this.recordRttSample();
     // 重置计时器
     this.resetTimers();
     let startIndex = 0;
@@ -110,7 +132,8 @@ export default abstract class BaseGuacdChannel<T extends ITerminalSession<GuacdR
   }
 
   // 处理已连接消息 需要在状态切换时手动调用
-  processConnected(_: OutputPayload): void {
+  processConnected(payload: OutputPayload): void {
+    void payload;
     // 设置可写
     this.session.setCanWrite(true);
     // 设置已连接
@@ -142,10 +165,39 @@ export default abstract class BaseGuacdChannel<T extends ITerminalSession<GuacdR
     this.close();
   }
 
+  // 处理 pong 消息：用于测量 RTT
+  processPong(): void {
+    this.recordRttSample();
+  }
+
+  // 记录一次 RTT 样本并据此自适应调整心跳参数
+  private recordRttSample(): void {
+    if (this.pingInFlightAt <= 0) {
+      return;
+    }
+    const sample = Date.now() - this.pingInFlightAt;
+    this.pingInFlightAt = 0;
+    if (sample < 0) {
+      return;
+    }
+    // 指数加权平均，降低抖动影响
+    this.smoothedRtt = this.smoothedRtt > 0
+      ? Math.round(this.smoothedRtt * 0.7 + sample * 0.3)
+      : sample;
+    // 高延迟弱网下降低 ping 频率，避免心跳风暴；提高不稳定阈值，避免误判
+    this.pingFrequency = clamp(Math.round(this.smoothedRtt * 1.5), MIN_PING_FREQUENCY, MAX_PING_FREQUENCY);
+    this.unstableThreshold = clamp(Math.round(this.smoothedRtt * 4), MIN_UNSTABLE_THRESHOLD, MAX_UNSTABLE_THRESHOLD);
+    this.receiveTimeout = clamp(Math.round(this.smoothedRtt * 10), MIN_RECEIVE_TIMEOUT, MAX_RECEIVE_TIMEOUT);
+  }
+
   // 发送 ping
   ping() {
-    if (Date.now() < this.lastSentTime + PING_FREQUENCY) {
+    if (Date.now() < this.lastSentTime + this.pingFrequency) {
       return;
+    }
+    // 记录在途 ping 时间用于 RTT 测量（仅在没有未完成样本时）
+    if (this.pingInFlightAt <= 0) {
+      this.pingInFlightAt = Date.now();
     }
     // this.sendInstruction(Guacamole.Tunnel.INTERNAL_DATA_OPCODE, 'ping', Date.now());
     this.send(InputProtocol.PING);
@@ -215,9 +267,9 @@ export default abstract class BaseGuacdChannel<T extends ITerminalSession<GuacdR
     this.unstableTimeoutId = window.setTimeout(() => {
       this.setState(Guacamole.Tunnel.State.UNSTABLE);
     }, this.unstableThreshold);
-    // 检查发送 ping
-    if (Date.now() < this.lastSentTime + PING_FREQUENCY) {
-      this.pingTimeoutId = window.setTimeout(this.ping.bind(this), PING_FREQUENCY);
+    // 检查发送 ping（使用自适应频率）
+    if (Date.now() < this.lastSentTime + this.pingFrequency) {
+      this.pingTimeoutId = window.setTimeout(this.ping.bind(this), this.pingFrequency);
     } else {
       this.ping();
     }

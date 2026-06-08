@@ -22,6 +22,9 @@ import BaseSession from './base-session';
 import SshChannel from '../channel/ssh-channel';
 import SshSessionHandler from '../handler/ssh-session-handler';
 
+// 最大自动重连次数
+const MAX_AUTO_RECONNECT_ATTEMPTS = 5;
+
 // SSH 会话实现
 export default class SshSession extends BaseSession<ReactiveSessionState, ISshChannel> implements ISshSession {
 
@@ -29,9 +32,17 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
 
   public autoReconnectTimer?: number;
 
+  // 已达上限后用户主动放弃重连
+  public reconnectGaveUp = false;
+
+  public readonly maxAutoReconnectAttempts = MAX_AUTO_RECONNECT_ATTEMPTS;
+
   public inst: Terminal;
 
   public config: SshInitConfig;
+  public resumeSessionId?: string;
+  public lastOutputOffset = 0;
+  public forceFreshSession = false;
 
   public readonly handler: ISshSessionHandler;
 
@@ -244,18 +255,31 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
   }
 
   // 网络断开后自动重连
-  scheduleAutoReconnect(): boolean {
-    // 已经达到最大重连次数，或者正在重连中
-    if (this.autoReconnectAttempts >= 5 || this.autoReconnectTimer) {
+  scheduleAutoReconnect(immediate = false): boolean {
+    // 用户已主动放弃，不再自动重连
+    if (this.reconnectGaveUp) {
+      return false;
+    }
+    // 正在重连中（已有定时器）则不重复触发，避免抖动风暴
+    if (this.autoReconnectTimer) {
+      return false;
+    }
+    // 已经达到最大重连次数：暴露给 UI 让用户选择继续/放弃
+    if (this.autoReconnectAttempts >= this.maxAutoReconnectAttempts) {
+      this.state.reconnectExhausted = true;
+      this.state.canReconnect = false;
       return false;
     }
     this.autoReconnectAttempts += 1;
     // 重连期间禁手动重连
     this.state.canReconnect = false;
-    
-    // 指数避退 + 抖动
+    this.state.reconnectExhausted = false;
+
+    // 指数避退 + 抖动；immediate=true 时立即触发（网络恢复事件）
     const baseDelay = 1000;
-    const delay = Math.min(10000, baseDelay * Math.pow(2, this.autoReconnectAttempts - 1)) * (0.5 + Math.random() * 0.5);
+    const delay = immediate
+      ? 0
+      : Math.min(10000, baseDelay * Math.pow(2, this.autoReconnectAttempts - 1)) * (0.5 + Math.random() * 0.5);
 
     this.autoReconnectTimer = window.setTimeout(async () => {
       this.autoReconnectTimer = undefined;
@@ -273,9 +297,53 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
     return true;
   }
 
+  // 网络恢复事件：立即触发一次重连尝试，与退避协调（取消挂起的退避定时器）
+  notifyNetworkOnline(): void {
+    // 已连接 / 连接中 / 用户已放弃，则不处理
+    if (this.state.connected
+      || this.state.connectStatus === TerminalStatus.CONNECTING
+      || this.reconnectGaveUp) {
+      return;
+    }
+    // 取消挂起的退避定时器，回退一次计数，改为立即重连
+    if (this.autoReconnectTimer) {
+      window.clearTimeout(this.autoReconnectTimer);
+      this.autoReconnectTimer = undefined;
+      if (this.autoReconnectAttempts > 0) {
+        this.autoReconnectAttempts -= 1;
+      }
+    } else if (this.autoReconnectAttempts >= this.maxAutoReconnectAttempts) {
+      // 已耗尽次数：交给 UI 决策，不静默重试
+      return;
+    }
+    this.scheduleAutoReconnect(true);
+  }
+
+  // 用户选择：继续重试（重置计数后立即重连）
+  continueReconnect(): void {
+    this.reconnectGaveUp = false;
+    this.autoReconnectAttempts = 0;
+    this.state.reconnectExhausted = false;
+    this.scheduleAutoReconnect(true);
+  }
+
+  // 用户选择：放弃重连
+  giveUpReconnect(): void {
+    this.reconnectGaveUp = true;
+    this.state.reconnectExhausted = false;
+    this.state.canReconnect = true;
+    if (this.autoReconnectTimer) {
+      window.clearTimeout(this.autoReconnectTimer);
+      this.autoReconnectTimer = undefined;
+    }
+  }
+
   // 重置自动重连计数
   markAutoReconnectSucceeded(): void {
     this.autoReconnectAttempts = 0;
+    this.forceFreshSession = false;
+    this.reconnectGaveUp = false;
+    this.state.reconnectExhausted = false;
   }
 
   // 断开连接
@@ -285,6 +353,11 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
       this.autoReconnectTimer = undefined;
     }
     this.channel?.send(InputProtocol.CLOSE);
+    this.forceFreshSession = true;
+    this.resumeSessionId = undefined;
+    this.lastOutputOffset = 0;
+    // 主动断开属于用户意图，避免网络恢复时被自动重连
+    this.reconnectGaveUp = true;
     super.disconnect();
   }
 

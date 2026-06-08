@@ -27,7 +27,8 @@ export default class VncChannel extends BaseGuacdChannel<IVncSession> {
   }
 
   // 处理修改大小
-  processResize({ width, height }: OutputPayload): void {
+  processResize(payload: OutputPayload): void {
+    void payload;
   }
 
 }

@@ -2348,8 +2348,8 @@ pub(super) async fn orion_terminal_access(
         expires_at: ticket.expires_at_ms,
         session_hint: ticket.session_hint,
         resume: OrionTerminalResumeConfig {
-            enabled: false,
-            window_seconds: 0,
+            enabled: connect_type == "ssh" && state.config.ssh.resume_grace_seconds > 0,
+            window_seconds: state.config.ssh.resume_grace_seconds as i32,
         },
     };
     Ok(OrionResponse::ok(response))

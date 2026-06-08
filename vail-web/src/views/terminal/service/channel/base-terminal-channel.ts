@@ -75,21 +75,24 @@ export default abstract class BaseTerminalChannel<T extends ITerminalSession> im
   };
 
   // 处理已连接消息
-  abstract processConnected(_: OutputPayload): void;
+  abstract processConnected(payload: OutputPayload): void;
 
   // 处理已关闭消息
   abstract processClosed(payload: OutputPayload): void;
 
   // 处理关闭元数据
-  processClMeta(_: OutputPayload) {
+  processClMeta(payload: OutputPayload): void {
+    void payload;
   }
 
   // 处理修改大小
-  processResize(_: OutputPayload) {
-  };
+  processResize(payload: OutputPayload): void {
+    void payload;
+  }
 
   // 处理 pong 消息
-  processPong(_: OutputPayload) {
+  processPong(payload: OutputPayload): void {
+    void payload;
   }
 
   // 处理客户端消息
@@ -105,8 +108,10 @@ export default abstract class BaseTerminalChannel<T extends ITerminalSession> im
       ?.processMethod;
     //  处理消息
     if (processMethod) {
-      const processMethodFn = this[processMethod as keyof ITerminalChannel] as Function;
-      processMethodFn && processMethodFn.call(this, payload);
+      const processMethodFn = this[processMethod as keyof ITerminalChannel] as ((p: OutputPayload) => void) | undefined;
+      if (processMethodFn) {
+        processMethodFn.call(this, payload);
+      }
     }
   }
 

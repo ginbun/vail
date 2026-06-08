@@ -39,7 +39,8 @@ export default class RdpChannel extends BaseGuacdChannel<IRdpSession> {
   }
 
   // 处理修改大小
-  processResize({ width, height }: OutputPayload): void {
+  processResize(payload: OutputPayload): void {
+    void payload;
   }
 
 }
