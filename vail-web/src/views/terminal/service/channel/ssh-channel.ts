@@ -8,10 +8,12 @@ import { getTerminalAccessToken, openTerminalAccessChannel } from '@/api/termina
 import BaseTerminalChannel from './base-terminal-channel';
 import { SshInputBuffer } from './ssh-input-buffer';
 import {
+  isResumeSecurityFailure,
   isSeamlessResume,
   shouldAttemptResume,
   shouldDiscardInputOnClose,
   shouldFlushInputOnConnect,
+  shouldFreshReconnectOnResumeFailure,
 } from './ssh-resume-input-policy';
 
 // 终端通信会话 SSH 会话实现
@@ -20,9 +22,11 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
   private isFlushingInput = false;
   private resumeAttemptSessionId?: string;
   private resumeSeamlessConnected = false;
+  private freshReconnectPending = false;
 
   // 打开 channel
   protected async openChannel(): Promise<void> {
+    this.freshReconnectPending = false;
     const { preference } = useTerminalStore();
     const { data } = await getTerminalAccessToken({
       hostId: this.session.info.hostId,
@@ -77,6 +81,7 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
   processConnected(payload: OutputPayload): void {
     void payload;
     const wasReconnecting = this.session.autoReconnectAttempts > 0;
+    this.freshReconnectPending = false;
     this.session.markAutoReconnectSucceeded?.();
     // 设置可写
     this.session.setCanWrite(true);
@@ -104,6 +109,11 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
     this.session.state.canReconnect = TerminalCloseCode.FORCE !== codeNumber;
     if (shouldDiscardInputOnClose(this.resumeAttemptSessionId, this.resumeSeamlessConnected)) {
       this.discardPendingInput(TerminalMessages.reconnectInputDiscarded);
+    }
+    if (this.freshReconnectPending) {
+      this.session.setClosed();
+      this.close();
+      return;
     }
     // 拼接关闭消息
     this.session.write((beforeConnected ? '\r\n\r\n' : '') + ansi(91, msg || ''));
@@ -151,31 +161,47 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
   processClMeta({ body }: OutputPayload): void {
     try {
       const meta = JSON.parse(body);
-      // 如果 meta 标记为可重试，且尚未触发自动重连，则尝试触发
-      if (meta.retryable && !this.session.autoReconnectTimer) {
+      const reason = typeof meta.reason === 'string' ? meta.reason : undefined;
+      if (isResumeSecurityFailure(reason)) {
+        this.session.state.canReconnect = false;
+      } else if (shouldFreshReconnectOnResumeFailure(reason)) {
+        this.scheduleFreshReconnect();
+      } else if (meta.retryable && !this.session.autoReconnectTimer && !this.freshReconnectPending) {
         const scheduled = this.session.scheduleAutoReconnect?.();
         if (scheduled) {
           this.session.write('\r\n' + ansi(91, TerminalMessages.autoReconnecting) + '\r\n');
         }
       }
-      if (meta.reason === 'resume-buffer-gap') {
-        this.discardPendingInput(TerminalMessages.reconnectInputDiscarded);
-        this.session.forceFreshSession = true;
-        this.session.resumeSessionId = undefined;
-        this.session.lastOutputOffset = 0;
-        this.session.state.canReconnect = true;
-        setTimeout(() => {
-          useTerminalStore().reOpenSession(this.session.sessionKey);
-        }, 0);
-      }
-      // 可以根据 meta.reason 提供更详细的错误信息
-      if (meta.reason && meta.reason !== this.session.state.lastCloseReason) {
-        this.session.state.lastCloseReason = meta.reason;
-        // 如果需要，可以在终端显示更详细的原因
-        // this.session.write('\r\n' + ansi(91, `Reason: ${meta.reason}`) + '\r\n');
+      if (reason && reason !== this.session.state.lastCloseReason) {
+        this.session.state.lastCloseReason = reason;
       }
     } catch (error) {
       console.error('Failed to parse clmeta', error);
+    }
+  }
+
+  private scheduleFreshReconnect(): void {
+    if (this.freshReconnectPending) {
+      return;
+    }
+    this.freshReconnectPending = true;
+    this.clearAutoReconnectTimer();
+    this.discardPendingInput(TerminalMessages.reconnectInputDiscarded);
+    this.session.forceFreshSession = true;
+    this.session.resumeSessionId = undefined;
+    this.session.lastOutputOffset = 0;
+    this.session.state.canReconnect = true;
+    this.session.state.reconnectExhausted = false;
+    this.session.write('\r\n' + ansi(93, TerminalMessages.resumeFreshReconnect) + '\r\n');
+    setTimeout(() => {
+      useTerminalStore().reOpenSession(this.session.sessionKey);
+    }, 0);
+  }
+
+  private clearAutoReconnectTimer(): void {
+    if (this.session.autoReconnectTimer) {
+      window.clearTimeout(this.session.autoReconnectTimer);
+      this.session.autoReconnectTimer = undefined;
     }
   }
 

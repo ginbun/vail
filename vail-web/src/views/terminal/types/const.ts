@@ -115,6 +115,7 @@ export const TerminalMessages = {
   reconnectSuccess: '网络连接已恢复',
   reconnectInputDiscarded: '断连期间的部分输入未发送，已丢弃',
   reconnectInputDropped: '断连期间输入过多，最早的部分输入已丢弃',
+  resumeFreshReconnect: '原 SSH 会话已失效，正在重新建立连接...',
   loggedElsewhere: '该账号已在另一台设备登录',
   connectTimeout: '请检查远程计算机网络及其他配置是否正常',
   fileTransferError: '传输失败',

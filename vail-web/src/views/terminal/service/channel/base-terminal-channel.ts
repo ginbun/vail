@@ -117,11 +117,16 @@ export default abstract class BaseTerminalChannel<T extends ITerminalSession> im
 
   // 处理客户端关闭
   protected handleClientClose(event: CloseEvent) {
+    if (this.triggerClosed) {
+      return;
+    }
     console.warn('channel closed', event);
+    const abnormalClose = !event.wasClean
+      || (event.code !== 1000 && event.code !== 1001);
     // 关闭后手动触发关闭消息 - 错误兜底
     this.processClosed({
       type: OutputProtocol.CLOSED.type,
-      code: TerminalCloseCode.NORMAL + '',
+      code: (abnormalClose ? TerminalCloseCode.NETWORK : TerminalCloseCode.NORMAL) + '',
       msg: event.reason || TerminalMessages.sessionClosed,
     });
   }

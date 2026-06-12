@@ -27,3 +27,13 @@ export function shouldDiscardInputOnClose(
 ): boolean {
   return !!resumeAttemptSessionId && !resumeSeamlessConnected;
 }
+
+/** Resume failures that should downgrade to a fresh SSH session. */
+export function shouldFreshReconnectOnResumeFailure(reason: string | undefined): boolean {
+  return reason === 'resume-not-found' || reason === 'resume-buffer-gap';
+}
+
+/** Security-sensitive resume failures must not auto-fallback to a fresh session. */
+export function isResumeSecurityFailure(reason: string | undefined): boolean {
+  return reason === 'resume-auth-failed' || reason === 'resume-busy';
+}

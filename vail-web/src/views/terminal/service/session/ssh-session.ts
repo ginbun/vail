@@ -340,10 +340,15 @@ export default class SshSession extends BaseSession<ReactiveSessionState, ISshCh
 
   // 重置自动重连计数
   markAutoReconnectSucceeded(): void {
+    if (this.autoReconnectTimer) {
+      window.clearTimeout(this.autoReconnectTimer);
+      this.autoReconnectTimer = undefined;
+    }
     this.autoReconnectAttempts = 0;
     this.forceFreshSession = false;
     this.reconnectGaveUp = false;
     this.state.reconnectExhausted = false;
+    this.state.canReconnect = false;
   }
 
   // 断开连接

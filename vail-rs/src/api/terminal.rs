@@ -593,13 +593,8 @@ async fn handle_ssh_socket(
                     "resume session id not found or expired",
                 )
                 .await;
-                let _ = socket
-                    .send(Message::Text(format!(
-                        "cl|{}|{}",
-                        TERMINAL_CLOSE_FORCE,
-                        safe_field("resume session not found")
-                    )))
-                    .await;
+                let close = resume_not_found_close_notice();
+                send_ssh_close_ws(&mut socket, &close, true).await;
                 return;
             }
             ResumeOutcome::Unavailable => {
@@ -619,29 +614,9 @@ async fn handle_ssh_socket(
                 audit_type,
                 reason,
             } => {
-                let close = SshCloseNotice {
-                    code: TERMINAL_CLOSE_FORCE,
-                    msg: msg.clone(),
-                    retryable: false,
-                    reason: match audit_type {
-                        "terminal:ssh-resume-gap" => "resume-buffer-gap",
-                        "terminal:ssh-resume-busy" => "resume-busy",
-                        _ => "resume-auth-failed",
-                    },
-                };
-                let _ = socket
-                    .send(Message::Text(format!(
-                        "cl|{}|{}",
-                        close.code,
-                        safe_field(&close.msg)
-                    )))
-                    .await;
-                if close.reason == "resume-buffer-gap" {
-                    let payload = serde_json::to_string(&close).unwrap_or_else(|_| {
-                        "{\"retryable\":false,\"reason\":\"resume-buffer-gap\"}".to_string()
-                    });
-                    let _ = socket.send(Message::Text(format!("clmeta|{payload}"))).await;
-                }
+                let close = resume_reject_close_notice(audit_type, msg.clone());
+                let include_meta = resume_close_includes_meta(close.reason);
+                send_ssh_close_ws(&mut socket, &close, include_meta).await;
                 append_terminal_lifecycle_log(
                     &state,
                     user_id,
@@ -3199,6 +3174,58 @@ fn classify_ssh_write_error(err: &std::io::Error) -> SshCloseNotice {
     }
 }
 
+fn resume_not_found_close_notice() -> SshCloseNotice {
+    SshCloseNotice {
+        code: TERMINAL_CLOSE_FORCE,
+        msg: "原 SSH 会话已失效，正在重新建立连接...".to_string(),
+        retryable: false,
+        reason: "resume-not-found",
+    }
+}
+
+fn resume_reject_close_notice(audit_type: &str, msg: String) -> SshCloseNotice {
+    let reason = match audit_type {
+        "terminal:ssh-resume-gap" => "resume-buffer-gap",
+        "terminal:ssh-resume-busy" => "resume-busy",
+        _ => "resume-auth-failed",
+    };
+    SshCloseNotice {
+        code: TERMINAL_CLOSE_FORCE,
+        msg,
+        retryable: false,
+        reason,
+    }
+}
+
+fn resume_close_includes_meta(reason: &str) -> bool {
+    matches!(reason, "resume-not-found" | "resume-buffer-gap")
+}
+
+fn ssh_close_ws_messages(close: &SshCloseNotice, include_meta: bool) -> Vec<String> {
+    let mut messages = Vec::new();
+    if include_meta && close.code != 0 {
+        let payload = serde_json::to_string(close).unwrap_or_else(|_| {
+            format!(
+                "{{\"code\":{},\"retryable\":{},\"reason\":\"{}\"}}",
+                close.code, close.retryable, close.reason
+            )
+        });
+        messages.push(format!("clmeta|{payload}"));
+    }
+    messages.push(format!(
+        "cl|{}|{}",
+        close.code,
+        safe_field(&close.msg)
+    ));
+    messages
+}
+
+async fn send_ssh_close_ws(socket: &mut WebSocket, close: &SshCloseNotice, include_meta: bool) {
+    for message in ssh_close_ws_messages(close, include_meta) {
+        let _ = socket.send(Message::Text(message)).await;
+    }
+}
+
 fn safe_field(value: &str) -> String {
     value.replace('|', " ")
 }
@@ -3436,5 +3463,66 @@ mod tests {
             "export token=abc123 password='abc'",
         );
         assert_eq!(masked, "export token=*** password=***");
+    }
+
+    #[test]
+    fn resume_not_found_close_notice_uses_fresh_reconnect_reason() {
+        let close = resume_not_found_close_notice();
+        assert_eq!(close.reason, "resume-not-found");
+        assert!(!close.retryable);
+        assert!(close.msg.contains("重新建立连接"));
+        assert!(!close.msg.contains("resume session not found"));
+    }
+
+    #[test]
+    fn resume_reject_close_notice_maps_security_failures_without_fresh_fallback() {
+        let gap = resume_reject_close_notice(
+            "terminal:ssh-resume-gap",
+            "无法无缝续连".to_string(),
+        );
+        assert_eq!(gap.reason, "resume-buffer-gap");
+        assert!(resume_close_includes_meta(gap.reason));
+
+        let busy = resume_reject_close_notice(
+            "terminal:ssh-resume-busy",
+            "会话已在另一连接中使用".to_string(),
+        );
+        assert_eq!(busy.reason, "resume-busy");
+        assert!(!resume_close_includes_meta(busy.reason));
+
+        let auth = resume_reject_close_notice(
+            "terminal:ssh-resume-auth-failed",
+            "resume binding mismatch".to_string(),
+        );
+        assert_eq!(auth.reason, "resume-auth-failed");
+        assert!(!resume_close_includes_meta(auth.reason));
+    }
+
+    #[test]
+    fn ssh_close_ws_messages_sends_clmeta_before_cl_for_resume_failures() {
+        for close in [
+            resume_not_found_close_notice(),
+            resume_reject_close_notice(
+                "terminal:ssh-resume-gap",
+                "无法无缝续连".to_string(),
+            ),
+        ] {
+            let messages = ssh_close_ws_messages(&close, true);
+            assert_eq!(messages.len(), 2);
+            assert!(messages[0].starts_with("clmeta|"));
+            assert!(messages[1].starts_with("cl|"));
+            assert!(messages[0].contains(close.reason));
+        }
+    }
+
+    #[test]
+    fn ssh_close_ws_messages_omits_clmeta_for_security_sensitive_resume_rejects() {
+        let close = resume_reject_close_notice(
+            "terminal:ssh-resume-busy",
+            "会话已在另一连接中使用".to_string(),
+        );
+        let messages = ssh_close_ws_messages(&close, false);
+        assert_eq!(messages.len(), 1);
+        assert!(messages[0].starts_with("cl|"));
     }
 }
