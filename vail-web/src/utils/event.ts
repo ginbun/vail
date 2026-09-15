@@ -2,7 +2,7 @@ import type { Ref } from 'vue';
 
 // 添加事件监听器
 export function addEventListen(
-  target: Window | HTMLElement,
+  target: EventTarget,
   event: string,
   handler: EventListenerOrEventListenerObject,
   capture = false
@@ -17,7 +17,7 @@ export function addEventListen(
 
 // 移除事件监听器
 export function removeEventListen(
-  target: Window | HTMLElement,
+  target: EventTarget,
   event: string,
   handler: EventListenerOrEventListenerObject,
   capture = false

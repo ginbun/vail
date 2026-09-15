@@ -125,6 +125,23 @@ struct TerminalSocketContext {
 }
 
 #[derive(Debug)]
+enum SshWsOut {
+    Text(String),
+    Pong(Vec<u8>),
+}
+
+fn ssh_ws_text(s: impl Into<String>) -> SshWsOut {
+    SshWsOut::Text(s.into())
+}
+
+fn websocket_control_reply(msg: Message) -> Option<Message> {
+    match msg {
+        Message::Ping(payload) => Some(Message::Pong(payload)),
+        _ => None,
+    }
+}
+
+#[derive(Debug)]
 struct SshResumeSession {
     session_id: String,
     user_id: i64,
@@ -140,7 +157,7 @@ struct SshResumeSession {
     session_start: i64,
     context: TerminalAuditContext,
     close_error: Option<String>,
-    attached_tx: Option<mpsc::UnboundedSender<String>>,
+    attached_tx: Option<mpsc::UnboundedSender<SshWsOut>>,
 }
 
 
@@ -806,10 +823,14 @@ async fn handle_ssh_socket(
     }
 
     let (mut ws_sender, mut ws_receiver) = socket.split();
-    let (outbound_tx, mut outbound_rx) = mpsc::unbounded_channel::<String>();
+    let (outbound_tx, mut outbound_rx) = mpsc::unbounded_channel::<SshWsOut>();
     let writer = tokio::spawn(async move {
         while let Some(frame) = outbound_rx.recv().await {
-            if ws_sender.send(Message::Text(frame)).await.is_err() {
+            let msg = match frame {
+                SshWsOut::Text(text) => Message::Text(text),
+                SshWsOut::Pong(payload) => Message::Pong(payload),
+            };
+            if ws_sender.send(msg).await.is_err() {
                 break;
             }
         }
@@ -820,7 +841,7 @@ async fn handle_ssh_socket(
             session.attached_tx = Some(outbound_tx.clone());
             session.detach_deadline = None;
             if session.connected {
-                let _ = outbound_tx.send("co".to_string());
+                let _ = outbound_tx.send(ssh_ws_text("co"));
             }
         }
         if let Ok(mut reg) = SSH_RESUME_SESSIONS.lock() {
@@ -829,7 +850,7 @@ async fn handle_ssh_socket(
     }
 
     for body in resume_replay {
-        let _ = outbound_tx.send(format!("o|{body}"));
+        let _ = outbound_tx.send(ssh_ws_text(format!("o|{body}")));
     }
 
     if resume_session_id.is_some() {
@@ -855,7 +876,7 @@ async fn handle_ssh_socket(
         match msg {
             Ok(Message::Text(text)) => {
                 if text == "p" {
-                    let _ = outbound_tx.send("p".to_string());
+                    let _ = outbound_tx.send(ssh_ws_text("p"));
                     continue;
                 }
                 if text == "cl" {
@@ -916,10 +937,10 @@ async fn handle_ssh_socket(
                     {
                         Ok(v) => v,
                         Err(err) => {
-                            let _ = outbound_tx.send(format!(
+                            let _ = outbound_tx.send(ssh_ws_text(format!(
                                 "cl|{TERMINAL_CLOSE_FORCE}|{}",
                                 safe_field(&err.to_string())
-                            ));
+                            )));
                             break;
                         }
                     };
@@ -964,6 +985,9 @@ async fn handle_ssh_socket(
                 }
             }
             Ok(Message::Close(_)) | Err(_) => break,
+            Ok(Message::Ping(payload)) => {
+                let _ = outbound_tx.send(SshWsOut::Pong(payload));
+            }
             Ok(_) => {}
         }
     }
@@ -1065,7 +1089,7 @@ async fn run_ssh_resume_pump(
                     }
                 }
                 if let Some(tx) = tx {
-                    let _ = tx.send("co".to_string());
+                    let _ = tx.send(ssh_ws_text("co"));
                 }
             }
             SshWorkerEvent::Output(body) => {
@@ -1079,7 +1103,7 @@ async fn run_ssh_resume_pump(
                     }
                 };
                 if let Some(tx) = tx {
-                    let _ = tx.send(format!("o|{body}"));
+                    let _ = tx.send(ssh_ws_text(format!("o|{body}")));
                 }
             }
             SshWorkerEvent::Closed(close) => {
@@ -1113,7 +1137,11 @@ async fn run_ssh_resume_pump(
                 };
 
                 if let Some(tx) = tx {
-                    let _ = tx.send(format!("cl|{}|{}", close.code, safe_field(&close.msg)));
+                    let _ = tx.send(ssh_ws_text(format!(
+                        "cl|{}|{}",
+                        close.code,
+                        safe_field(&close.msg)
+                    )));
                     if close.code != 0 {
                         let payload = serde_json::to_string(&close).unwrap_or_else(|_| {
                             format!(
@@ -1121,7 +1149,7 @@ async fn run_ssh_resume_pump(
                                 close.code, close.retryable, close.reason
                             )
                         });
-                        let _ = tx.send(format!("clmeta|{payload}"));
+                        let _ = tx.send(ssh_ws_text(format!("clmeta|{payload}")));
                     }
                 }
 
@@ -1251,7 +1279,14 @@ async fn handle_sftp_socket(state: AppState, mut socket: WebSocket, user_id: i64
         let text = match msg {
             Ok(Message::Text(text)) => text,
             Ok(Message::Close(_)) => break,
-            Ok(_) => continue,
+            Ok(other) => {
+                if let Some(reply) = websocket_control_reply(other) {
+                    if socket.send(reply).await.is_err() {
+                        break;
+                    }
+                }
+                continue;
+            }
             Err(_) => break,
         };
 
@@ -2332,7 +2367,13 @@ async fn handle_transfer_socket(state: AppState, mut socket: WebSocket, user_id:
                 }
             }
             Some(Ok(Message::Close(_))) | None => break,
-            Some(Ok(_)) => {}
+            Some(Ok(other)) => {
+                if let Some(reply) = websocket_control_reply(other) {
+                    if socket.send(reply).await.is_err() {
+                        break;
+                    }
+                }
+            }
             Some(Err(_)) => break,
         }
     }
@@ -2344,9 +2385,10 @@ async fn handle_v2_terminal_access_socket(
     protocol: String,
     socket_ctx: TerminalSocketContext,
 ) {
-    let auth_text = match tokio::time::timeout(Duration::from_secs(10), socket.next()).await {
-        Ok(Some(Ok(Message::Text(text)))) => text,
-        _ => {
+    let auth_deadline = Instant::now() + Duration::from_secs(10);
+    let auth_text = loop {
+        let remain = auth_deadline.saturating_duration_since(Instant::now());
+        if remain.is_zero() {
             let _ = socket
                 .send(Message::Text(format!(
                     "cl|{}|{}",
@@ -2355,6 +2397,25 @@ async fn handle_v2_terminal_access_socket(
                 )))
                 .await;
             return;
+        }
+        match tokio::time::timeout(remain, socket.next()).await {
+            Ok(Some(Ok(Message::Text(text)))) => break text,
+            Ok(Some(Ok(Message::Ping(payload)))) => {
+                if socket.send(Message::Pong(payload)).await.is_err() {
+                    return;
+                }
+            }
+            Ok(Some(Ok(Message::Pong(_)))) => {}
+            _ => {
+                let _ = socket
+                    .send(Message::Text(format!(
+                        "cl|{}|{}",
+                        TERMINAL_CLOSE_FORCE,
+                        safe_field("missing or invalid auth frame")
+                    )))
+                    .await;
+                return;
+            }
         }
     };
 
@@ -3524,5 +3585,17 @@ mod tests {
         let messages = ssh_close_ws_messages(&close, false);
         assert_eq!(messages.len(), 1);
         assert!(messages[0].starts_with("cl|"));
+    }
+
+    #[test]
+    fn websocket_ping_replies_with_matching_pong() {
+        let reply = websocket_control_reply(Message::Ping(vec![1, 2, 3]));
+        assert!(matches!(reply, Some(Message::Pong(payload)) if payload == [1, 2, 3]));
+    }
+
+    #[test]
+    fn websocket_text_does_not_produce_control_reply() {
+        assert!(websocket_control_reply(Message::Text("p".into())).is_none());
+        assert!(websocket_control_reply(Message::Pong(vec![9])).is_none());
     }
 }

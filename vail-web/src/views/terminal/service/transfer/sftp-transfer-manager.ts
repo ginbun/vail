@@ -10,6 +10,7 @@ import type {
 import { TerminalMessages, TransferReceiver, TransferStatus, TransferType } from '../../types/const';
 import { Message } from '@arco-design/web-vue';
 import { getTerminalTransferToken, openTerminalTransferChannel } from '@/api/terminal/terminal';
+import { WEAK_NETWORK_HANDSHAKE_RETRY } from '@/utils/websocket-policy';
 import BaseTransferManager from './base-transfer-manager';
 import SftpFileUploadTask from './sftp-file-upload-task';
 import SftpFileDownloadTask from './sftp-file-download-task';
@@ -99,7 +100,7 @@ export default class SftpTransferManager extends BaseTransferManager implements 
     const { data: transferToken } = await getTerminalTransferToken();
     // 打开会话
     try {
-      this.client = await openTerminalTransferChannel(transferToken);
+      this.client = await openTerminalTransferChannel(transferToken, WEAK_NETWORK_HANDSHAKE_RETRY);
       this.reconnectAttempts = 0;
     } catch (e) {
       // 打开失败将传输列表置为失效

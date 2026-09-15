@@ -3,10 +3,14 @@ import test from 'node:test';
 import {
   isResumeSecurityFailure,
   isSeamlessResume,
+  shouldAnnounceAutoReconnect,
+  shouldAnnounceReconnectSuccess,
   shouldAttemptResume,
   shouldDiscardInputOnClose,
   shouldFlushInputOnConnect,
   shouldFreshReconnectOnResumeFailure,
+  shouldPromptManualReconnect,
+  shouldWriteDisconnectNotice,
 } from '../src/views/terminal/service/channel/ssh-resume-input-policy';
 
 test('shouldAttemptResume requires enabled id and no force-fresh flag', () => {
@@ -56,4 +60,34 @@ test('security-sensitive resume failures block fresh reconnect fallback', () => 
 test('force-fresh flag prevents resume after downgrade decision', () => {
   assert.equal(shouldAttemptResume(true, 'ssh-1', true), false);
   assert.equal(shouldFlushInputOnConnect(false), false);
+});
+
+test('first resume-capable auto reconnect stays silent', () => {
+  assert.equal(shouldAnnounceAutoReconnect(true, 1, true), false);
+  assert.equal(shouldWriteDisconnectNotice(true, true, true), false);
+  assert.equal(shouldAnnounceReconnectSuccess(true, true), false);
+});
+
+test('later or non-resume reconnects surface status to the operator', () => {
+  assert.equal(shouldAnnounceAutoReconnect(true, 2, true), true);
+  assert.equal(shouldAnnounceAutoReconnect(true, 1, false), true);
+  assert.equal(shouldAnnounceReconnectSuccess(true, false), true);
+  assert.equal(shouldWriteDisconnectNotice(true, true, false), true);
+});
+
+test('manual reconnect prompt is hidden while auto reconnect is already scheduled', () => {
+  assert.equal(shouldPromptManualReconnect(true, true), false);
+  assert.equal(shouldPromptManualReconnect(true, false), true);
+  assert.equal(shouldPromptManualReconnect(false, false), false);
+});
+
+test('unscheduled disconnect still writes a notice', () => {
+  assert.equal(shouldAnnounceAutoReconnect(false, 1, true), false);
+  assert.equal(shouldWriteDisconnectNotice(true, false, true), true);
+  assert.equal(shouldAnnounceReconnectSuccess(false, false), false);
+});
+
+test('initial connect failure still writes a notice even if retry is scheduled', () => {
+  assert.equal(shouldWriteDisconnectNotice(false, true, true), true);
+  assert.equal(shouldWriteDisconnectNotice(false, true, false), true);
 });

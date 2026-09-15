@@ -15,6 +15,7 @@ import { sleep } from '@/utils';
 import { TerminalSessionTypes } from '../../types/const';
 import { useDebounceFn } from '@vueuse/core';
 import { addEventListen, removeEventListen } from '@/utils/event';
+import { DEFAULT_PING_INTERVAL_MS } from '@/utils/websocket-policy';
 import SshSession from './ssh-session';
 import SftpSession from './sftp-session';
 import RdpSession from './rdp-session';
@@ -31,17 +32,29 @@ export default class TerminalSessionManager implements ITerminalSessionManager {
 
   private readonly handleNetworkOnlineFn: () => void;
 
+  private readonly handleVisibilityFn: () => void;
+
   constructor() {
     this.sessions = [];
     this.dispatchFitFn = useDebounceFn(this.dispatchFit, 300).bind(this);
     // 网络恢复事件做防抖，避免 online 抖动风暴反复触发重连
     this.handleNetworkOnlineFn = useDebounceFn(this.dispatchNetworkOnline, 500).bind(this);
+    this.handleVisibilityFn = () => {
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+      // 从后台回到前台时立即探活，并尝试恢复已断开的会话
+      this.dispatchPing();
+      this.handleNetworkOnlineFn();
+    };
     // 注册 resize 事件
     addEventListen(window, 'resize', this.dispatchFitFn);
     // 注册网络恢复事件
     addEventListen(window, 'online', this.handleNetworkOnlineFn);
+    addEventListen(window, 'pageshow', this.handleNetworkOnlineFn);
+    addEventListen(document, 'visibilitychange', this.handleVisibilityFn);
     // 注册 ping 事件
-    this.keepAliveTaskId = window.setInterval(this.dispatchPing.bind(this), 15000);
+    this.keepAliveTaskId = window.setInterval(this.dispatchPing.bind(this), DEFAULT_PING_INTERVAL_MS);
   }
 
   // 网络恢复时通知各会话立即尝试重连
@@ -197,6 +210,8 @@ export default class TerminalSessionManager implements ITerminalSessionManager {
       removeEventListen(window, 'resize', this.dispatchFitFn);
       // 移除网络恢复事件
       removeEventListen(window, 'online', this.handleNetworkOnlineFn);
+      removeEventListen(window, 'pageshow', this.handleNetworkOnlineFn);
+      removeEventListen(document, 'visibilitychange', this.handleVisibilityFn);
     } catch {
       // ignored
     }

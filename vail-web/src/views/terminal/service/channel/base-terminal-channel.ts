@@ -2,6 +2,7 @@ import type { ITerminalChannel, ITerminalSession, SessionHostInfo } from '@/view
 import type { InputPayload, OutputPayload, Protocol } from '@/views/terminal/types/protocol';
 import { format, InputProtocol, OutputProtocol, parse } from '@/views/terminal/types/protocol';
 import { TerminalCloseCode, TerminalMessages } from '../../types/const';
+import { isWebSocketStale, PONG_WATCHDOG_MS, shouldDeclareMissedPong } from '@/utils/websocket-policy';
 import { Message } from '@arco-design/web-vue';
 
 // 终端通信处理器 实现
@@ -12,6 +13,12 @@ export default abstract class BaseTerminalChannel<T extends ITerminalSession> im
   protected session: T;
 
   protected triggerClosed: boolean;
+
+  private lastInboundAt = 0;
+
+  private pingInFlightAt = 0;
+
+  private pongWatchdogId?: number;
 
   constructor(session: T) {
     this.session = session;
@@ -32,6 +39,7 @@ export default abstract class BaseTerminalChannel<T extends ITerminalSession> im
       throw e;
     }
     if (this.client) {
+      this.lastInboundAt = Date.now();
       // 处理关闭事件
       this.client.onclose = this.handleClientClose.bind(this);
       // 处理消息
@@ -55,7 +63,19 @@ export default abstract class BaseTerminalChannel<T extends ITerminalSession> im
 
   // ping
   ping(): void {
+    const now = Date.now();
+    if (this.isOpened() && (
+      isWebSocketStale(this.lastInboundAt, now)
+      || shouldDeclareMissedPong(this.pingInFlightAt, now)
+    )) {
+      this.handleStaleConnection();
+      return;
+    }
+    if (this.pingInFlightAt <= 0) {
+      this.pingInFlightAt = now;
+    }
     this.send(InputProtocol.PING);
+    this.armPongWatchdog();
   }
 
   // 处理设置id
@@ -93,10 +113,12 @@ export default abstract class BaseTerminalChannel<T extends ITerminalSession> im
   // 处理 pong 消息
   processPong(payload: OutputPayload): void {
     void payload;
+    this.markInbound();
   }
 
   // 处理客户端消息
   protected handleClientMessage(event: MessageEvent) {
+    this.markInbound();
     // 解析消息
     const payload = parse(event.data as string);
     if (!payload) {
@@ -112,6 +134,40 @@ export default abstract class BaseTerminalChannel<T extends ITerminalSession> im
       if (processMethodFn) {
         processMethodFn.call(this, payload);
       }
+    }
+  }
+
+  protected handleStaleConnection(): void {
+    this.handleClientClose({
+      wasClean: false,
+      code: 1006,
+      reason: TerminalMessages.sessionClosed,
+    } as CloseEvent);
+  }
+
+  protected markInbound(): void {
+    this.lastInboundAt = Date.now();
+    this.pingInFlightAt = 0;
+    this.clearPongWatchdog();
+  }
+
+  private armPongWatchdog(): void {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+      return;
+    }
+    this.clearPongWatchdog();
+    this.pongWatchdogId = window.setTimeout(() => {
+      this.pongWatchdogId = undefined;
+      if (this.isOpened() && shouldDeclareMissedPong(this.pingInFlightAt, Date.now())) {
+        this.handleStaleConnection();
+      }
+    }, PONG_WATCHDOG_MS);
+  }
+
+  private clearPongWatchdog(): void {
+    if (this.pongWatchdogId) {
+      window.clearTimeout(this.pongWatchdogId);
+      this.pongWatchdogId = undefined;
     }
   }
 
@@ -138,6 +194,8 @@ export default abstract class BaseTerminalChannel<T extends ITerminalSession> im
 
   // 关闭
   close(): void {
+    this.clearPongWatchdog();
+    this.pingInFlightAt = 0;
     // 关闭 client
     if (this.client) {
       if (this.client.readyState === WebSocket.OPEN) {

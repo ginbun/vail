@@ -37,3 +37,40 @@ export function shouldFreshReconnectOnResumeFailure(reason: string | undefined):
 export function isResumeSecurityFailure(reason: string | undefined): boolean {
   return reason === 'resume-auth-failed' || reason === 'resume-busy';
 }
+
+/** First resume-capable retry stays silent; later or non-resume retries are visible. */
+export function shouldAnnounceAutoReconnect(
+  scheduled: boolean,
+  autoReconnectAttempts: number,
+  canAttemptResume: boolean,
+): boolean {
+  if (!scheduled) {
+    return false;
+  }
+  return !canAttemptResume || autoReconnectAttempts > 1;
+}
+
+/** Seamless resume should not print a recovery banner. */
+export function shouldAnnounceReconnectSuccess(
+  wasReconnecting: boolean,
+  seamlessResume: boolean,
+): boolean {
+  return wasReconnecting && !seamlessResume;
+}
+
+/** Do not ask the operator to press Enter while auto-reconnect is already running. */
+export function shouldPromptManualReconnect(
+  canReconnect: boolean,
+  autoReconnectScheduled: boolean,
+): boolean {
+  return canReconnect && !autoReconnectScheduled;
+}
+
+/** Hide the disconnect banner only for a mid-session, resume-capable auto-reconnect. */
+export function shouldWriteDisconnectNotice(
+  beforeConnected: boolean,
+  autoReconnectScheduled: boolean,
+  canAttemptResume: boolean,
+): boolean {
+  return !(beforeConnected && autoReconnectScheduled && canAttemptResume);
+}

@@ -2,6 +2,7 @@ import type { ISftpChannel, ISftpSession } from '@/views/terminal/interfaces';
 import type { OutputPayload } from '@/views/terminal/types/protocol';
 import { TerminalCloseCode, TerminalSessionTypes } from '@/views/terminal/types/const';
 import { getTerminalAccessToken, openTerminalAccessChannel } from '@/api/terminal/terminal';
+import { WEAK_NETWORK_HANDSHAKE_RETRY } from '@/utils/websocket-policy';
 import BaseTerminalChannel from './base-terminal-channel';
 
 // 终端通信会话 SFTP 会话实现
@@ -14,7 +15,11 @@ export default class SftpChannel extends BaseTerminalChannel<ISftpSession> imple
       connectType: TerminalSessionTypes.SFTP.type,
     });
     // 打开 channel
-    this.client = await openTerminalAccessChannel(TerminalSessionTypes.SFTP.channel, data);
+    this.client = await openTerminalAccessChannel(
+      TerminalSessionTypes.SFTP.channel,
+      data,
+      WEAK_NETWORK_HANDSHAKE_RETRY,
+    );
     this.client.send(JSON.stringify({
       type: 'auth',
       ticket: data.wsTicket,

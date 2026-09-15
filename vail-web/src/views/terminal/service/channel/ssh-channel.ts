@@ -5,15 +5,20 @@ import { TerminalCloseCode, TerminalMessages, TerminalSessionTypes } from '@/vie
 import { ansi } from '@/utils';
 import { useTerminalStore } from '@/store';
 import { getTerminalAccessToken, openTerminalAccessChannel } from '@/api/terminal/terminal';
+import { WEAK_NETWORK_HANDSHAKE_RETRY } from '@/utils/websocket-policy';
 import BaseTerminalChannel from './base-terminal-channel';
 import { SshInputBuffer } from './ssh-input-buffer';
 import {
   isResumeSecurityFailure,
   isSeamlessResume,
+  shouldAnnounceAutoReconnect,
+  shouldAnnounceReconnectSuccess,
   shouldAttemptResume,
   shouldDiscardInputOnClose,
   shouldFlushInputOnConnect,
   shouldFreshReconnectOnResumeFailure,
+  shouldPromptManualReconnect,
+  shouldWriteDisconnectNotice,
 } from './ssh-resume-input-policy';
 
 // 终端通信会话 SSH 会话实现
@@ -36,11 +41,11 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
       }
     });
     // 打开 channel
-    this.client = await openTerminalAccessChannel(TerminalSessionTypes.SSH.channel, data, {
-      maxAttempts: 3,
-      baseDelay: 1000,
-      jitter: true,
-    });
+    this.client = await openTerminalAccessChannel(
+      TerminalSessionTypes.SSH.channel,
+      data,
+      WEAK_NETWORK_HANDSHAKE_RETRY,
+    );
     const shouldResume = shouldAttemptResume(
       data.resume?.enabled,
       this.session.resumeSessionId,
@@ -92,7 +97,7 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
     } else {
       this.discardPendingInput(TerminalMessages.reconnectInputDiscarded);
     }
-    if (wasReconnecting) {
+    if (shouldAnnounceReconnectSuccess(wasReconnecting, this.resumeSeamlessConnected)) {
       this.session.write(ansi(92, `\r\n${TerminalMessages.reconnectSuccess}\r\n`));
     }
   }
@@ -115,15 +120,18 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
       this.close();
       return;
     }
-    // 拼接关闭消息
-    this.session.write((beforeConnected ? '\r\n\r\n' : '') + ansi(91, msg || ''));
+    let scheduled = false;
     if (codeNumber === TerminalCloseCode.NETWORK) {
-      const scheduled = this.session.scheduleAutoReconnect?.();
-      if (scheduled) {
-        this.session.write('\r\n' + ansi(91, TerminalMessages.autoReconnecting) + '\r\n');
-      }
+      scheduled = this.session.scheduleAutoReconnect?.() === true;
     }
-    if (this.session.state.canReconnect) {
+    const canAttemptResume = !!(this.session.resumeSessionId && !this.session.forceFreshSession);
+    if (shouldWriteDisconnectNotice(beforeConnected, scheduled, canAttemptResume)) {
+      this.session.write((beforeConnected ? '\r\n\r\n' : '') + ansi(91, msg || ''));
+    }
+    if (shouldAnnounceAutoReconnect(scheduled, this.session.autoReconnectAttempts, canAttemptResume)) {
+      this.session.write('\r\n' + ansi(91, TerminalMessages.autoReconnecting) + '\r\n');
+    }
+    if (shouldPromptManualReconnect(this.session.state.canReconnect, scheduled)) {
       this.session.write('\r\n' + ansi(91, TerminalMessages.waitingReconnect) + '\r\n');
     }
     // 设置已关闭
@@ -167,8 +175,9 @@ export default class SshChannel extends BaseTerminalChannel<ISshSession> impleme
       } else if (shouldFreshReconnectOnResumeFailure(reason)) {
         this.scheduleFreshReconnect();
       } else if (meta.retryable && !this.session.autoReconnectTimer && !this.freshReconnectPending) {
-        const scheduled = this.session.scheduleAutoReconnect?.();
-        if (scheduled) {
+        const scheduled = this.session.scheduleAutoReconnect?.() === true;
+        const canAttemptResume = !!(this.session.resumeSessionId && !this.session.forceFreshSession);
+        if (shouldAnnounceAutoReconnect(scheduled, this.session.autoReconnectAttempts, canAttemptResume)) {
           this.session.write('\r\n' + ansi(91, TerminalMessages.autoReconnecting) + '\r\n');
         }
       }
